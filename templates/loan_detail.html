@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | {{ loan.loan_id }} - Loan 详情</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --accent-teal: #2E7D6E; --accent-amber: #E8A838; --accent-coral: #D8434F; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f0ee 0%, #ebe5e3 100%); min-height: 100vh; color: var(--dark-blue); }
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover { background: rgba(255,255,255,0.1); }
+        .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        .page-header { margin-bottom: 24px; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+        .page-header h1 { font-size: 1.25rem; font-weight: 700; margin-top: 12px; }
+        .page-header .sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+        .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-teal); display: inline-block; }
+        .section-block { background: var(--white); border-radius: 10px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); overflow-x: auto; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+        .info-item { padding: 12px 16px; background: #F8FAFC; border-radius: 8px; }
+        .info-item .label { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
+        .info-item .value { font-size: 0.95rem; font-weight: 600; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .data-table th { background: #F8FAFC; font-weight: 600; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; }
+        .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .data-table tr:hover { background: rgba(255,241,238,0.4); }
+        .status-paid { color: var(--accent-teal); font-weight: 600; }
+        .status-pending { color: var(--text-muted); }
+        .empty-state { padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/partner/manage">资产商管理</a>
+                <a href="/partner/{{ partner.id }}/risk">{{ partner.name }}</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <a href="javascript:history.back()" class="btn-back">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                返回
+            </a>
+            <h1>{{ loan.loan_id }}</h1>
+            <div class="sub">放款 ${{ "{:,.0f}".format(loan.disbursement_amount or 0) }} · {{ loan.loan_status or 'active' }} · DPD {{ loan.dpd or 0 }}</div>
+        </div>
+
+        <!-- 客户基础信息 -->
+        <div class="section-title">客户基础信息</div>
+        <div class="section-block">
+            <div class="info-grid">
+                <div class="info-item"><div class="label">行业</div><div class="value">{{ customer_info.industry|default('-') }}</div></div>
+                <div class="info-item"><div class="label">信用评级</div><div class="value">{{ customer_info.credit_rating|default('-') }}</div></div>
+                <div class="info-item"><div class="label">地区</div><div class="value">{{ customer_info.region|default('-') }}</div></div>
+                <div class="info-item"><div class="label">教育程度</div><div class="value">{{ customer_info.education|default('-') }}</div></div>
+            </div>
+        </div>
+
+        <!-- 还款计划 -->
+        <div class="section-title">还款计划</div>
+        <div class="section-block">
+            {% if schedule %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>期次</th>
+                        <th>还款日期</th>
+                        <th class="num">应还本金</th>
+                        <th class="num">应还利息</th>
+                        <th class="num">应还总额</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in schedule %}
+                    <tr>
+                        <td>{{ s.period }}</td>
+                        <td>{{ s.due_date }}</td>
+                        <td class="num">${{ "{:,.2f}".format(s.principal_due or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(s.interest_due or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(s.total_due or 0) }}</td>
+                        <td class="status-{{ s.status|default('pending') }}">{{ '已还' if s.status == 'paid' else '待还' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">暂无还款计划</div>
+            {% endif %}
+        </div>
+
+        <!-- 还款信息 -->
+        <div class="section-title">还款信息</div>
+        <div class="section-block">
+            {% if repayments %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>还款日期</th>
+                        <th class="num">期次</th>
+                        <th class="num">还款金额</th>
+                        <th class="num">还款本金</th>
+                        <th class="num">还款利息</th>
+                        <th class="num">还款罚息</th>
+                        <th class="num">Waive</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in repayments %}
+                    <tr>
+                        <td>{{ r.payment_date }}</td>
+                        <td class="num">{{ r.period }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.amount or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.principal_paid or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.interest_paid or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.penalty_paid or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.waive_amount or 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">暂无还款记录</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | 告警面板</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: var(--light-pink); color: var(--dark-blue); }
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover { background: rgba(255,255,255,0.1); }
+
+        .page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+        .page-header .left-group { display: flex; align-items: center; gap: 12px; }
+        .page-header h1 { font-size: 1.35rem; font-weight: 700; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+
+        .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--red); display: inline-block; }
+        .section-block { background: var(--white); border-radius: 12px; padding: 24px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border: 1px solid var(--border); }
+
+        /* 底层资产告警 */
+        .partner-alerts-block { margin-bottom: 24px; }
+        .partner-alerts-block:last-child { margin-bottom: 0; }
+        .partner-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .partner-name-row h3 { font-size: 0.95rem; font-weight: 700; }
+        .partner-name-row .tag { padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; }
+        .tag-pl { background: rgba(59,74,106,0.1); color: var(--dark-blue); }
+        .tag-mca { background: rgba(46,125,110,0.1); color: var(--green); }
+        .partner-name-row .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; font-weight: 700; background: var(--red); color: var(--white); }
+        .partner-name-row .badge.none { background: var(--green); }
+
+        .alert-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 8px; display: flex; gap: 14px; align-items: flex-start; transition: background 0.15s; }
+        .alert-item:last-child { margin-bottom: 0; }
+        .alert-item:hover { background: rgba(255,241,238,0.5); }
+        .alert-item.severity-high { background: #FFF5F5; border: 1px solid #FED7D7; }
+        .alert-item.severity-medium { background: #FFFBEB; border: 1px solid #FEF3C7; }
+        .alert-item.severity-low { background: #F0FDF4; border: 1px solid #BBF7D0; }
+        .alert-item.resolved { opacity: 0.55; }
+        .alert-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+        .alert-dot.high { background: var(--red); }
+        .alert-dot.medium { background: var(--gold); }
+        .alert-dot.low { background: var(--teal); }
+        .alert-content { flex: 1; }
+        .alert-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .alert-title { font-size: 0.82rem; font-weight: 600; }
+        .alert-date { font-size: 0.7rem; color: var(--text-muted); }
+        .alert-detail { font-size: 0.75rem; color: #5A6577; line-height: 1.6; }
+        .alert-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; margin-left: 8px; }
+        .alert-tag.open { background: #FEE2E2; color: var(--red); }
+        .alert-tag.resolved { background: #D1FAE5; color: var(--green); }
+        .no-alerts { font-size: 0.82rem; color: var(--text-muted); padding: 20px; text-align: center; }
+
+        /* 覆盖倍数列表 */
+        .cov-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .cov-table th, .cov-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        .cov-table th { background: #F8FAFC; font-weight: 600; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .cov-table tr:hover { background: rgba(255,241,238,0.4); }
+        .cov-table td:first-child { font-weight: 600; }
+        .cov-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .cov-table .status { padding: 3px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
+        .cov-table .status.safe { background: #D1FAE5; color: var(--green); }
+        .cov-table .status.warn { background: #FEF3C7; color: #B45309; }
+        .cov-table .status.danger { background: #FEE2E2; color: var(--red); }
+        .cov-table .link { color: var(--dark-blue); text-decoration: none; font-weight: 600; }
+        .cov-table .link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/alert/panel" class="active">告警面板</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div class="left-group">
+                <a href="/dashboard" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回
+                </a>
+                <h1>告警面板</h1>
+            </div>
+        </div>
+
+        <!-- Part 1: 底层资产告警 -->
+        <div class="section-title">底层资产告警</div>
+        <div class="section-block">
+            {% for p in partners %}
+            <div class="partner-alerts-block">
+                <div class="partner-name-row">
+                    <h3>{{ p.name }}</h3>
+                    <span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' }}">{{ p.product_type }}</span>
+                    {% set open_count = p.alerts|selectattr('status','equalto','open')|list|length %}
+                    <span class="badge {{ 'none' if open_count == 0 else '' }}">
+                        {{ open_count }} 项待处理
+                    </span>
+                    <a href="/partner/{{ p.id }}/risk" class="link" style="margin-left:auto;font-size:0.75rem;">查看风控详情 →</a>
+                </div>
+                {% if p.alerts %}
+                {% for a in p.alerts %}
+                <div class="alert-item severity-{{ a.severity }} {{ 'resolved' if a.status == 'resolved' else '' }}">
+                    <div class="alert-dot {{ a.severity }}"></div>
+                    <div class="alert-content">
+                        <div class="alert-head">
+                            <span>
+                                <span class="alert-title">{{ a.title }}</span>
+                                <span class="alert-tag {{ a.status }}">{{ '待处理' if a.status == 'open' else '已解决' }}</span>
+                            </span>
+                            <span class="alert-date">{{ a.date }}</span>
+                        </div>
+                        <div class="alert-detail">{{ a.detail }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="no-alerts">暂无告警</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Part 2: 覆盖倍数列表 -->
+        <div class="section-title">覆盖倍数列表</div>
+        <div class="section-block">
+            <table class="cov-table">
+                <thead>
+                    <tr>
+                        <th>生产商</th>
+                        <th>国家</th>
+                        <th>产品类型</th>
+                        <th class="num">当前覆盖倍数</th>
+                        <th class="num">基准线</th>
+                        <th class="num">补仓线</th>
+                        <th class="num">平仓线</th>
+                        <th>状态</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in partners %}
+                    {% set cov = p.coverage %}
+                    {% if cov %}
+                    {% set cur = cov.current|float %}
+                    {% set base = cov.baseline|float %}
+                    {% set margin = cov.margin_call|float %}
+                    {% set liq = cov.liquidation|float %}
+                    {% set status = 'danger' if cur <= liq else ('warn' if cur <= base else 'safe') %}
+                    {% set status_text = '平仓预警' if cur <= liq else ('补仓预警' if cur <= margin else ('低于基准' if cur <= base else '正常')) %}
+                    <tr>
+                        <td><a href="/partner/{{ p.id }}/risk" class="link">{{ p.name }}</a></td>
+                        <td>{{ p.country }}</td>
+                        <td><span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' }}">{{ p.product_type }}</span></td>
+                        <td class="num"><strong>{{ "%.2f"|format(cur) }}x</strong></td>
+                        <td class="num">{{ "%.2f"|format(base) }}x</td>
+                        <td class="num">{{ "%.2f"|format(margin) }}x</td>
+                        <td class="num">{{ "%.2f"|format(liq) }}x</td>
+                        <td><span class="status {{ status }}">{{ status_text }}</span></td>
+                        <td><a href="/partner/{{ p.id }}/risk" class="link">详情</a></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td><a href="/partner/{{ p.id }}/risk" class="link">{{ p.name }}</a></td>
+                        <td>{{ p.country }}</td>
+                        <td><span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' }}">{{ p.product_type }}</span></td>
+                        <td class="num" colspan="5">暂无覆盖倍数数据</td>
+                        <td><a href="/partner/{{ p.id }}/risk" class="link">详情</a></td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

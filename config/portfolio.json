@@ -1,0 +1,68 @@
+{
+  "fund": {
+    "name": "CHUAN Private Credit Fund I",
+    "name_cn": "串金私募信贷基金一号",
+    "currency": "USD",
+    "inception_date": "2024-06-01",
+    "nav_date": "2025-12-31",
+    "nav_per_unit": 1.0823,
+    "total_aum": 52800000,
+    "total_units": 48782156,
+    "ytd_return": 0.0823,
+    "annualized_return": 0.1097,
+    "sharpe_ratio": 2.14,
+    "max_drawdown": -0.012,
+    "avg_yield": 0.1850,
+    "weighted_duration_days": 127
+  },
+  "allocation_by_product": [
+    { "name": "个人消费贷 (PL)", "name_en": "Personal Loans", "value": 31680000, "pct": 0.60 },
+    { "name": "商户现金预支 (MCA)", "name_en": "Merchant Cash Advance", "value": 15840000, "pct": 0.30 },
+    { "name": "现金及等价物", "name_en": "Cash & Equivalents", "value": 5280000, "pct": 0.10 }
+  ],
+  "allocation_by_region": [
+    { "name": "东南亚", "name_en": "Southeast Asia", "value": 22176000, "pct": 0.42 },
+    { "name": "拉丁美洲", "name_en": "Latin America", "value": 13728000, "pct": 0.26 },
+    { "name": "中东/非洲", "name_en": "MENA / Africa", "value": 8448000, "pct": 0.16 },
+    { "name": "东亚", "name_en": "East Asia", "value": 5808000, "pct": 0.11 },
+    { "name": "现金", "name_en": "Cash", "value": 2640000, "pct": 0.05 }
+  ],
+  "allocation_by_platform": [
+    { "name": "Platform Alpha", "value": 15840000, "pct": 0.30, "type": "PL", "region": "东南亚" },
+    { "name": "Platform Beta", "value": 10560000, "pct": 0.20, "type": "MCA", "region": "拉丁美洲" },
+    { "name": "Platform Gamma", "value": 8448000, "pct": 0.16, "type": "PL", "region": "东南亚" },
+    { "name": "Platform Delta", "value": 7920000, "pct": 0.15, "type": "PL", "region": "中东/非洲" },
+    { "name": "Platform Epsilon", "value": 4752000, "pct": 0.09, "type": "MCA", "region": "东亚" },
+    { "name": "其他", "value": 5280000, "pct": 0.10, "type": "Mixed", "region": "多地区" }
+  ],
+  "monthly_returns": [
+    { "month": "2024-06", "return": 0.0072 },
+    { "month": "2024-07", "return": 0.0085 },
+    { "month": "2024-08", "return": 0.0091 },
+    { "month": "2024-09", "return": 0.0078 },
+    { "month": "2024-10", "return": 0.0094 },
+    { "month": "2024-11", "return": 0.0088 },
+    { "month": "2024-12", "return": 0.0076 },
+    { "month": "2025-01", "return": 0.0082 },
+    { "month": "2025-02", "return": 0.0090 },
+    { "month": "2025-03", "return": 0.0086 },
+    { "month": "2025-04", "return": 0.0079 },
+    { "month": "2025-05", "return": 0.0093 },
+    { "month": "2025-06", "return": 0.0088 },
+    { "month": "2025-07", "return": 0.0091 },
+    { "month": "2025-08", "return": 0.0084 },
+    { "month": "2025-09", "return": 0.0077 },
+    { "month": "2025-10", "return": 0.0095 },
+    { "month": "2025-11", "return": 0.0089 },
+    { "month": "2025-12", "return": 0.0083 }
+  ],
+  "risk_metrics": {
+    "current_dpd_0": 0.924,
+    "current_dpd_1_30": 0.041,
+    "current_dpd_31_60": 0.018,
+    "current_dpd_61_90": 0.009,
+    "current_dpd_90_plus": 0.008,
+    "provision_coverage": 1.85,
+    "concentration_top5": 0.81
+  }
+}

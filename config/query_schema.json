@@ -1,0 +1,28 @@
+{
+  "comment": "风控数据查询 - 实际表为 raw_loan、raw_repayment",
+  "loan": {
+    "table": "raw_loan",
+    "id_column": "loan_id",
+    "columns": ["loan_id", "disbursement_time", "disbursement_amount", "term_months", "loan_maturity_date", "customer_id", "contract_no", "spv_id"]
+  },
+  "repayment_schedule": {
+    "table": "raw_loan",
+    "source": "jsonb",
+    "jsonb_column": "repayment_schedule",
+    "jsonb_path": "schedule",
+    "columns": ["period_no", "due_date", "principal_due", "interest_due", "total_due"],
+    "jsonb_keys": {"period_no": "term", "due_date": "due_date", "principal_due": "principal", "interest_due": "interest", "total_due": "total"}
+  },
+  "repayment_records": {
+    "table": "raw_repayment",
+    "loan_id_column": "loan_id",
+    "order_column": "repayment_date",
+    "columns": ["repayment_type", "repayment_term", "repayment_date", "total_repayment", "principal_repayment", "interest_repayment", "penalty_repayment", "extension_fee", "waiver_amount", "repayment_txn_id", "is_settled"]
+  },
+  "disbursements": {
+    "table": "raw_loan",
+    "date_column": "disbursement_time",
+    "id_column": "loan_id",
+    "columns": ["loan_id", "disbursement_time", "disbursement_amount", "spv_id", "customer_id", "term_months"]
+  }
+}

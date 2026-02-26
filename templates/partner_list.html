@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | 资产商管理</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: var(--light-pink); color: var(--dark-blue); }
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover { background: rgba(255,255,255,0.1); }
+
+        .page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+        .page-header .left-group { display: flex; align-items: center; gap: 12px; }
+        .page-header h1 { font-size: 1.35rem; font-weight: 700; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+        .summary { font-size: 0.82rem; color: var(--text-muted); }
+
+        /* Tabs */
+        .main-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
+        .main-tab { padding: 12px 28px; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.15s; display: flex; align-items: center; gap: 8px; }
+        .main-tab:hover { color: var(--dark-blue); }
+        .main-tab.active { color: var(--dark-blue); border-bottom-color: var(--dark-blue); }
+        .main-tab svg { width: 18px; height: 18px; fill: currentColor; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Risk cards (existing) */
+        .partner-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .p-card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; transition: all 0.2s; cursor: pointer; }
+        .p-card:hover { box-shadow: 0 6px 20px rgba(59,74,106,0.12); transform: translateY(-3px); }
+        .p-card-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); }
+        .p-card-name { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+        .p-card-sub { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .status-dot.active { background: var(--green); }
+        .status-dot.inactive { background: var(--red); }
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+        .tag-pl { background: rgba(59,74,106,0.08); color: var(--dark-blue); }
+        .tag-mca { background: rgba(46,125,110,0.1); color: var(--green); }
+        .p-card-body { padding: 20px 24px; }
+        .p-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .p-kpi { text-align: center; }
+        .p-kpi-label { font-size: 0.68rem; color: var(--text-muted); margin-bottom: 4px; }
+        .p-kpi-value { font-size: 1rem; font-weight: 700; }
+        .p-kpi-value.warn { color: var(--gold); }
+        .p-kpi-value.danger { color: var(--red); }
+        .p-kpi-value.good { color: var(--green); }
+        .p-card-footer { padding: 12px 24px; background: #F8FAFC; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); }
+        .p-card-footer .enter { color: var(--dark-blue); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .p-card-footer .enter svg { width: 14px; height: 14px; fill: currentColor; }
+
+        /* Revenue cards */
+        .rv-card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; transition: all 0.2s; cursor: pointer; }
+        .rv-card:hover { box-shadow: 0 6px 20px rgba(59,74,106,0.12); transform: translateY(-3px); }
+        .rv-card-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); }
+        .rv-card-body { padding: 20px 24px; }
+        .rv-spark { padding: 0 24px 16px; }
+        .rv-spark svg { width: 100%; height: 48px; display: block; }
+        .rv-spark .sp-path { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+        .rv-spark .sp-area { opacity: 0.08; }
+        .rv-spark-legend { display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--text-muted); margin-top: 4px; }
+        .rv-card-footer { padding: 12px 24px; background: #F8FAFC; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); }
+        .rv-card-footer .enter { color: var(--dark-blue); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .rv-card-footer .enter svg { width: 14px; height: 14px; fill: currentColor; }
+        .rv-delta { font-size: 0.65rem; font-weight: 600; }
+        .rv-delta.up { color: var(--green); }
+        .rv-delta.down { color: var(--red); }
+
+        @media (max-width: 768px) { .partner-cards { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/partner/manage" class="active">资产商管理</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div class="left-group">
+                <a href="/dashboard" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回
+                </a>
+                <h1>资产商管理</h1>
+            </div>
+            <div class="summary">共 {{ partners|length }} 个资产商</div>
+        </div>
+
+        <div class="main-tabs">
+            <div class="main-tab active" onclick="switchMainTab('risk')">
+                <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                风险管理
+            </div>
+            <div class="main-tab" onclick="switchMainTab('revenue')">
+                <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+                收益规模
+            </div>
+        </div>
+
+        <!-- Risk Panel -->
+        <div class="tab-panel active" id="panel-risk">
+            <div class="partner-cards">
+                {% for p in partners %}
+                <div class="p-card" onclick="location.href='/partner/{{ p.id }}/risk'">
+                    <div class="p-card-header">
+                        <div>
+                            <div class="p-card-name">{{ p.name }}</div>
+                            <div class="p-card-sub">
+                                <span class="status-dot {{ 'active' if p.status == 'active' else 'inactive' }}"></span>
+                                {{ p.country }} · 入驻 {{ p.onboard_date }}
+                            </div>
+                        </div>
+                        <span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' }}">{{ p.product_type }}</span>
+                    </div>
+                    <div class="p-card-body">
+                        <div class="p-kpi-grid">
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">当前余额</div>
+                                <div class="p-kpi-value">{{ p.latest.current_balance_fmt }}</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">M0 占比</div>
+                                <div class="p-kpi-value {{ p.latest.m0_class }}">{{ p.latest.m0_ratio_fmt }}</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">逾期 1+ 率</div>
+                                <div class="p-kpi-value {{ p.latest.od1_class }}">{{ p.latest.od1_fmt }}</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">累计放款</div>
+                                <div class="p-kpi-value">{{ p.latest.cum_disb_fmt }}</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">活跃借款人</div>
+                                <div class="p-kpi-value">{{ p.latest.active_borrowers }}</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">月放贷规模</div>
+                                <div class="p-kpi-value">{{ p.monthly_volume_fmt }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-card-footer">
+                        <span>数据日期：{{ p.latest.stat_date }}</span>
+                        <span class="enter">进入风控面板 <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Revenue Panel -->
+        <div class="tab-panel" id="panel-revenue"></div>
+    </div>
+
+    <script>
+        const partnersRevenue = {{ partners_revenue | tojson }};
+
+        function switchMainTab(tab) {
+            document.querySelectorAll('.main-tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'risk' ? 0 : 1)));
+            document.getElementById('panel-risk').classList.toggle('active', tab === 'risk');
+            document.getElementById('panel-revenue').classList.toggle('active', tab === 'revenue');
+            if (tab === 'revenue' && !document.getElementById('panel-revenue').dataset.loaded) {
+                renderRevenue();
+                document.getElementById('panel-revenue').dataset.loaded = '1';
+            }
+        }
+
+        function fmtK(n) {
+            if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+            return '$' + n.toLocaleString();
+        }
+
+        function renderRevenue() {
+            const el = document.getElementById('panel-revenue');
+            el.innerHTML = '<div class="partner-cards">' + partnersRevenue.map(p => {
+                const d = p.revenue_data;
+                if (!d || d.length === 0) return '';
+                const latest = d[d.length - 1];
+                const prev = d.length > 1 ? d[d.length - 2] : latest;
+                const totalRevenue = d.reduce((s, r) => s + r.net_revenue, 0);
+
+                const balDelta = latest.outstanding_balance - prev.outstanding_balance;
+                const balUp = balDelta >= 0;
+                const revDelta = latest.net_revenue - prev.net_revenue;
+                const revUp = revDelta >= 0;
+
+                const maxBal = Math.max(...d.map(r => r.outstanding_balance));
+                const svgW = 300, svgH = 48, pad = 2;
+                const xStep = d.length > 1 ? (svgW - pad * 2) / (d.length - 1) : 0;
+                const pts = d.map((r, i) => [pad + i * xStep, svgH - pad - (r.outstanding_balance / maxBal) * (svgH - pad * 2)]);
+                const polyline = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+                let area = `M ${pts[0][0].toFixed(1)},${svgH - pad}`;
+                pts.forEach(([x, y]) => area += ` L ${x.toFixed(1)},${y.toFixed(1)}`);
+                area += ` L ${pts[pts.length-1][0].toFixed(1)},${svgH - pad} Z`;
+
+                return `
+                <div class="rv-card" onclick="location.href='/partner/${p.id}/revenue'">
+                    <div class="rv-card-header">
+                        <div>
+                            <div class="p-card-name">${p.name}</div>
+                            <div class="p-card-sub">
+                                <span class="status-dot active"></span>
+                                ${p.country} · ${p.product_type}
+                            </div>
+                        </div>
+                        <span class="tag ${p.product_type === 'PL' ? 'tag-pl' : 'tag-mca'}">${p.product_type}</span>
+                    </div>
+                    <div class="rv-card-body">
+                        <div class="p-kpi-grid">
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">在贷余额</div>
+                                <div class="p-kpi-value">${fmtK(latest.outstanding_balance)}</div>
+                                <div class="rv-delta ${balUp ? 'up' : 'down'}">${balUp ? '↑' : '↓'} ${fmtK(Math.abs(balDelta))}</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">年化收益率</div>
+                                <div class="p-kpi-value good">${(latest.avg_yield_annualized * 100).toFixed(1)}%</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">回收率</div>
+                                <div class="p-kpi-value good">${(latest.collection_rate * 100).toFixed(1)}%</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">累计放款</div>
+                                <div class="p-kpi-value">${fmtK(latest.cumulative_disbursement)}</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">当月净收益</div>
+                                <div class="p-kpi-value good">${fmtK(latest.net_revenue)}</div>
+                                <div class="rv-delta ${revUp ? 'up' : 'down'}">${revUp ? '↑' : '↓'} ${fmtK(Math.abs(revDelta))}</div>
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">累计净收益</div>
+                                <div class="p-kpi-value good">${fmtK(totalRevenue)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rv-spark">
+                        <svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none">
+                            <path class="sp-area" d="${area}" fill="var(--green)"/>
+                            <polyline class="sp-path" points="${polyline}" stroke="var(--green)"/>
+                        </svg>
+                        <div class="rv-spark-legend">
+                            <span>${d[0].month}</span>
+                            <span style="font-size:0.58rem;color:var(--text-muted)">在贷余额趋势</span>
+                            <span>${latest.month}</span>
+                        </div>
+                    </div>
+                    <div class="rv-card-footer">
+                        <span>数据截至 ${latest.month} · 运营 ${d.length} 个月</span>
+                        <span class="enter">查看详情 <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
+                    </div>
+                </div>`;
+            }).join('') + '</div>';
+        }
+    </script>
+</body>
+</html>

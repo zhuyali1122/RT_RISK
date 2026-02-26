@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | 风控数据查询</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --teal: #4DB6AC; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: var(--light-pink); color: var(--dark-blue); }
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover { background: rgba(255,255,255,0.1); }
+
+        .page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+        .page-header h1 { font-size: 1.35rem; font-weight: 700; }
+
+        .query-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+        .query-tab { padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--white); color: var(--text-muted); transition: all 0.15s; }
+        .query-tab:hover { color: var(--dark-blue); background: rgba(255,241,238,0.6); }
+        .query-tab.active { background: var(--dark-blue); color: var(--white); border-color: var(--dark-blue); }
+
+        .query-form { background: var(--white); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border: 1px solid var(--border); }
+        .query-form.hidden { display: none; }
+        .form-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .form-row label { font-size: 0.8rem; font-weight: 600; min-width: 80px; }
+        .form-row input { padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+        .form-row input[type="text"] { min-width: 220px; }
+        .form-row input[type="date"] { min-width: 180px; }
+        .btn-query { padding: 10px 24px; background: var(--dark-blue); color: var(--white); border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .btn-query:hover { background: #2d3a5a; }
+        .btn-query:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--teal); display: inline-block; }
+        .section-block { background: var(--white); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border: 1px solid var(--border); }
+        .section-block:last-child { margin-bottom: 0; }
+        .loan-block { border-left: 4px solid var(--teal); }
+        .sub-section { margin-top: 20px; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        .data-table th { background: #F8FAFC; font-weight: 600; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .data-table tr:hover { background: rgba(255,241,238,0.4); }
+        .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .data-table .empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+        .status-paid { color: var(--green); font-weight: 600; }
+        .status-pending { color: var(--text-muted); }
+
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+        .status-item { padding: 14px 16px; background: #F8FAFC; border-radius: 8px; border-left: 4px solid var(--dark-blue); }
+        .status-item .label { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
+        .status-item .value { font-size: 1rem; font-weight: 600; }
+
+        .db-status { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; }
+        .db-status.ok { background: #D1FAE5; color: var(--green); }
+        .db-status.fail { background: #FEE2E2; color: var(--red); max-width: 360px; }
+        .db-status.checking { color: var(--text-muted); }
+        .db-status .hint { display: block; font-size: 0.72rem; margin-top: 4px; opacity: 0.9; }
+
+        .error-msg { padding: 16px; background: #FEE2E2; color: var(--red); border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; }
+        .loading { padding: 24px; text-align: center; color: var(--text-muted); }
+        .summary-row { display: flex; gap: 24px; margin-bottom: 16px; font-size: 0.9rem; }
+        .summary-row strong { color: var(--dark-blue); }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/alert/panel">告警面板</a>
+                <a href="/risk/query" class="active">数据查询</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <a href="/dashboard" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回
+                </a>
+                <h1 style="margin-top:12px;">风控数据查询</h1>
+            </div>
+            <div id="db-status" class="db-status">检查中...</div>
+        </div>
+
+        <div class="query-tabs">
+            <div class="query-tab active" data-mode="loan">单个 Loan 查询</div>
+            <div class="query-tab" data-mode="disbursements">按日新增放款查询</div>
+        </div>
+
+        <!-- 模式1: 单个 Loan -->
+        <div class="query-form" id="form-loan">
+            <div class="form-row">
+                <label>Loan ID</label>
+                <input type="text" id="loan-id" placeholder="请输入 Loan ID">
+                <button class="btn-query" id="btn-query-loan">查询</button>
+            </div>
+        </div>
+
+        <!-- 模式2: 按日放款 -->
+        <div class="query-form hidden" id="form-disbursements">
+            <div class="form-row">
+                <label>查询日期</label>
+                <input type="date" id="query-date">
+                <button class="btn-query" id="btn-query-disbursements">查询</button>
+            </div>
+        </div>
+
+        <!-- 结果区域 -->
+        <div id="result-area"></div>
+    </div>
+
+    <script>
+        const user = {{ user | tojson }};
+
+        (function checkDbStatus() {
+            const el = document.getElementById('db-status');
+            if (!el) return;
+            fetch('/api/db/status')
+                .then(r => r.json())
+                .then(data => {
+                    el.classList.remove('checking');
+                    if (data.ok) {
+                        el.className = 'db-status ok';
+                        el.textContent = '✓ 数据库已连接';
+                    } else {
+                        el.className = 'db-status fail';
+                        el.innerHTML = '✗ 数据库未连接：' + (data.message || '').slice(0, 80) +
+                            (data.hint ? '<span class="hint">' + data.hint + '</span>' : '');
+                    }
+                })
+                .catch(() => {
+                    el.classList.remove('checking');
+                    el.className = 'db-status fail';
+                    el.textContent = '✗ 无法获取连接状态';
+                });
+        })();
+
+        const tabs = document.querySelectorAll('.query-tab');
+        const formLoan = document.getElementById('form-loan');
+        const formDisb = document.getElementById('form-disbursements');
+        const resultArea = document.getElementById('result-area');
+
+        tabs.forEach(t => {
+            t.addEventListener('click', () => {
+                tabs.forEach(x => x.classList.remove('active'));
+                t.classList.add('active');
+                const mode = t.dataset.mode;
+                formLoan.classList.toggle('hidden', mode !== 'loan');
+                formDisb.classList.toggle('hidden', mode !== 'disbursements');
+                resultArea.innerHTML = '';
+            });
+        });
+
+        function setDefaultDate() {
+            const d = new Date();
+            document.getElementById('query-date').value = d.toISOString().slice(0, 10);
+        }
+        setDefaultDate();
+
+        function fmtNum(n) {
+            if (n == null || n === '' || isNaN(n)) return '-';
+            const x = typeof n === 'number' ? n : parseFloat(n);
+            return '$' + x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        function fmtDate(v) {
+            if (!v) return '-';
+            const s = String(v);
+            return s.indexOf('T') >= 0 ? s.slice(0, 10) : s;
+        }
+        const REPAYMENT_TYPE_MAP = { 1: '按期', 2: '提前结清', 3: '展期结清', 4: '部分还清', 5: '逾期还款' };
+        function fmtRepaymentType(v) {
+            if (v == null || v === '') return '-';
+            const n = typeof v === 'number' ? v : parseInt(v, 10);
+            return REPAYMENT_TYPE_MAP[n] || String(v);
+        }
+
+        function renderLoanResult(data) {
+            if (data.error) {
+                return `<div class="error-msg">${data.error}</div>`;
+            }
+            let html = '';
+            const statusLabels = {
+                loan_id: 'Loan ID',
+                disbursement_time: '放款时间',
+                disbursement_amount: '放款金额',
+                term_months: '期限(月)',
+                loan_maturity_date: '到期日',
+                customer_id: '客户ID',
+                contract_no: '合同号',
+                spv_id: 'SPV'
+            };
+
+            // 合同号汇总
+            html += '<div class="section-block"><div class="section-title">合同信息</div>';
+            html += '<div class="status-grid"><div class="status-item"><div class="label">合同号</div><div class="value">' + (data.contract_no || '-') + '</div></div>';
+            html += '<div class="status-item"><div class="label">同合同 Loan 数</div><div class="value">' + (data.loans ? data.loans.length : 0) + '</div></div></div>';
+            html += '</div>';
+
+            // 按放款时间依次展示每个 Loan
+            (data.loans || []).forEach((loan, idx) => {
+                const st = loan.status || {};
+                html += '<div class="section-block loan-block">';
+                html += '<div class="section-title">Loan ' + (idx + 1) + '：' + (st.loan_id || '-') + '（放款：' + fmtDate(st.disbursement_time) + '）</div>';
+                html += '<div class="status-grid" style="margin-bottom:16px">';
+                for (const [k, v] of Object.entries(st)) {
+                    if (k === 'contract_no') continue;
+                    const label = statusLabels[k] || k;
+                    let val = v == null ? '-' : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+                    if (k === 'disbursement_amount' && v != null) val = fmtNum(v);
+                    if ((k === 'disbursement_time' || k === 'loan_maturity_date') && v) val = fmtDate(v);
+                    html += `<div class="status-item"><div class="label">${label}</div><div class="value">${val}</div></div>`;
+                }
+                html += '</div>';
+
+                const paidTerms = new Set((loan.records || []).filter(r => r.repayment_term > 0).map(r => r.repayment_term));
+                const scheduleCount = (loan.schedule || []).length;
+                html += '<div class="sub-section"><div class="section-title" style="font-size:0.82rem">还款计划' + (scheduleCount > 0 ? '（共 ' + scheduleCount + ' 期）' : '') + '</div>';
+                if (loan.schedule && loan.schedule.length > 0) {
+                    html += '<table class="data-table"><thead><tr>';
+                    html += '<th>期次</th><th>还款日期</th><th class="num">应还本金</th><th class="num">应还利息</th><th class="num">应还总额</th><th>状态</th>';
+                    html += '</tr></thead><tbody>';
+                    loan.schedule.forEach(row => {
+                        const term = row.period_no;
+                        const status = paidTerms.has(term) ? '已还' : '待还';
+                        html += '<tr>';
+                        html += `<td>${term ?? '-'}</td>`;
+                        html += `<td>${fmtDate(row.due_date)}</td>`;
+                        html += `<td class="num">${fmtNum(row.principal_due)}</td>`;
+                        html += `<td class="num">${fmtNum(row.interest_due)}</td>`;
+                        html += `<td class="num">${fmtNum(row.total_due)}</td>`;
+                        html += `<td class="status-${status === '已还' ? 'paid' : 'pending'}">${status}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                } else {
+                    html += '<p class="empty">暂无还款计划</p>';
+                }
+                html += '</div>';
+
+                html += '<div class="sub-section"><div class="section-title" style="font-size:0.82rem">还款信息</div>';
+                if (loan.records && loan.records.length > 0) {
+                    html += '<table class="data-table"><thead><tr>';
+                    html += '<th>还款类型</th><th>还款日期</th><th class="num">期次</th><th class="num">还款金额</th><th class="num">还款本金</th><th class="num">还款利息</th><th class="num">还款罚息</th><th class="num">展期费</th><th class="num">Waive</th><th>交易ID</th><th>是否结清</th>';
+                    html += '</tr></thead><tbody>';
+                    loan.records.forEach(row => {
+                        const isSettled = row.is_settled;
+                        const settledText = isSettled === true || isSettled === 1 || isSettled === '1' ? '是' : (isSettled === false || isSettled === 0 || isSettled === '0' ? '否' : (row.is_settled != null ? String(row.is_settled) : '-'));
+                        html += '<tr>';
+                        html += `<td>${fmtRepaymentType(row.repayment_type)}</td>`;
+                        html += `<td>${fmtDate(row.repayment_date)}</td>`;
+                        html += `<td class="num">${row.repayment_term != null && row.repayment_term > 0 ? row.repayment_term : '-'}</td>`;
+                        html += `<td class="num">${fmtNum(row.total_repayment)}</td>`;
+                        html += `<td class="num">${fmtNum(row.principal_repayment)}</td>`;
+                        html += `<td class="num">${fmtNum(row.interest_repayment)}</td>`;
+                        html += `<td class="num">${fmtNum(row.penalty_repayment)}</td>`;
+                        html += `<td class="num">${fmtNum(row.extension_fee)}</td>`;
+                        html += `<td class="num">${fmtNum(row.waiver_amount)}</td>`;
+                        html += `<td>${row.repayment_txn_id != null && row.repayment_txn_id !== '' ? row.repayment_txn_id : '-'}</td>`;
+                        html += `<td>${settledText}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                } else {
+                    html += '<p class="empty">暂无还款记录</p>';
+                }
+                html += '</div>';
+                html += '</div>';
+            });
+
+            return html;
+        }
+
+        function renderDisbursementsResult(data) {
+            if (data.error) {
+                return `<div class="error-msg">${data.error}</div>`;
+            }
+            let html = '<div class="section-block">';
+            html += '<div class="section-title">当日新增放款</div>';
+            html += '<div class="summary-row"><strong>共 ' + data.total_count + ' 笔</strong>';
+            if (data.total_amount > 0) {
+                html += '<span>合计金额: ' + data.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 }) + '</span>';
+            }
+            html += '</div>';
+
+            if (data.disbursements && data.disbursements.length > 0) {
+                const cols = Object.keys(data.disbursements[0]);
+                html += '<table class="data-table"><thead><tr>';
+                cols.forEach(c => { html += `<th>${c}</th>`; });
+                html += '</tr></thead><tbody>';
+                data.disbursements.forEach(row => {
+                    html += '<tr>';
+                    cols.forEach(c => {
+                        const v = row[c];
+                        const val = v == null ? '-' : (typeof v === 'number' ? v.toLocaleString() : String(v));
+                        html += `<td class="${typeof v === 'number' ? 'num' : ''}">${val}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+            } else {
+                html += '<p class="empty">暂无放款记录</p>';
+            }
+            html += '</div>';
+            return html;
+        }
+
+        document.getElementById('btn-query-loan').addEventListener('click', async () => {
+            const loanId = document.getElementById('loan-id').value.trim();
+            if (!loanId) {
+                resultArea.innerHTML = '<div class="error-msg">请输入 Loan ID</div>';
+                return;
+            }
+            resultArea.innerHTML = '<div class="loading">查询中...</div>';
+            try {
+                const res = await fetch('/api/risk/query/loan/' + encodeURIComponent(loanId));
+                let data;
+                try {
+                    data = await res.json();
+                } catch (_) {
+                    resultArea.innerHTML = '<div class="error-msg">请先 <a href="/login">登录</a> 后再查询</div>';
+                    return;
+                }
+                if (res.status === 401) {
+                    resultArea.innerHTML = '<div class="error-msg">' + (data.error || '请先登录') + '，<a href="/login">前往登录</a></div>';
+                    return;
+                }
+                resultArea.innerHTML = renderLoanResult(data);
+            } catch (e) {
+                resultArea.innerHTML = '<div class="error-msg">请求失败: ' + e.message + '</div>';
+            }
+        });
+
+        document.getElementById('btn-query-disbursements').addEventListener('click', async () => {
+            const date = document.getElementById('query-date').value;
+            if (!date) {
+                resultArea.innerHTML = '<div class="error-msg">请选择查询日期</div>';
+                return;
+            }
+            resultArea.innerHTML = '<div class="loading">查询中...</div>';
+            try {
+                const res = await fetch('/api/risk/query/disbursements', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date })
+                });
+                let data;
+                try {
+                    data = await res.json();
+                } catch (_) {
+                    resultArea.innerHTML = '<div class="error-msg">请先 <a href="/login">登录</a> 后再查询</div>';
+                    return;
+                }
+                if (res.status === 401) {
+                    resultArea.innerHTML = '<div class="error-msg">' + (data.error || '请先登录') + '，<a href="/login">前往登录</a></div>';
+                    return;
+                }
+                resultArea.innerHTML = renderDisbursementsResult(data);
+            } catch (e) {
+                resultArea.innerHTML = '<div class="error-msg">请求失败: ' + e.message + '</div>';
+            }
+        });
+    </script>
+</body>
+</html>

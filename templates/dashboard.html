@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | Dashboard</title>
+    <style>
+        :root {
+            --light-pink: #FFF1EE;
+            --dark-blue: #3B4A6A;
+            --white: #FFFFFF;
+            --text-muted: #8A95A5;
+            --border: #E2E8F0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: var(--light-pink); }
+        .top-bar {
+            background: var(--dark-blue);
+            color: var(--white);
+            padding: 0 32px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar .user-info {
+            display: flex; align-items: center; gap: 16px; font-size: 0.85rem;
+        }
+        .role-badge {
+            padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;
+        }
+        .role-admin { background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .role-project_manager { background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .role-investor { background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .role-risk { background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-logout {
+            padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px;
+            color: var(--white); background: none; cursor: pointer; font-size: 0.8rem;
+            text-decoration: none;
+        }
+        .btn-logout:hover { background: rgba(255,255,255,0.1); }
+        .main { max-width: 1200px; margin: 32px auto; padding: 0 24px; }
+        .welcome {
+            background: var(--dark-blue);
+            color: var(--white); padding: 32px; border-radius: 12px; margin-bottom: 24px;
+        }
+        .welcome h1 { font-size: 1.4rem; margin-bottom: 8px; }
+        .welcome p { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
+        .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .card {
+            background: var(--white); border-radius: 10px; padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--border);
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(59,74,106,0.12);
+            transform: translateY(-2px);
+        }
+        .card h3 { font-size: 0.9rem; color: var(--dark-blue); margin-bottom: 8px; }
+        .card p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; }
+        .card-icon { font-size: 1.6rem; margin-bottom: 12px; }
+        .card.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .card.disabled:hover {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transform: none;
+        }
+        .card.disabled::after {
+            content: '即将上线'; font-size: 0.7rem; color: #B0B8C4;
+            display: block; margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo">CHUAN</div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge role-{{ user.role }}">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-logout">退出登录</a>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="welcome">
+            <h1>你好，{{ user.display_name }}</h1>
+            <p>角色：{{ user.role_label }} · {{ user.email }}</p>
+        </div>
+
+        <div class="cards" id="modules">
+        </div>
+    </div>
+
+    <script>
+        const user = {{ user | tojson }};
+
+        const allModules = [
+            { icon: '👥', title: '用户管理', desc: '管理系统用户与角色权限', perm: 'manage_users', href: '#' },
+            { icon: '🔧', title: '系统设置', desc: '系统参数与全局配置', perm: 'manage_system', href: '#' },
+            { icon: '📋', title: '操作日志', desc: '查看所有操作记录', perm: 'view_logs', href: '#' },
+            { icon: '🛡️', title: '风控面板', desc: '风险指标监控与预警', perm: 'manage_risk', href: '#' },
+            { icon: '✅', title: '交易审批', desc: '审批待处理交易请求', perm: 'approve_transactions', href: '/transaction/review' },
+            { icon: '🏢', title: '资产商准入', desc: '审核与管理资产商准入', perm: 'manage_partner_admission', href: '#' },
+            { icon: '📄', title: '报告中心', desc: '月报、季报与年报下载', perm: 'view_reports', href: '#' },
+            { icon: '📊', title: '投资组合', desc: '查看资产配置与持仓详情', perm: 'view_portfolio', href: '/portfolio' },
+            { icon: '📈', title: '净值走势', desc: '基金净值与收益率分析', perm: 'view_nav', href: '#' },
+            { icon: '📝', title: '资产商申请', desc: '提交新资产商合作申请', perm: 'apply_partner', href: '/partner/apply' },
+            { icon: '💰', title: '交易申请', desc: '提交新交易与放款申请', perm: 'apply_transactions', href: '/transaction/apply' },
+            { icon: '🏦', title: '资产商管理', desc: '管理已合作资产商信息', perm: 'manage_partners', href: '/partner/manage' },
+            { icon: '🚨', title: '告警面板', desc: '对账预警与风控告警汇总', perm: 'alert_panel', href: '/alert/panel' },
+            { icon: '🔍', title: '数据查询', desc: '多维度数据检索与导出', perm: 'data_query', href: '/risk/query' },
+        ];
+
+        const modules = allModules.filter(m => user.permissions.includes(m.perm));
+
+        const container = document.getElementById('modules');
+        modules.forEach(m => {
+            const ready = m.href !== '#';
+            const clickAttr = ready ? `onclick="location.href='${m.href}'"` : '';
+            container.innerHTML += `
+                <div class="card ${ready ? '' : 'disabled'}" ${clickAttr}>
+                    <div class="card-icon">${m.icon}</div>
+                    <h3>${m.title}</h3>
+                    <p>${m.desc}</p>
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>

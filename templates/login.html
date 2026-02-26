@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | 登录</title>
+    <style>
+        :root {
+            --light-pink: #FFF1EE;
+            --dark-blue: #3B4A6A;
+            --white: #FFFFFF;
+            --text-muted: #8A95A5;
+            --border: #E2E8F0;
+            --error: #D8434F;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background: var(--dark-blue);
+            overflow: hidden;
+        }
+
+        /* ===== 左侧品牌面板（浅粉底） ===== */
+        .brand-panel {
+            flex: 1;
+            background: var(--light-pink);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px 56px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle at top right, rgba(59,74,106,0.03) 0%, transparent 60%);
+        }
+
+        .brand-panel::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle at bottom left, rgba(59,74,106,0.02) 0%, transparent 60%);
+        }
+
+        .brand-top {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-identity {
+            display: flex;
+            align-items: flex-end;
+            gap: 14px;
+            margin-bottom: 8px;
+        }
+
+        .brand-logo {
+            width: 88px;
+            height: auto;
+        }
+
+        .brand-name-group {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .brand-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark-blue);
+            letter-spacing: 3px;
+            line-height: 1.2;
+        }
+
+        .brand-title-sub {
+            font-size: 0.75rem;
+            color: rgba(59,74,106,0.5);
+            letter-spacing: 0.5px;
+            margin-top: 3px;
+        }
+
+        .brand-center {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-headline {
+            font-size: 1.55rem;
+            font-weight: 300;
+            color: var(--dark-blue);
+            line-height: 1.55;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-headline strong {
+            font-weight: 600;
+        }
+
+        .brand-tagline {
+            font-size: 0.82rem;
+            color: rgba(59,74,106,0.55);
+            line-height: 1.7;
+            margin-bottom: 40px;
+            max-width: 360px;
+        }
+
+        .brand-separator {
+            width: 32px;
+            height: 2px;
+            background: rgba(59,74,106,0.2);
+            margin-bottom: 32px;
+        }
+
+        .brand-features {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(59,74,106,0.07);
+            border: 1px solid rgba(59,74,106,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--dark-blue);
+            opacity: 0.6;
+        }
+
+        .feature-text {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding-top: 2px;
+        }
+
+        .feature-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--dark-blue);
+            letter-spacing: 0.3px;
+        }
+
+        .feature-desc {
+            font-size: 0.72rem;
+            color: rgba(59,74,106,0.45);
+            line-height: 1.5;
+        }
+
+        .brand-bottom {
+            position: relative;
+            z-index: 1;
+            border-top: 1px solid rgba(59,74,106,0.1);
+            padding-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .brand-footer-info {
+            font-size: 0.68rem;
+            color: rgba(59,74,106,0.4);
+            line-height: 1.6;
+        }
+
+        .brand-footer-links {
+            display: flex;
+            gap: 16px;
+            font-size: 0.68rem;
+        }
+
+        .brand-footer-links a {
+            color: rgba(59,74,106,0.45);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .brand-footer-links a:hover {
+            color: var(--dark-blue);
+        }
+
+        /* ===== 右侧登录面板（深蓝底） ===== */
+        .login-panel {
+            width: 480px;
+            background: var(--dark-blue);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 48px;
+            position: relative;
+        }
+
+        .login-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(255,241,238,0.03) 0%, transparent 40%, rgba(255,241,238,0.02) 100%);
+            pointer-events: none;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 360px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-header {
+            margin-bottom: 40px;
+        }
+
+        .login-header h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--white);
+            background: rgba(255,255,255,0.06);
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: rgba(255,241,238,0.4);
+            background: rgba(255,255,255,0.1);
+            box-shadow: 0 0 0 3px rgba(255,241,238,0.08);
+        }
+
+        .form-input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        .form-input-wrap {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            fill: rgba(255,255,255,0.25);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .toggle-password svg {
+            width: 18px;
+            height: 18px;
+            fill: rgba(255,255,255,0.25);
+        }
+
+        .toggle-password:hover svg {
+            fill: rgba(255,255,255,0.6);
+        }
+
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.45);
+            cursor: pointer;
+        }
+
+        .remember-me input {
+            accent-color: var(--light-pink);
+        }
+
+        .forgot-link {
+            font-size: 0.8rem;
+            color: rgba(255,241,238,0.6);
+            text-decoration: none;
+        }
+
+        .forgot-link:hover {
+            color: var(--light-pink);
+            text-decoration: underline;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--light-pink);
+            color: var(--dark-blue);
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 1px;
+        }
+
+        .btn-login:hover {
+            background: #FFE4DE;
+            box-shadow: 0 4px 16px rgba(255,241,238,0.25);
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            display: none;
+            background: rgba(216,67,79,0.12);
+            border: 1px solid rgba(216,67,79,0.3);
+            color: #FF9AA2;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 28px 0;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.75rem;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .role-hint {
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.4);
+            line-height: 1.6;
+        }
+
+        .role-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin: 2px;
+        }
+
+        .role-investor { background: rgba(255,241,238,0.1); color: rgba(255,241,238,0.7); border: 1px solid rgba(255,241,238,0.15); }
+        .role-admin { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.1); }
+        .role-manager { background: rgba(255,241,238,0.1); color: rgba(255,241,238,0.7); border: 1px solid rgba(255,241,238,0.15); }
+
+        .footer-text {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.2);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 960px) {
+            .brand-panel { display: none; }
+            .login-panel { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 左侧品牌区（浅粉背景） -->
+    <div class="brand-panel">
+        <div class="brand-top">
+            <div class="brand-identity">
+                <img src="/static/chuan-logo.webp" alt="CHUAN" class="brand-logo"
+                     onerror="this.style.display='none'">
+                <div class="brand-name-group">
+                    <div class="brand-title">CHUAN</div>
+                    <div class="brand-title-sub">Alliance CHUAN Group</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="brand-center">
+            <div class="brand-headline">
+                数字化<strong>另类信贷</strong>的<br>链上投资网络
+            </div>
+            <div class="brand-tagline">
+                连接全球数字科技平台与资本市场，以 AI 风控和区块链技术驱动信贷资产的生成、管理与证券化流通。
+            </div>
+            <div class="brand-separator"></div>
+            <div class="brand-features">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-title">AI 智能风控</span>
+                        <span class="feature-desc">自动授信决策与动态风险监控引擎</span>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-title">结构化信贷资产</span>
+                        <span class="feature-desc">PL 与 MCA 产品的全球配置与证券化</span>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+                    </div>
+                    <div class="feature-text">
+                        <span class="feature-title">链上透明结算</span>
+                        <span class="feature-desc">资金日日回收，资产笔笔上链可追溯</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="brand-bottom">
+            <div class="brand-footer-info">
+                Alliance CHUAN Group (BVI) Limited<br>
+                Hong Kong · BVI
+            </div>
+            <div class="brand-footer-links">
+                <a href="https://www.chuanx.xyz" target="_blank">chuanx.xyz</a>
+                <a href="mailto:contact@alliancechuan.com">contact@alliancechuan.com</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧登录区（深蓝背景） -->
+    <div class="login-panel">
+        <div class="login-container">
+            <div class="login-header">
+                <h2>欢迎登录</h2>
+                <p>请输入您的账户信息以继续</p>
+            </div>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">用户名 Username</label>
+                    <div class="form-input-wrap">
+                        <input type="text" class="form-input" id="username"
+                               placeholder="请输入用户名" autocomplete="username" required>
+                        <svg class="input-icon" viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">密码 Password</label>
+                    <div class="form-input-wrap">
+                        <input type="password" class="form-input" id="password"
+                               placeholder="请输入密码" autocomplete="current-password" required>
+                        <button type="button" class="toggle-password" onclick="togglePassword()">
+                            <svg id="eyeIcon" viewBox="0 0 24 24">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input type="checkbox" id="remember"> 记住我
+                    </label>
+                    <a href="#" class="forgot-link">忘记密码？</a>
+                </div>
+
+                <button type="submit" class="btn-login" id="btnLogin">登 录</button>
+            </form>
+
+            <div class="divider">系统角色</div>
+
+            <div class="role-hint">
+                <span class="role-tag role-investor">投资者 Investor</span>
+                <span class="role-tag role-admin">管理员 Admin</span>
+                <span class="role-tag role-manager">基金经理 Fund Manager</span>
+            </div>
+
+            <div class="footer-text">
+                © 2024 Alliance CHUAN Group. All Rights Reserved.<br>
+                仅供授权用户访问 · For Authorized Users Only
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const pwd = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                icon.innerHTML = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
+            } else {
+                pwd.type = 'password';
+                icon.innerHTML = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            const errEl = document.getElementById('errorMsg');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            errEl.classList.remove('show');
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    window.location.href = data.redirect || '/dashboard';
+                } else {
+                    errEl.textContent = data.message || '用户名或密码错误';
+                    errEl.classList.add('show');
+                }
+            } catch (err) {
+                errEl.textContent = '网络错误，请稍后重试';
+                errEl.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '登 录';
+            }
+        }
+    </script>
+</body>
+</html>

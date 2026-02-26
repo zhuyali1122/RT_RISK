@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | 投资组合</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --light-pink: #FFF1EE;
+            --dark-blue: #3B4A6A;
+            --white: #FFFFFF;
+            --text-muted: #8A95A5;
+            --border: #E2E8F0;
+            --green: #2E7D6E;
+            --red: #D8434F;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: var(--light-pink); color: var(--dark-blue); }
+
+        /* Top bar */
+        .top-bar {
+            background: var(--dark-blue);
+            color: var(--white);
+            padding: 0 32px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a {
+            color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem;
+            padding: 6px 14px; border-radius: 6px; transition: all 0.15s;
+        }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover { background: rgba(255,255,255,0.1); }
+
+        /* Layout */
+        .page { max-width: 1280px; margin: 0 auto; padding: 28px 24px 48px; }
+
+        /* Page header */
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+        .page-header h1 { font-size: 1.35rem; font-weight: 700; }
+        .page-header .meta { font-size: 0.78rem; color: var(--text-muted); text-align: right; line-height: 1.6; }
+        .btn-back {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.8rem; color: var(--dark-blue); text-decoration: none;
+            padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--white); transition: all 0.15s; white-space: nowrap;
+        }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+
+        /* KPI row */
+        .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 24px; }
+        .kpi-row-2 { grid-template-columns: repeat(3, 1fr); }
+        .kpi {
+            background: var(--white); border-radius: 10px; padding: 20px;
+            border: 1px solid var(--border);
+        }
+        .kpi-label { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px; }
+        .kpi-value { font-size: 1.3rem; font-weight: 700; }
+        .kpi-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+        .kpi-value.positive { color: var(--green); }
+        .kpi-value.negative { color: var(--red); }
+
+        /* Section */
+        .section { margin-bottom: 24px; }
+        .section-title {
+            font-size: 0.88rem; font-weight: 700; margin-bottom: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section-title::before {
+            content: ''; width: 3px; height: 16px; background: var(--dark-blue); border-radius: 2px;
+        }
+
+        /* Grid layout */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+        /* Card */
+        .card {
+            background: var(--white); border-radius: 10px; padding: 24px;
+            border: 1px solid var(--border);
+        }
+        .card-title { font-size: 0.82rem; font-weight: 600; margin-bottom: 16px; color: var(--dark-blue); }
+
+        /* Chart area (donut) */
+        .chart-container { display: flex; align-items: center; gap: 24px; }
+        .donut-wrap { position: relative; flex-shrink: 0; }
+        .donut-center {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            text-align: center;
+        }
+        .donut-center .val { font-size: 1rem; font-weight: 700; color: var(--dark-blue); }
+        .donut-center .lbl { font-size: 0.65rem; color: var(--text-muted); }
+        .legend { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .legend-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; }
+        .legend-left { display: flex; align-items: center; gap: 8px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+        .legend-pct { font-weight: 600; min-width: 40px; text-align: right; }
+        .legend-val { color: var(--text-muted); font-size: 0.72rem; min-width: 80px; text-align: right; }
+
+        /* Bar chart */
+        .bar-chart { display: flex; flex-direction: column; gap: 6px; }
+        .bar-row { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; }
+        .bar-label { min-width: 60px; text-align: right; color: var(--text-muted); font-size: 0.72rem; }
+        .bar-track { flex: 1; height: 22px; background: var(--light-pink); border-radius: 4px; overflow: hidden; position: relative; }
+        .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 0.68rem; color: var(--white); font-weight: 600; min-width: 36px; }
+        .bar-val { min-width: 55px; text-align: right; font-weight: 600; font-size: 0.75rem; }
+
+        /* Table */
+        .tbl-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th {
+            text-align: left; padding: 10px 12px; font-weight: 600; font-size: 0.72rem;
+            color: var(--text-muted); border-bottom: 2px solid var(--border); text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        td { padding: 12px 12px; border-bottom: 1px solid #F0F2F5; }
+        tr:hover td { background: rgba(255,241,238,0.3); }
+        .text-right { text-align: right; }
+        .tag {
+            display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 600;
+        }
+        .tag-pl { background: rgba(59,74,106,0.08); color: var(--dark-blue); }
+        .tag-mca { background: rgba(46,125,110,0.1); color: var(--green); }
+        .tag-mixed { background: rgba(138,149,165,0.12); color: var(--text-muted); }
+
+        /* Risk gauge row */
+        .risk-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; }
+        .risk-cell {
+            text-align: center; padding: 14px 8px;
+            border-right: 1px solid var(--border);
+        }
+        .risk-cell:last-child { border-right: none; }
+        .risk-label { font-size: 0.68rem; color: var(--text-muted); margin-bottom: 6px; }
+        .risk-value { font-size: 1.1rem; font-weight: 700; }
+        .risk-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .risk-bar-fill { height: 100%; border-radius: 2px; }
+
+        @media (max-width: 1024px) {
+            .kpi-row { grid-template-columns: repeat(3, 1fr); }
+            .grid-2 { grid-template-columns: 1fr; }
+            .grid-3 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .kpi-row { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Page tabs */
+        .page-tabs { display: flex; gap: 4px; margin-left: 20px; }
+        .page-tab {
+            padding: 6px 16px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--white); color: var(--text-muted); font-size: 0.82rem;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .page-tab:hover { color: var(--dark-blue); background: #F8FAFC; }
+        .page-tab.active { background: var(--dark-blue); color: var(--white); border-color: var(--dark-blue); }
+
+        /* Producer expansion */
+        .drill-hint { font-size: 0.7rem; color: var(--text-muted); font-weight: normal; }
+        .world-map { width: 100%; height: 420px; min-height: 360px; }
+        .world-map-compact { width: 100%; height: 280px; min-height: 240px; }
+        .chart-compact .donut-wrap canvas { width: 140px; height: 140px; }
+        .region-map { display: flex; flex-wrap: wrap; gap: 10px; }
+        .region-chip {
+            padding: 10px 16px; border-radius: 8px; background: var(--light-pink);
+            border: 1px solid var(--border); cursor: pointer; font-size: 0.82rem;
+            transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        }
+        .region-chip:hover { background: rgba(59,74,106,0.08); border-color: var(--dark-blue); }
+        .region-chip .count { font-weight: 700; color: var(--dark-blue); font-size: 0.9rem; }
+        .dim-bars { display: flex; flex-direction: column; gap: 8px; }
+        .dim-bar { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; }
+        .dim-bar .label { min-width: 80px; color: var(--text-muted); }
+        .dim-bar .bar { flex: 1; height: 20px; background: var(--light-pink); border-radius: 4px; overflow: hidden; }
+        .dim-bar .bar-fill { height: 100%; border-radius: 4px; }
+        .dim-bar .val { min-width: 36px; font-weight: 600; text-align: right; }
+        .btn-sm-reset { padding: 4px 10px; font-size: 0.72rem; border-radius: 4px; border: 1px solid var(--border); background: var(--white); cursor: pointer; color: var(--text-muted); }
+        .btn-sm-reset:hover { color: var(--dark-blue); }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/portfolio" class="active">投资组合</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <a href="/dashboard" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回概览
+                </a>
+                <h1>投资组合</h1>
+                <div class="page-tabs">
+                    <button class="page-tab active" data-tab="portfolio">投资组合</button>
+                    <button class="page-tab" data-tab="producers">生产商拓展列表</button>
+                </div>
+            </div>
+            <div class="meta" id="metaInfo"></div>
+        </div>
+
+        <!-- Tab: 投资组合 -->
+        <div id="tabPortfolio" class="tab-content">
+        <!-- KPIs -->
+        <div class="kpi-row" id="kpiRow"></div>
+
+        <!-- 第二排：累积指标 -->
+        <div class="kpi-row kpi-row-2" id="cumulativeRow"></div>
+
+        <!-- Allocation Charts -->
+        <div class="section">
+            <div class="section-title">资产配置</div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">按产品类型</div>
+                    <div class="chart-container">
+                        <div class="donut-wrap">
+                            <canvas id="donutProduct" width="150" height="150"></canvas>
+                            <div class="donut-center">
+                                <div class="val" id="donutProductCenter"></div>
+                                <div class="lbl">总 AUM</div>
+                            </div>
+                        </div>
+                        <div class="legend" id="legendProduct"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">按投放区域</div>
+                    <div class="chart-container">
+                        <div class="donut-wrap">
+                            <canvas id="donutRegion" width="150" height="150"></canvas>
+                            <div class="donut-center">
+                                <div class="val" id="donutRegionCenter"></div>
+                                <div class="lbl">区域分布</div>
+                            </div>
+                        </div>
+                        <div class="legend" id="legendRegion"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Returns -->
+        <div class="section">
+            <div class="section-title">月度收益率</div>
+            <div class="card">
+                <div class="bar-chart" id="monthlyChart"></div>
+            </div>
+        </div>
+
+        <!-- Platform Holdings -->
+        <div class="section">
+            <div class="section-title">平台持仓明细</div>
+            <div class="card">
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>平台名称</th>
+                                <th>产品类型</th>
+                                <th>区域</th>
+                                <th class="text-right">持仓金额 (USD)</th>
+                                <th class="text-right">占比</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdingsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk / DPD -->
+        <div class="section">
+            <div class="section-title">资产质量分布</div>
+            <div class="card">
+                <div class="risk-row" id="riskRow"></div>
+            </div>
+        </div>
+        </div><!-- /tabPortfolio -->
+
+        <!-- Tab: 生产商拓展列表 -->
+        <div id="tabProducers" class="tab-content" style="display:none;">
+            <div class="section">
+                <div class="section-title">数据概览</div>
+                <div class="kpi-row kpi-row-2" id="producerKpis"></div>
+            </div>
+            <div class="section">
+                <div class="section-title">行业与地域分布</div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">行业分布（Top 3）<span class="drill-hint">（点击下钻）</span></div>
+                        <div class="chart-container chart-compact">
+                            <div class="donut-wrap">
+                                <canvas id="donutIndustry" width="140" height="140"></canvas>
+                                <div class="donut-center">
+                                    <div class="val" id="donutIndustryCenter">-</div>
+                                    <div class="lbl">行业</div>
+                                </div>
+                            </div>
+                            <div class="legend" id="legendIndustry"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">地域分布（约 10 国）<span class="drill-hint">（点击国家下钻）</span></div>
+                        <div id="worldMap" class="world-map-compact"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">其他维度</div>
+                <div class="grid-3">
+                    <div class="card">
+                        <div class="card-title">项目成熟程度</div>
+                        <div class="dim-bars" id="dimMaturity"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">场景</div>
+                        <div class="dim-bars" id="dimScenario"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">类型</div>
+                        <div class="dim-bars" id="dimType"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">明细列表 <span id="detailFilterLabel"></span> <button id="btnResetFilter" class="btn-sm-reset" style="display:none;margin-left:8px">重置筛选</button></div>
+                <div class="card">
+                    <div class="tbl-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>名称</th>
+                                    <th>地域</th>
+                                    <th>地区</th>
+                                    <th>行业</th>
+                                    <th>成熟度</th>
+                                    <th>场景</th>
+                                    <th>类型</th>
+                                </tr>
+                            </thead>
+                            <tbody id="producerDetailBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /tabProducers -->
+    </div>
+
+    <script>
+        const data = {{ portfolio | tojson }};
+        const fund = data.fund;
+
+        /* ---- helpers ---- */
+        function fmtUSD(n) {
+            if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+            return '$' + n.toLocaleString();
+        }
+        function fmtPct(n) { return (n * 100).toFixed(2) + '%'; }
+
+        /* ---- Meta ---- */
+        document.getElementById('metaInfo').innerHTML =
+            `${fund.name}<br>净值日期：${fund.nav_date}`;
+
+        /* ---- KPIs ---- */
+        const kpis = [
+            { label: '基金净值 (NAV/Unit)', value: fund.nav_per_unit.toFixed(4), sub: '成立日：' + fund.inception_date },
+            { label: '资产管理规模 (AUM)', value: fmtUSD(fund.total_aum), sub: fund.currency },
+            { label: '本年累计回报 (YTD)', value: fmtPct(fund.ytd_return), cls: 'positive', sub: '2025 YTD' },
+            { label: '年化收益率', value: fmtPct(fund.annualized_return), cls: 'positive', sub: 'Since Inception' },
+            { label: '夏普比率', value: fund.sharpe_ratio.toFixed(2), sub: '风险调整收益' },
+            { label: '加权平均久期', value: fund.weighted_duration_days + ' 天', sub: '组合加权' },
+        ];
+        const kpiRow = document.getElementById('kpiRow');
+        kpis.forEach(k => {
+            kpiRow.innerHTML += `<div class="kpi">
+                <div class="kpi-label">${k.label}</div>
+                <div class="kpi-value ${k.cls||''}">${k.value}</div>
+                <div class="kpi-sub">${k.sub}</div>
+            </div>`;
+        });
+
+        /* ---- 第二排：累积放款总额、累积借款总量、累积借款人数 ---- */
+        const cumDisb = fund.cumulative_disbursement ?? 0;
+        const cumLoans = fund.cumulative_loan_count ?? 0;
+        const cumBorrowers = fund.cumulative_borrower_count ?? 0;
+        const cumKpis = [
+            { label: '累积放款总额', value: fmtUSD(cumDisb), sub: fund.currency || 'USD' },
+            { label: '累积借款总量', value: cumLoans.toLocaleString() + ' 笔', sub: '历史放款笔数' },
+            { label: '累积借款人数', value: cumBorrowers.toLocaleString() + ' 人', sub: '当前在贷人数' },
+        ];
+        const cumRow = document.getElementById('cumulativeRow');
+        cumKpis.forEach(k => {
+            cumRow.innerHTML += `<div class="kpi">
+                <div class="kpi-label">${k.label}</div>
+                <div class="kpi-value">${k.value}</div>
+                <div class="kpi-sub">${k.sub}</div>
+            </div>`;
+        });
+
+        /* ---- Donut chart ---- */
+        const COLORS = ['#3B4A6A','#2E7D6E','#C9A96E','#7B8BA5','#D4816B'];
+
+        function drawDonut(canvasId, items, centerText) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const size = 150;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            ctx.scale(dpr, dpr);
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
+
+            const cx = size / 2, cy = size / 2, r = 60, lineW = 18;
+            let startAngle = -Math.PI / 2;
+
+            items.forEach((item, i) => {
+                const sweep = item.pct * 2 * Math.PI;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
+                ctx.lineWidth = lineW;
+                ctx.strokeStyle = COLORS[i % COLORS.length];
+                ctx.lineCap = 'butt';
+                ctx.stroke();
+                startAngle += sweep;
+            });
+
+            document.getElementById(canvasId.replace('donut','donut') + 'Center')
+                .textContent = centerText;
+        }
+
+        function buildLegend(containerId, items) {
+            const el = document.getElementById(containerId);
+            items.forEach((item, i) => {
+                el.innerHTML += `<div class="legend-item">
+                    <div class="legend-left">
+                        <div class="legend-dot" style="background:${COLORS[i % COLORS.length]}"></div>
+                        <span>${item.name}</span>
+                    </div>
+                    <span class="legend-pct">${fmtPct(item.pct)}</span>
+                    <span class="legend-val">${fmtUSD(item.value)}</span>
+                </div>`;
+            });
+        }
+
+        drawDonut('donutProduct', data.allocation_by_product, fmtUSD(fund.total_aum));
+        buildLegend('legendProduct', data.allocation_by_product);
+
+        drawDonut('donutRegion', data.allocation_by_region, data.allocation_by_region.length + ' 区域');
+        buildLegend('legendRegion', data.allocation_by_region);
+
+        /* ---- Monthly Returns Bar Chart ---- */
+        const monthlyEl = document.getElementById('monthlyChart');
+        const maxReturn = Math.max(...data.monthly_returns.map(m => m.return));
+        data.monthly_returns.forEach(m => {
+            const pct = (m.return / maxReturn * 100).toFixed(0);
+            const label = m.month.slice(2).replace('-','/');
+            const color = m.return >= 0.009 ? 'var(--green)' : 'var(--dark-blue)';
+            monthlyEl.innerHTML += `<div class="bar-row">
+                <div class="bar-label">${label}</div>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:${pct}%;background:${color}">${fmtPct(m.return)}</div>
+                </div>
+                <div class="bar-val">${fmtPct(m.return)}</div>
+            </div>`;
+        });
+
+        /* ---- Holdings Table ---- */
+        const tbody = document.getElementById('holdingsBody');
+        data.allocation_by_platform.forEach(p => {
+            const tagCls = p.type === 'PL' ? 'tag-pl' : p.type === 'MCA' ? 'tag-mca' : 'tag-mixed';
+            tbody.innerHTML += `<tr>
+                <td><strong>${p.name}</strong></td>
+                <td><span class="tag ${tagCls}">${p.type}</span></td>
+                <td>${p.region}</td>
+                <td class="text-right">${'$' + p.value.toLocaleString()}</td>
+                <td class="text-right">${fmtPct(p.pct)}</td>
+            </tr>`;
+        });
+
+        /* ---- Risk / DPD ---- */
+        const risk = data.risk_metrics;
+        const dpd = [
+            { label: '正常 (Current)', value: risk.current_dpd_0, color: 'var(--green)' },
+            { label: 'DPD 1-30', value: risk.current_dpd_1_30, color: '#C9A96E' },
+            { label: 'DPD 31-60', value: risk.current_dpd_31_60, color: '#D4816B' },
+            { label: 'DPD 61-90', value: risk.current_dpd_61_90, color: '#D8434F' },
+            { label: 'DPD 90+', value: risk.current_dpd_90_plus, color: '#8B2F3A' },
+        ];
+        const riskEl = document.getElementById('riskRow');
+        dpd.forEach(d => {
+            riskEl.innerHTML += `<div class="risk-cell">
+                <div class="risk-label">${d.label}</div>
+                <div class="risk-value" style="color:${d.color}">${fmtPct(d.value)}</div>
+                <div class="risk-bar">
+                    <div class="risk-bar-fill" style="width:${(d.value*100).toFixed(1)}%;background:${d.color}"></div>
+                </div>
+            </div>`;
+        });
+
+        /* ========== Tab 切换 ========== */
+        document.querySelectorAll('.page-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.page-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = btn.dataset.tab;
+                document.getElementById('tabPortfolio').style.display = tab === 'portfolio' ? 'block' : 'none';
+                document.getElementById('tabProducers').style.display = tab === 'producers' ? 'block' : 'none';
+                if (tab === 'producers' && !window._producerDataLoaded) loadProducerData();
+            });
+        });
+
+        /* ========== 生产商拓展列表 ========== */
+        let producerData = null;
+        let drillStack = []; // [{dim, key, items}]
+
+        async function loadProducerData() {
+            const kpis = document.getElementById('producerKpis');
+            kpis.innerHTML = '<div class="kpi"><div class="kpi-label">加载中</div><div class="kpi-value">...</div></div>';
+            try {
+                const res = await fetch('/api/producers/data');
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                producerData = data;
+                window._producerDataLoaded = true;
+                renderProducerTab(data);
+                document.getElementById('btnResetFilter')?.addEventListener('click', () => {
+                    drillStack = [];
+                    if (producerData) renderDetailTable(producerData.records || []);
+                    document.getElementById('detailFilterLabel').textContent = '';
+                    document.getElementById('btnResetFilter').style.display = 'none';
+                });
+            } catch (e) {
+                kpis.innerHTML = `<div class="kpi"><div class="kpi-label">错误</div><div class="kpi-value negative">${e.message}</div></div>`;
+            }
+        }
+
+        function renderProducerTab(data) {
+            const agg = data.aggregation || {};
+            const total = data.total || 0;
+
+            // KPIs
+            const kpiEl = document.getElementById('producerKpis');
+            kpiEl.innerHTML = `
+                <div class="kpi"><div class="kpi-label">总数量</div><div class="kpi-value">${total}</div><div class="kpi-sub">生产商</div></div>
+                <div class="kpi"><div class="kpi-label">地域数</div><div class="kpi-value">${Object.keys(agg.by_region||{}).length}</div><div class="kpi-sub">地区</div></div>
+                <div class="kpi"><div class="kpi-label">行业数</div><div class="kpi-value">${Object.keys(agg.by_industry||{}).length}</div><div class="kpi-sub">行业</div></div>
+            `;
+
+            // 行业饼图（仅 Top 3）
+            const byIndustry = agg.by_industry || {};
+            const industryAll = Object.entries(byIndustry).map(([k,v]) => ({name:k, value:v.count, pct:v.count/total, items:v.items})).sort((a,b)=>b.value-a.value);
+            const industryItems = industryAll.slice(0, 3);
+            const industryRest = industryAll.slice(3).reduce((acc, x) => ({ count: acc.count + x.value, items: acc.items.concat(x.items) }), { count: 0, items: [] });
+            if (industryRest.count > 0) industryItems.push({ name: '其他', value: industryRest.count, pct: industryRest.count/total, items: industryRest.items });
+            const industryTotal = industryItems.reduce((s, x) => s + x.value, 0);
+            industryItems.forEach(x => { x.pct = x.value / industryTotal; });
+            renderIndustryDonut(industryItems, total);
+
+            // 世界地图（按国家，约 Top 10）
+            const byCountry = agg.by_country || {};
+            const countryAll = Object.entries(byCountry).map(([name, v]) => ({ name, value: v.count, items: v.items })).sort((a,b)=>b.value-a.value);
+            const mapData = countryAll.slice(0, 10);
+            renderWorldMap(mapData);
+
+            // 成熟度/场景/类型
+            renderDimBars('dimMaturity', agg.by_maturity || {}, total);
+            renderDimBars('dimScenario', agg.by_scenario || {}, total);
+            renderDimBars('dimType', agg.by_type || {}, total);
+
+            // 明细
+            renderDetailTable(data.records || []);
+            drillStack = [];
+        }
+
+        function renderIndustryDonut(items, total) {
+            const canvas = document.getElementById('donutIndustry');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const size = 140;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            ctx.scale(dpr, dpr);
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
+
+            const cx = size/2, cy = size/2, r = 52, lineW = 16;
+            let startAngle = -Math.PI/2;
+            const COLORS = ['#3B4A6A','#2E7D6E','#C9A96E','#7B8BA5','#D4816B','#5B6B8A'];
+
+            items.forEach((item, i) => {
+                const sweep = item.pct * 2 * Math.PI;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
+                ctx.lineWidth = lineW;
+                ctx.strokeStyle = COLORS[i % COLORS.length];
+                ctx.lineCap = 'butt';
+                ctx.stroke();
+                ctx.save();
+                const midAngle = startAngle + sweep/2;
+                const tx = cx + (r - lineW/2) * Math.cos(midAngle);
+                const ty = cy + (r - lineW/2) * Math.sin(midAngle);
+                ctx.translate(tx, ty);
+                ctx.rotate(midAngle + Math.PI/2);
+                ctx.font = '9px sans-serif';
+                ctx.fillStyle = '#333';
+                ctx.textAlign = 'center';
+                ctx.fillText(item.name.length > 4 ? item.name.slice(0,4)+'…' : item.name, 0, 4);
+                ctx.restore();
+                startAngle += sweep;
+            });
+
+            document.getElementById('donutIndustryCenter').textContent = total;
+            const legend = document.getElementById('legendIndustry');
+            legend.innerHTML = '';
+            items.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = 'legend-item';
+                div.style.cursor = 'pointer';
+                div.innerHTML = `
+                    <div class="legend-left">
+                        <div class="legend-dot" style="background:${COLORS[i%COLORS.length]}"></div>
+                        <span>${item.name}</span>
+                    </div>
+                    <span class="legend-pct">${(item.pct*100).toFixed(1)}%</span>
+                    <span class="legend-val">${item.value}</span>
+                `;
+                div.onclick = () => drillDown('industry', item.name, item.items);
+                legend.appendChild(div);
+            });
+
+            canvas.onclick = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left - size/2;
+                const y = e.clientY - rect.top - size/2;
+                const angle = Math.atan2(y, x) + Math.PI/2;
+                let a = angle < 0 ? angle + 2*Math.PI : angle;
+                let idx = 0;
+                for (let i = 0; i < items.length; i++) {
+                    const sweep = items[i].pct * 2 * Math.PI;
+                    if (a < sweep) { idx = i; break; }
+                    a -= sweep;
+                }
+                if (items[idx]) drillDown('industry', items[idx].name, items[idx].items);
+            };
+        }
+
+        let worldMapChart = null;
+        let worldMapData = [];
+
+        async function renderWorldMap(mapData) {
+            worldMapData = mapData;
+            const el = document.getElementById('worldMap');
+            if (!el) return;
+            if (worldMapChart) worldMapChart.dispose();
+            worldMapChart = echarts.init(el);
+
+            try {
+                const worldJson = await fetch('/static/geo/world.json').then(r => r.json());
+                echarts.registerMap('world', worldJson);
+            } catch (e) {
+                el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">地图加载失败，请检查网络</div>';
+                return;
+            }
+
+            const maxVal = Math.max(...mapData.map(d => d.value), 1);
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: p => {
+                        if (p.data && p.data.items) {
+                            const names = p.data.items.slice(0, 5).map(i => i.name).join('、');
+                            const more = p.data.items.length > 5 ? ' 等' + p.data.items.length + '家' : '';
+                            return `${p.name}<br/>${p.data.value} 家生产商<br/>${names}${more}`;
+                        }
+                        return p.name + ': ' + (p.value || 0);
+                    }
+                },
+                visualMap: {
+                    min: 0,
+                    max: maxVal,
+                    text: ['多', '少'],
+                    realtime: false,
+                    calculable: true,
+                    inRange: { color: ['#E8F4F0', '#2E7D6E'] },
+                    left: 20,
+                    bottom: 20,
+                },
+                geo: {
+                    map: 'world',
+                    roam: true,
+                    scaleLimit: { min: 0.5, max: 3 },
+                    itemStyle: {
+                        areaColor: '#F5F7FA',
+                        borderColor: '#E2E8F0',
+                        borderWidth: 1,
+                    },
+                    emphasis: {
+                        itemStyle: { areaColor: '#FFF1EE' },
+                        label: { show: false },
+                    },
+                },
+                series: [{
+                    name: '生产商',
+                    type: 'map',
+                    map: 'world',
+                    roam: true,
+                    data: mapData.map(d => ({ name: d.name, value: d.value, items: d.items })),
+                    itemStyle: {
+                        areaColor: '#F5F7FA',
+                        borderColor: '#E2E8F0',
+                    },
+                    emphasis: {
+                        itemStyle: { areaColor: '#C9E6DF' },
+                        label: { show: true, formatter: '{b}: {c}' },
+                    },
+                }],
+            };
+            worldMapChart.setOption(option);
+            worldMapChart.on('click', (params) => {
+                if (params.data && params.data.items) {
+                    drillDown('region', params.name, params.data.items);
+                } else {
+                    const found = mapData.find(d => d.name === params.name);
+                    if (found && found.items) drillDown('region', params.name, found.items);
+                }
+            });
+            window.addEventListener('resize', () => worldMapChart?.resize());
+        }
+
+        function renderDimBars(id, obj, total) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const entries = Object.entries(obj).sort((a,b)=>b[1].count-a[1].count);
+            const max = Math.max(...entries.map(e=>e[1].count), 1);
+            if (!window._dimItems) window._dimItems = {};
+            window._dimItems[id] = {};
+            entries.forEach(([k,v]) => { window._dimItems[id][k] = v.items; });
+            el.innerHTML = '';
+            entries.forEach(([k,v]) => {
+                const pct = (v.count/max*100).toFixed(0);
+                const div = document.createElement('div');
+                div.className = 'dim-bar';
+                div.style.cursor = 'pointer';
+                div.innerHTML = `<span class="label">${k}</span><div class="bar"><div class="bar-fill" style="width:${pct}%;background:var(--dark-blue)"></div></div><span class="val">${v.count}</span>`;
+                div.onclick = () => drillDown('dim', k, v.items);
+                el.appendChild(div);
+            });
+        }
+
+        function drillDown(dim, key, items) {
+            drillStack.push({ dim, key, items });
+            renderDetailTable(items);
+            document.getElementById('detailFilterLabel').textContent = `（筛选: ${key}，共 ${items.length} 条）`;
+            const btn = document.getElementById('btnResetFilter');
+            if (btn) btn.style.display = 'inline-block';
+        }
+
+        function renderDetailTable(items) {
+            const tbody = document.getElementById('producerDetailBody');
+            tbody.innerHTML = items.map(r => `
+                <tr>
+                    <td><strong>${r.name||'-'}</strong></td>
+                    <td>${r.region||'-'}</td>
+                    <td>${r.region_detail||'-'}</td>
+                    <td>${r.industry||'-'}</td>
+                    <td>${r.maturity||'-'}</td>
+                    <td>${r.scenario||'-'}</td>
+                    <td>${r.type||'-'}</td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

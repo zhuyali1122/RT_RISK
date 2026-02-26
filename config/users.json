@@ -1,0 +1,77 @@
+{
+  "roles": {
+    "admin": {
+      "label": "管理员",
+      "label_en": "Administrator",
+      "permissions": [
+        "manage_users",
+        "manage_system",
+        "view_logs",
+        "manage_risk",
+        "approve_transactions",
+        "manage_partner_admission",
+        "view_reports",
+        "view_portfolio",
+        "view_nav",
+        "alert_panel",
+        "data_query"
+      ]
+    },
+    "investor": {
+      "label": "投资者",
+      "label_en": "Investor",
+      "permissions": [
+        "view_portfolio",
+        "view_nav",
+        "view_reports"
+      ]
+    },
+    "project_manager": {
+      "label": "项目经理",
+      "label_en": "Project Manager",
+      "permissions": [
+        "apply_partner",
+        "manage_partners",
+        "apply_transactions"
+      ]
+    },
+    "risk": {
+      "label": "风控",
+      "label_en": "Risk Control",
+      "permissions": [
+        "alert_panel",
+        "data_query"
+      ]
+    }
+  },
+  "users": [
+    {
+      "username": "admin",
+      "password": "chuan2026",
+      "role": "admin",
+      "display_name": "系统管理员",
+      "email": "admin@alliancechuan.com"
+    },
+    {
+      "username": "investor",
+      "password": "chuan2026",
+      "role": "investor",
+      "display_name": "张三",
+      "email": "investor@alliancechuan.com"
+    },
+    {
+      "username": "pm",
+      "password": "chuan2026",
+      "role": "project_manager",
+      "display_name": "李四",
+      "email": "pm@alliancechuan.com"
+    },
+    {
+      "username": "risk",
+      "password": "chuan2026",
+      "role": "risk",
+      "display_name": "风控专员",
+      "email": "risk@alliancechuan.com"
+    }
+  ]
+}

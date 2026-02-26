@@ -1,0 +1,2649 @@
+{
+  "KP-ID-202509-001": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-10-05",
+        "principal_due": 354.17,
+        "interest_due": 6.38,
+        "total_due": 360.54,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2025-11-04",
+        "principal_due": 354.17,
+        "interest_due": 5.84,
+        "total_due": 360.01,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2025-12-04",
+        "principal_due": 354.17,
+        "interest_due": 5.31,
+        "total_due": 359.48,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-01-03",
+        "principal_due": 354.17,
+        "interest_due": 4.78,
+        "total_due": 358.95,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-02-02",
+        "principal_due": 354.17,
+        "interest_due": 4.25,
+        "total_due": 358.42,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-03-04",
+        "principal_due": 354.17,
+        "interest_due": 3.72,
+        "total_due": 357.89,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-04-03",
+        "principal_due": 354.17,
+        "interest_due": 3.19,
+        "total_due": 357.35,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-05-03",
+        "principal_due": 354.17,
+        "interest_due": 2.66,
+        "total_due": 356.82,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-06-02",
+        "principal_due": 354.17,
+        "interest_due": 2.12,
+        "total_due": 356.29,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-07-02",
+        "principal_due": 354.17,
+        "interest_due": 1.59,
+        "total_due": 355.76,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-08-01",
+        "principal_due": 354.17,
+        "interest_due": 1.06,
+        "total_due": 355.23,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-08-31",
+        "principal_due": 354.17,
+        "interest_due": 0.53,
+        "total_due": 354.7,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-10-07 00:00",
+        "period": 1,
+        "amount": 360.54,
+        "principal_paid": 354.17,
+        "interest_paid": 6.38,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2025-11-06 00:00",
+        "period": 2,
+        "amount": 360.01,
+        "principal_paid": 354.17,
+        "interest_paid": 5.84,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "零售",
+      "credit_rating": "A",
+      "region": "雅加达",
+      "education": "高中"
+    }
+  },
+  "KP-ID-202509-002": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-10-08",
+        "principal_due": 633.33,
+        "interest_due": 6.97,
+        "total_due": 640.3,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2025-11-07",
+        "principal_due": 633.33,
+        "interest_due": 5.81,
+        "total_due": 639.14,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2025-12-07",
+        "principal_due": 633.33,
+        "interest_due": 4.64,
+        "total_due": 637.98,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-01-06",
+        "principal_due": 633.33,
+        "interest_due": 3.48,
+        "total_due": 636.82,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-02-05",
+        "principal_due": 633.33,
+        "interest_due": 2.32,
+        "total_due": 635.66,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-03-07",
+        "principal_due": 633.33,
+        "interest_due": 1.16,
+        "total_due": 634.49,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-10-10 00:00",
+        "period": 1,
+        "amount": 640.3,
+        "principal_paid": 633.33,
+        "interest_paid": 6.97,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2025-11-09 00:00",
+        "period": 2,
+        "amount": 639.84,
+        "principal_paid": 633.33,
+        "interest_paid": 5.81,
+        "penalty_paid": 0.7,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "服务业",
+      "credit_rating": "B",
+      "region": "泗水",
+      "education": "大专"
+    }
+  },
+  "KP-ID-202509-003": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-10-12",
+        "principal_due": 425.0,
+        "interest_due": 6.8,
+        "total_due": 431.8,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2025-11-11",
+        "principal_due": 425.0,
+        "interest_due": 6.23,
+        "total_due": 431.23,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2025-12-11",
+        "principal_due": 425.0,
+        "interest_due": 5.67,
+        "total_due": 430.67,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-01-10",
+        "principal_due": 425.0,
+        "interest_due": 5.1,
+        "total_due": 430.1,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-02-09",
+        "principal_due": 425.0,
+        "interest_due": 4.53,
+        "total_due": 429.53,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-03-11",
+        "principal_due": 425.0,
+        "interest_due": 3.97,
+        "total_due": 428.97,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-04-10",
+        "principal_due": 425.0,
+        "interest_due": 3.4,
+        "total_due": 428.4,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-05-10",
+        "principal_due": 425.0,
+        "interest_due": 2.83,
+        "total_due": 427.83,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-06-09",
+        "principal_due": 425.0,
+        "interest_due": 2.27,
+        "total_due": 427.27,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-07-09",
+        "principal_due": 425.0,
+        "interest_due": 1.7,
+        "total_due": 426.7,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-08-08",
+        "principal_due": 425.0,
+        "interest_due": 1.13,
+        "total_due": 426.13,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-09-07",
+        "principal_due": 425.0,
+        "interest_due": 0.57,
+        "total_due": 425.57,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-10-14 00:00",
+        "period": 1,
+        "amount": 431.8,
+        "principal_paid": 425.0,
+        "interest_paid": 6.8,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2025-11-13 00:00",
+        "period": 2,
+        "amount": 431.23,
+        "principal_paid": 425.0,
+        "interest_paid": 6.23,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "制造业",
+      "credit_rating": "C",
+      "region": "万隆",
+      "education": "本科"
+    }
+  },
+  "KP-ID-202510-001": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-11-01",
+        "principal_due": 375.0,
+        "interest_due": 6.38,
+        "total_due": 381.38,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2025-12-01",
+        "principal_due": 375.0,
+        "interest_due": 5.84,
+        "total_due": 380.84,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2025-12-31",
+        "principal_due": 375.0,
+        "interest_due": 5.31,
+        "total_due": 380.31,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-01-30",
+        "principal_due": 375.0,
+        "interest_due": 4.78,
+        "total_due": 379.78,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-03-01",
+        "principal_due": 375.0,
+        "interest_due": 4.25,
+        "total_due": 379.25,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-03-31",
+        "principal_due": 375.0,
+        "interest_due": 3.72,
+        "total_due": 378.72,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-04-30",
+        "principal_due": 375.0,
+        "interest_due": 3.19,
+        "total_due": 378.19,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-05-30",
+        "principal_due": 375.0,
+        "interest_due": 2.66,
+        "total_due": 377.66,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-06-29",
+        "principal_due": 375.0,
+        "interest_due": 2.13,
+        "total_due": 377.12,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-07-29",
+        "principal_due": 375.0,
+        "interest_due": 1.59,
+        "total_due": 376.59,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-08-28",
+        "principal_due": 375.0,
+        "interest_due": 1.06,
+        "total_due": 376.06,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-09-27",
+        "principal_due": 375.0,
+        "interest_due": 0.53,
+        "total_due": 375.53,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-11-03 00:00",
+        "period": 1,
+        "amount": 381.38,
+        "principal_paid": 375.0,
+        "interest_paid": 6.38,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2025-12-03 00:00",
+        "period": 2,
+        "amount": 380.84,
+        "principal_paid": 375.0,
+        "interest_paid": 5.84,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "科技",
+      "credit_rating": "D",
+      "region": "墨西哥城",
+      "education": "硕士"
+    }
+  },
+  "KP-ID-202510-002": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-11-14",
+        "principal_due": 533.33,
+        "interest_due": 5.33,
+        "total_due": 538.67,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2025-12-14",
+        "principal_due": 533.33,
+        "interest_due": 4.44,
+        "total_due": 537.78,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-01-13",
+        "principal_due": 533.33,
+        "interest_due": 3.56,
+        "total_due": 536.89,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-02-12",
+        "principal_due": 533.33,
+        "interest_due": 2.67,
+        "total_due": 536.0,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-03-14",
+        "principal_due": 533.33,
+        "interest_due": 1.78,
+        "total_due": 535.11,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-04-13",
+        "principal_due": 533.33,
+        "interest_due": 0.89,
+        "total_due": 534.22,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-11-16 00:00",
+        "period": 1,
+        "amount": 538.67,
+        "principal_paid": 533.33,
+        "interest_paid": 5.33,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2025-12-16 00:00",
+        "period": 2,
+        "amount": 538.04,
+        "principal_paid": 533.33,
+        "interest_paid": 4.44,
+        "penalty_paid": 0.27,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "教育",
+      "credit_rating": "A",
+      "region": "蒙特雷",
+      "education": "高中"
+    }
+  },
+  "KP-ID-202511-001": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-12-01",
+        "principal_due": 433.33,
+        "interest_due": 7.8,
+        "total_due": 441.13,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2025-12-31",
+        "principal_due": 433.33,
+        "interest_due": 7.15,
+        "total_due": 440.48,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-01-30",
+        "principal_due": 433.33,
+        "interest_due": 6.5,
+        "total_due": 439.83,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-03-01",
+        "principal_due": 433.33,
+        "interest_due": 5.85,
+        "total_due": 439.18,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-03-31",
+        "principal_due": 433.33,
+        "interest_due": 5.2,
+        "total_due": 438.53,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-04-30",
+        "principal_due": 433.33,
+        "interest_due": 4.55,
+        "total_due": 437.88,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-05-30",
+        "principal_due": 433.33,
+        "interest_due": 3.9,
+        "total_due": 437.23,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-06-29",
+        "principal_due": 433.33,
+        "interest_due": 3.25,
+        "total_due": 436.58,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-07-29",
+        "principal_due": 433.33,
+        "interest_due": 2.6,
+        "total_due": 435.93,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-08-28",
+        "principal_due": 433.33,
+        "interest_due": 1.95,
+        "total_due": 435.28,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-09-27",
+        "principal_due": 433.33,
+        "interest_due": 1.3,
+        "total_due": 434.63,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-10-27",
+        "principal_due": 433.33,
+        "interest_due": 0.65,
+        "total_due": 433.98,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-12-03 00:00",
+        "period": 1,
+        "amount": 441.13,
+        "principal_paid": 433.33,
+        "interest_paid": 7.8,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-01-02 00:00",
+        "period": 2,
+        "amount": 440.48,
+        "principal_paid": 433.33,
+        "interest_paid": 7.15,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "医疗",
+      "credit_rating": "B",
+      "region": "瓜达拉哈拉",
+      "education": "大专"
+    }
+  },
+  "KP-ID-202511-002": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-12-18",
+        "principal_due": 683.33,
+        "interest_due": 7.18,
+        "total_due": 690.51,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-01-17",
+        "principal_due": 683.33,
+        "interest_due": 5.98,
+        "total_due": 689.31,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-02-16",
+        "principal_due": 683.33,
+        "interest_due": 4.78,
+        "total_due": 688.12,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-03-18",
+        "principal_due": 683.33,
+        "interest_due": 3.59,
+        "total_due": 686.92,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-04-17",
+        "principal_due": 683.33,
+        "interest_due": 2.39,
+        "total_due": 685.73,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-05-17",
+        "principal_due": 683.33,
+        "interest_due": 1.2,
+        "total_due": 684.53,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-12-20 00:00",
+        "period": 1,
+        "amount": 690.51,
+        "principal_paid": 683.33,
+        "interest_paid": 7.18,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-01-19 00:00",
+        "period": 2,
+        "amount": 689.31,
+        "principal_paid": 683.33,
+        "interest_paid": 5.98,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "零售",
+      "credit_rating": "C",
+      "region": "雅加达",
+      "education": "本科"
+    }
+  },
+  "KP-ID-202511-003": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-12-25",
+        "principal_due": 316.67,
+        "interest_due": 6.02,
+        "total_due": 322.68,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-01-24",
+        "principal_due": 316.67,
+        "interest_due": 5.52,
+        "total_due": 322.18,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-02-23",
+        "principal_due": 316.67,
+        "interest_due": 5.01,
+        "total_due": 321.68,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-03-25",
+        "principal_due": 316.67,
+        "interest_due": 4.51,
+        "total_due": 321.18,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-04-24",
+        "principal_due": 316.67,
+        "interest_due": 4.01,
+        "total_due": 320.68,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-05-24",
+        "principal_due": 316.67,
+        "interest_due": 3.51,
+        "total_due": 320.18,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-06-23",
+        "principal_due": 316.67,
+        "interest_due": 3.01,
+        "total_due": 319.68,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-07-23",
+        "principal_due": 316.67,
+        "interest_due": 2.51,
+        "total_due": 319.17,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-08-22",
+        "principal_due": 316.67,
+        "interest_due": 2.01,
+        "total_due": 318.67,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-09-21",
+        "principal_due": 316.67,
+        "interest_due": 1.5,
+        "total_due": 318.17,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-10-21",
+        "principal_due": 316.67,
+        "interest_due": 1.0,
+        "total_due": 317.67,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-11-20",
+        "principal_due": 316.67,
+        "interest_due": 0.5,
+        "total_due": 317.17,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-12-27 00:00",
+        "period": 1,
+        "amount": 322.68,
+        "principal_paid": 316.67,
+        "interest_paid": 6.02,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-01-26 00:00",
+        "period": 2,
+        "amount": 322.18,
+        "principal_paid": 316.67,
+        "interest_paid": 5.52,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "服务业",
+      "credit_rating": "D",
+      "region": "泗水",
+      "education": "硕士"
+    }
+  },
+  "KP-ID-202512-001": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-01-02",
+        "principal_due": 400.0,
+        "interest_due": 6.8,
+        "total_due": 406.8,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-02-01",
+        "principal_due": 400.0,
+        "interest_due": 6.23,
+        "total_due": 406.23,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-03-03",
+        "principal_due": 400.0,
+        "interest_due": 5.67,
+        "total_due": 405.67,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-04-02",
+        "principal_due": 400.0,
+        "interest_due": 5.1,
+        "total_due": 405.1,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-05-02",
+        "principal_due": 400.0,
+        "interest_due": 4.53,
+        "total_due": 404.53,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-06-01",
+        "principal_due": 400.0,
+        "interest_due": 3.97,
+        "total_due": 403.97,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-07-01",
+        "principal_due": 400.0,
+        "interest_due": 3.4,
+        "total_due": 403.4,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-07-31",
+        "principal_due": 400.0,
+        "interest_due": 2.83,
+        "total_due": 402.83,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-08-30",
+        "principal_due": 400.0,
+        "interest_due": 2.27,
+        "total_due": 402.27,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-09-29",
+        "principal_due": 400.0,
+        "interest_due": 1.7,
+        "total_due": 401.7,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-10-29",
+        "principal_due": 400.0,
+        "interest_due": 1.13,
+        "total_due": 401.13,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-11-28",
+        "principal_due": 400.0,
+        "interest_due": 0.57,
+        "total_due": 400.57,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-01-04 00:00",
+        "period": 1,
+        "amount": 406.8,
+        "principal_paid": 400.0,
+        "interest_paid": 6.8,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-02-03 00:00",
+        "period": 2,
+        "amount": 406.23,
+        "principal_paid": 400.0,
+        "interest_paid": 6.23,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "制造业",
+      "credit_rating": "A",
+      "region": "万隆",
+      "education": "高中"
+    }
+  },
+  "KP-ID-202512-002": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-01-19",
+        "principal_due": 600.0,
+        "interest_due": 6.6,
+        "total_due": 606.6,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-02-18",
+        "principal_due": 600.0,
+        "interest_due": 5.5,
+        "total_due": 605.5,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-03-20",
+        "principal_due": 600.0,
+        "interest_due": 4.4,
+        "total_due": 604.4,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-04-19",
+        "principal_due": 600.0,
+        "interest_due": 3.3,
+        "total_due": 603.3,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-05-19",
+        "principal_due": 600.0,
+        "interest_due": 2.2,
+        "total_due": 602.2,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-06-18",
+        "principal_due": 600.0,
+        "interest_due": 1.1,
+        "total_due": 601.1,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-01-21 00:00",
+        "period": 1,
+        "amount": 606.6,
+        "principal_paid": 600.0,
+        "interest_paid": 6.6,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-02-20 00:00",
+        "period": 2,
+        "amount": 605.9,
+        "principal_paid": 600.0,
+        "interest_paid": 5.5,
+        "penalty_paid": 0.4,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "科技",
+      "credit_rating": "B",
+      "region": "墨西哥城",
+      "education": "大专"
+    }
+  },
+  "KP-ID-202601-001": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-02-04",
+        "principal_due": 416.67,
+        "interest_due": 7.5,
+        "total_due": 424.17,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-03-06",
+        "principal_due": 416.67,
+        "interest_due": 6.87,
+        "total_due": 423.54,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-04-05",
+        "principal_due": 416.67,
+        "interest_due": 6.25,
+        "total_due": 422.92,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-05-05",
+        "principal_due": 416.67,
+        "interest_due": 5.62,
+        "total_due": 422.29,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-06-04",
+        "principal_due": 416.67,
+        "interest_due": 5.0,
+        "total_due": 421.67,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-07-04",
+        "principal_due": 416.67,
+        "interest_due": 4.37,
+        "total_due": 421.04,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-08-03",
+        "principal_due": 416.67,
+        "interest_due": 3.75,
+        "total_due": 420.42,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-09-02",
+        "principal_due": 416.67,
+        "interest_due": 3.12,
+        "total_due": 419.79,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-10-02",
+        "principal_due": 416.67,
+        "interest_due": 2.5,
+        "total_due": 419.17,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-11-01",
+        "principal_due": 416.67,
+        "interest_due": 1.88,
+        "total_due": 418.54,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-12-01",
+        "principal_due": 416.67,
+        "interest_due": 1.25,
+        "total_due": 417.92,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-12-31",
+        "principal_due": 416.67,
+        "interest_due": 0.62,
+        "total_due": 417.29,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-02-06 00:00",
+        "period": 1,
+        "amount": 424.17,
+        "principal_paid": 416.67,
+        "interest_paid": 7.5,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-03-08 00:00",
+        "period": 2,
+        "amount": 423.54,
+        "principal_paid": 416.67,
+        "interest_paid": 6.87,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "教育",
+      "credit_rating": "C",
+      "region": "蒙特雷",
+      "education": "本科"
+    }
+  },
+  "KP-ID-202601-002": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-02-14",
+        "principal_due": 700.0,
+        "interest_due": 7.0,
+        "total_due": 707.0,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-03-16",
+        "principal_due": 700.0,
+        "interest_due": 5.83,
+        "total_due": 705.83,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-04-15",
+        "principal_due": 700.0,
+        "interest_due": 4.67,
+        "total_due": 704.67,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-05-15",
+        "principal_due": 700.0,
+        "interest_due": 3.5,
+        "total_due": 703.5,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-06-14",
+        "principal_due": 700.0,
+        "interest_due": 2.33,
+        "total_due": 702.33,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-07-14",
+        "principal_due": 700.0,
+        "interest_due": 1.17,
+        "total_due": 701.17,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-02-16 00:00",
+        "period": 1,
+        "amount": 707.0,
+        "principal_paid": 700.0,
+        "interest_paid": 7.0,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-03-18 00:00",
+        "period": 2,
+        "amount": 705.83,
+        "principal_paid": 700.0,
+        "interest_paid": 5.83,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "医疗",
+      "credit_rating": "D",
+      "region": "瓜达拉哈拉",
+      "education": "硕士"
+    }
+  },
+  "KP-ID-202601-003": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-02-27",
+        "principal_due": 375.0,
+        "interest_due": 6.38,
+        "total_due": 381.38,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-03-29",
+        "principal_due": 375.0,
+        "interest_due": 5.84,
+        "total_due": 380.84,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-04-28",
+        "principal_due": 375.0,
+        "interest_due": 5.31,
+        "total_due": 380.31,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-05-28",
+        "principal_due": 375.0,
+        "interest_due": 4.78,
+        "total_due": 379.78,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-06-27",
+        "principal_due": 375.0,
+        "interest_due": 4.25,
+        "total_due": 379.25,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-07-27",
+        "principal_due": 375.0,
+        "interest_due": 3.72,
+        "total_due": 378.72,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-08-26",
+        "principal_due": 375.0,
+        "interest_due": 3.19,
+        "total_due": 378.19,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-09-25",
+        "principal_due": 375.0,
+        "interest_due": 2.66,
+        "total_due": 377.66,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-10-25",
+        "principal_due": 375.0,
+        "interest_due": 2.13,
+        "total_due": 377.12,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-11-24",
+        "principal_due": 375.0,
+        "interest_due": 1.59,
+        "total_due": 376.59,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-12-24",
+        "principal_due": 375.0,
+        "interest_due": 1.06,
+        "total_due": 376.06,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2027-01-23",
+        "principal_due": 375.0,
+        "interest_due": 0.53,
+        "total_due": 375.53,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-03-01 00:00",
+        "period": 1,
+        "amount": 381.38,
+        "principal_paid": 375.0,
+        "interest_paid": 6.38,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-03-31 00:00",
+        "period": 2,
+        "amount": 380.84,
+        "principal_paid": 375.0,
+        "interest_paid": 5.84,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "零售",
+      "credit_rating": "A",
+      "region": "雅加达",
+      "education": "高中"
+    }
+  },
+  "KP-ID-202602-001": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-03-05",
+        "principal_due": 400.0,
+        "interest_due": 7.2,
+        "total_due": 407.2,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-04-04",
+        "principal_due": 400.0,
+        "interest_due": 6.6,
+        "total_due": 406.6,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-05-04",
+        "principal_due": 400.0,
+        "interest_due": 6.0,
+        "total_due": 406.0,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-06-03",
+        "principal_due": 400.0,
+        "interest_due": 5.4,
+        "total_due": 405.4,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-07-03",
+        "principal_due": 400.0,
+        "interest_due": 4.8,
+        "total_due": 404.8,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-08-02",
+        "principal_due": 400.0,
+        "interest_due": 4.2,
+        "total_due": 404.2,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-09-01",
+        "principal_due": 400.0,
+        "interest_due": 3.6,
+        "total_due": 403.6,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-10-01",
+        "principal_due": 400.0,
+        "interest_due": 3.0,
+        "total_due": 403.0,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-10-31",
+        "principal_due": 400.0,
+        "interest_due": 2.4,
+        "total_due": 402.4,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-11-30",
+        "principal_due": 400.0,
+        "interest_due": 1.8,
+        "total_due": 401.8,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-12-30",
+        "principal_due": 400.0,
+        "interest_due": 1.2,
+        "total_due": 401.2,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2027-01-29",
+        "principal_due": 400.0,
+        "interest_due": 0.6,
+        "total_due": 400.6,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-03-07 00:00",
+        "period": 1,
+        "amount": 407.2,
+        "principal_paid": 400.0,
+        "interest_paid": 7.2,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-04-06 00:00",
+        "period": 2,
+        "amount": 406.6,
+        "principal_paid": 400.0,
+        "interest_paid": 6.6,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "服务业",
+      "credit_rating": "B",
+      "region": "泗水",
+      "education": "大专"
+    }
+  },
+  "KP-ID-202602-002": {
+    "partner_id": "partner_alpha",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-03-12",
+        "principal_due": 583.33,
+        "interest_due": 6.12,
+        "total_due": 589.46,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-04-11",
+        "principal_due": 583.33,
+        "interest_due": 5.1,
+        "total_due": 588.44,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-05-11",
+        "principal_due": 583.33,
+        "interest_due": 4.08,
+        "total_due": 587.42,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-06-10",
+        "principal_due": 583.33,
+        "interest_due": 3.06,
+        "total_due": 586.4,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-07-10",
+        "principal_due": 583.33,
+        "interest_due": 2.04,
+        "total_due": 585.38,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-08-09",
+        "principal_due": 583.33,
+        "interest_due": 1.02,
+        "total_due": 584.35,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-03-14 00:00",
+        "period": 1,
+        "amount": 589.46,
+        "principal_paid": 583.33,
+        "interest_paid": 6.12,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-04-13 00:00",
+        "period": 2,
+        "amount": 588.44,
+        "principal_paid": 583.33,
+        "interest_paid": 5.1,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "制造业",
+      "credit_rating": "C",
+      "region": "万隆",
+      "education": "本科"
+    }
+  },
+  "QC-MX-202510-001": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-11-04",
+        "principal_due": 433.33,
+        "interest_due": 9.53,
+        "total_due": 442.87,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2025-12-04",
+        "principal_due": 433.33,
+        "interest_due": 8.74,
+        "total_due": 442.07,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-01-03",
+        "principal_due": 433.33,
+        "interest_due": 7.94,
+        "total_due": 441.28,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-02-02",
+        "principal_due": 433.33,
+        "interest_due": 7.15,
+        "total_due": 440.48,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-03-04",
+        "principal_due": 433.33,
+        "interest_due": 6.36,
+        "total_due": 439.69,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-04-03",
+        "principal_due": 433.33,
+        "interest_due": 5.56,
+        "total_due": 438.89,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-05-03",
+        "principal_due": 433.33,
+        "interest_due": 4.77,
+        "total_due": 438.1,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-06-02",
+        "principal_due": 433.33,
+        "interest_due": 3.97,
+        "total_due": 437.31,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-07-02",
+        "principal_due": 433.33,
+        "interest_due": 3.18,
+        "total_due": 436.51,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-08-01",
+        "principal_due": 433.33,
+        "interest_due": 2.38,
+        "total_due": 435.72,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-08-31",
+        "principal_due": 433.33,
+        "interest_due": 1.59,
+        "total_due": 434.92,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-09-30",
+        "principal_due": 433.33,
+        "interest_due": 0.79,
+        "total_due": 434.13,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-11-06 00:00",
+        "period": 1,
+        "amount": 442.87,
+        "principal_paid": 433.33,
+        "interest_paid": 9.53,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2025-12-06 00:00",
+        "period": 2,
+        "amount": 442.07,
+        "principal_paid": 433.33,
+        "interest_paid": 8.74,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "科技",
+      "credit_rating": "D",
+      "region": "墨西哥城",
+      "education": "硕士"
+    }
+  },
+  "QC-MX-202510-002": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-11-17",
+        "principal_due": 683.33,
+        "interest_due": 8.54,
+        "total_due": 691.88,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2025-12-17",
+        "principal_due": 683.33,
+        "interest_due": 7.12,
+        "total_due": 690.45,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-01-16",
+        "principal_due": 683.33,
+        "interest_due": 5.69,
+        "total_due": 689.03,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-02-15",
+        "principal_due": 683.33,
+        "interest_due": 4.27,
+        "total_due": 687.6,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-03-17",
+        "principal_due": 683.33,
+        "interest_due": 2.85,
+        "total_due": 686.18,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-04-16",
+        "principal_due": 683.33,
+        "interest_due": 1.42,
+        "total_due": 684.76,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-11-19 00:00",
+        "period": 1,
+        "amount": 691.88,
+        "principal_paid": 683.33,
+        "interest_paid": 8.54,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2025-12-19 00:00",
+        "period": 2,
+        "amount": 690.45,
+        "principal_paid": 683.33,
+        "interest_paid": 7.12,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "教育",
+      "credit_rating": "A",
+      "region": "蒙特雷",
+      "education": "高中"
+    }
+  },
+  "QC-MX-202511-001": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-12-02",
+        "principal_due": 400.0,
+        "interest_due": 9.2,
+        "total_due": 409.2,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-01-01",
+        "principal_due": 400.0,
+        "interest_due": 8.43,
+        "total_due": 408.43,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-01-31",
+        "principal_due": 400.0,
+        "interest_due": 7.67,
+        "total_due": 407.67,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-03-02",
+        "principal_due": 400.0,
+        "interest_due": 6.9,
+        "total_due": 406.9,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-04-01",
+        "principal_due": 400.0,
+        "interest_due": 6.13,
+        "total_due": 406.13,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-05-01",
+        "principal_due": 400.0,
+        "interest_due": 5.37,
+        "total_due": 405.37,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-05-31",
+        "principal_due": 400.0,
+        "interest_due": 4.6,
+        "total_due": 404.6,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-06-30",
+        "principal_due": 400.0,
+        "interest_due": 3.83,
+        "total_due": 403.83,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-07-30",
+        "principal_due": 400.0,
+        "interest_due": 3.07,
+        "total_due": 403.07,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-08-29",
+        "principal_due": 400.0,
+        "interest_due": 2.3,
+        "total_due": 402.3,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-09-28",
+        "principal_due": 400.0,
+        "interest_due": 1.53,
+        "total_due": 401.53,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-10-28",
+        "principal_due": 400.0,
+        "interest_due": 0.77,
+        "total_due": 400.77,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-12-04 00:00",
+        "period": 1,
+        "amount": 409.2,
+        "principal_paid": 400.0,
+        "interest_paid": 9.2,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-01-03 00:00",
+        "period": 2,
+        "amount": 408.43,
+        "principal_paid": 400.0,
+        "interest_paid": 8.43,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "医疗",
+      "credit_rating": "B",
+      "region": "瓜达拉哈拉",
+      "education": "大专"
+    }
+  },
+  "QC-MX-202511-002": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-12-15",
+        "principal_due": 916.67,
+        "interest_due": 11.0,
+        "total_due": 927.67,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-01-14",
+        "principal_due": 916.67,
+        "interest_due": 9.17,
+        "total_due": 925.83,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-02-13",
+        "principal_due": 916.67,
+        "interest_due": 7.33,
+        "total_due": 924.0,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-03-15",
+        "principal_due": 916.67,
+        "interest_due": 5.5,
+        "total_due": 922.17,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-04-14",
+        "principal_due": 916.67,
+        "interest_due": 3.67,
+        "total_due": 920.33,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-05-14",
+        "principal_due": 916.67,
+        "interest_due": 1.83,
+        "total_due": 918.5,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2025-12-17 00:00",
+        "period": 1,
+        "amount": 927.67,
+        "principal_paid": 916.67,
+        "interest_paid": 11.0,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-01-16 00:00",
+        "period": 2,
+        "amount": 926.33,
+        "principal_paid": 916.67,
+        "interest_paid": 9.17,
+        "penalty_paid": 0.5,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "零售",
+      "credit_rating": "C",
+      "region": "雅加达",
+      "education": "本科"
+    }
+  },
+  "QC-MX-202512-001": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2025-12-31",
+        "principal_due": 375.0,
+        "interest_due": 8.25,
+        "total_due": 383.25,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-01-30",
+        "principal_due": 375.0,
+        "interest_due": 7.56,
+        "total_due": 382.56,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-03-01",
+        "principal_due": 375.0,
+        "interest_due": 6.88,
+        "total_due": 381.88,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-03-31",
+        "principal_due": 375.0,
+        "interest_due": 6.19,
+        "total_due": 381.19,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-04-30",
+        "principal_due": 375.0,
+        "interest_due": 5.5,
+        "total_due": 380.5,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-05-30",
+        "principal_due": 375.0,
+        "interest_due": 4.81,
+        "total_due": 379.81,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-06-29",
+        "principal_due": 375.0,
+        "interest_due": 4.12,
+        "total_due": 379.12,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-07-29",
+        "principal_due": 375.0,
+        "interest_due": 3.44,
+        "total_due": 378.44,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-08-28",
+        "principal_due": 375.0,
+        "interest_due": 2.75,
+        "total_due": 377.75,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-09-27",
+        "principal_due": 375.0,
+        "interest_due": 2.06,
+        "total_due": 377.06,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-10-27",
+        "principal_due": 375.0,
+        "interest_due": 1.38,
+        "total_due": 376.38,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-11-26",
+        "principal_due": 375.0,
+        "interest_due": 0.69,
+        "total_due": 375.69,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-01-02 00:00",
+        "period": 1,
+        "amount": 383.25,
+        "principal_paid": 375.0,
+        "interest_paid": 8.25,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-02-01 00:00",
+        "period": 2,
+        "amount": 382.56,
+        "principal_paid": 375.0,
+        "interest_paid": 7.56,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "服务业",
+      "credit_rating": "D",
+      "region": "泗水",
+      "education": "硕士"
+    }
+  },
+  "QC-MX-202512-002": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-01-19",
+        "principal_due": 633.33,
+        "interest_due": 8.23,
+        "total_due": 641.57,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-02-18",
+        "principal_due": 633.33,
+        "interest_due": 6.86,
+        "total_due": 640.19,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-03-20",
+        "principal_due": 633.33,
+        "interest_due": 5.49,
+        "total_due": 638.82,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-04-19",
+        "principal_due": 633.33,
+        "interest_due": 4.12,
+        "total_due": 637.45,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-05-19",
+        "principal_due": 633.33,
+        "interest_due": 2.74,
+        "total_due": 636.08,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-06-18",
+        "principal_due": 633.33,
+        "interest_due": 1.37,
+        "total_due": 634.71,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-01-21 00:00",
+        "period": 1,
+        "amount": 641.57,
+        "principal_paid": 633.33,
+        "interest_paid": 8.23,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-02-20 00:00",
+        "period": 2,
+        "amount": 640.49,
+        "principal_paid": 633.33,
+        "interest_paid": 6.86,
+        "penalty_paid": 0.3,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "制造业",
+      "credit_rating": "A",
+      "region": "万隆",
+      "education": "高中"
+    }
+  },
+  "QC-MX-202601-001": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-02-04",
+        "principal_due": 416.67,
+        "interest_due": 9.58,
+        "total_due": 426.25,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-03-06",
+        "principal_due": 416.67,
+        "interest_due": 8.78,
+        "total_due": 425.45,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-04-05",
+        "principal_due": 416.67,
+        "interest_due": 7.99,
+        "total_due": 424.65,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-05-05",
+        "principal_due": 416.67,
+        "interest_due": 7.19,
+        "total_due": 423.85,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-06-04",
+        "principal_due": 416.67,
+        "interest_due": 6.39,
+        "total_due": 423.06,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-07-04",
+        "principal_due": 416.67,
+        "interest_due": 5.59,
+        "total_due": 422.26,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-08-03",
+        "principal_due": 416.67,
+        "interest_due": 4.79,
+        "total_due": 421.46,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-09-02",
+        "principal_due": 416.67,
+        "interest_due": 3.99,
+        "total_due": 420.66,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-10-02",
+        "principal_due": 416.67,
+        "interest_due": 3.19,
+        "total_due": 419.86,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-11-01",
+        "principal_due": 416.67,
+        "interest_due": 2.4,
+        "total_due": 419.06,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-12-01",
+        "principal_due": 416.67,
+        "interest_due": 1.6,
+        "total_due": 418.26,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2026-12-31",
+        "principal_due": 416.67,
+        "interest_due": 0.8,
+        "total_due": 417.47,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-02-06 00:00",
+        "period": 1,
+        "amount": 426.25,
+        "principal_paid": 416.67,
+        "interest_paid": 9.58,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-03-08 00:00",
+        "period": 2,
+        "amount": 425.45,
+        "principal_paid": 416.67,
+        "interest_paid": 8.78,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "科技",
+      "credit_rating": "B",
+      "region": "墨西哥城",
+      "education": "大专"
+    }
+  },
+  "QC-MX-202601-002": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-02-17",
+        "principal_due": 700.0,
+        "interest_due": 8.4,
+        "total_due": 708.4,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-03-19",
+        "principal_due": 700.0,
+        "interest_due": 7.0,
+        "total_due": 707.0,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-04-18",
+        "principal_due": 700.0,
+        "interest_due": 5.6,
+        "total_due": 705.6,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-05-18",
+        "principal_due": 700.0,
+        "interest_due": 4.2,
+        "total_due": 704.2,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-06-17",
+        "principal_due": 700.0,
+        "interest_due": 2.8,
+        "total_due": 702.8,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-07-17",
+        "principal_due": 700.0,
+        "interest_due": 1.4,
+        "total_due": 701.4,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-02-19 00:00",
+        "period": 1,
+        "amount": 708.4,
+        "principal_paid": 700.0,
+        "interest_paid": 8.4,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-03-21 00:00",
+        "period": 2,
+        "amount": 707.0,
+        "principal_paid": 700.0,
+        "interest_paid": 7.0,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "教育",
+      "credit_rating": "C",
+      "region": "蒙特雷",
+      "education": "本科"
+    }
+  },
+  "QC-MX-202602-001": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-03-04",
+        "principal_due": 400.0,
+        "interest_due": 8.8,
+        "total_due": 408.8,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-04-03",
+        "principal_due": 400.0,
+        "interest_due": 8.07,
+        "total_due": 408.07,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-05-03",
+        "principal_due": 400.0,
+        "interest_due": 7.33,
+        "total_due": 407.33,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-06-02",
+        "principal_due": 400.0,
+        "interest_due": 6.6,
+        "total_due": 406.6,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-07-02",
+        "principal_due": 400.0,
+        "interest_due": 5.87,
+        "total_due": 405.87,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-08-01",
+        "principal_due": 400.0,
+        "interest_due": 5.13,
+        "total_due": 405.13,
+        "status": "pending"
+      },
+      {
+        "period": 7,
+        "due_date": "2026-08-31",
+        "principal_due": 400.0,
+        "interest_due": 4.4,
+        "total_due": 404.4,
+        "status": "pending"
+      },
+      {
+        "period": 8,
+        "due_date": "2026-09-30",
+        "principal_due": 400.0,
+        "interest_due": 3.67,
+        "total_due": 403.67,
+        "status": "pending"
+      },
+      {
+        "period": 9,
+        "due_date": "2026-10-30",
+        "principal_due": 400.0,
+        "interest_due": 2.93,
+        "total_due": 402.93,
+        "status": "pending"
+      },
+      {
+        "period": 10,
+        "due_date": "2026-11-29",
+        "principal_due": 400.0,
+        "interest_due": 2.2,
+        "total_due": 402.2,
+        "status": "pending"
+      },
+      {
+        "period": 11,
+        "due_date": "2026-12-29",
+        "principal_due": 400.0,
+        "interest_due": 1.47,
+        "total_due": 401.47,
+        "status": "pending"
+      },
+      {
+        "period": 12,
+        "due_date": "2027-01-28",
+        "principal_due": 400.0,
+        "interest_due": 0.73,
+        "total_due": 400.73,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-03-06 00:00",
+        "period": 1,
+        "amount": 408.8,
+        "principal_paid": 400.0,
+        "interest_paid": 8.8,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-04-05 00:00",
+        "period": 2,
+        "amount": 408.07,
+        "principal_paid": 400.0,
+        "interest_paid": 8.07,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "医疗",
+      "credit_rating": "D",
+      "region": "瓜达拉哈拉",
+      "education": "硕士"
+    }
+  },
+  "QC-MX-202602-002": {
+    "partner_id": "partner_beta",
+    "schedule": [
+      {
+        "period": 1,
+        "due_date": "2026-03-14",
+        "principal_due": 583.33,
+        "interest_due": 7.29,
+        "total_due": 590.62,
+        "status": "paid"
+      },
+      {
+        "period": 2,
+        "due_date": "2026-04-13",
+        "principal_due": 583.33,
+        "interest_due": 6.08,
+        "total_due": 589.41,
+        "status": "paid"
+      },
+      {
+        "period": 3,
+        "due_date": "2026-05-13",
+        "principal_due": 583.33,
+        "interest_due": 4.86,
+        "total_due": 588.19,
+        "status": "pending"
+      },
+      {
+        "period": 4,
+        "due_date": "2026-06-12",
+        "principal_due": 583.33,
+        "interest_due": 3.65,
+        "total_due": 586.98,
+        "status": "pending"
+      },
+      {
+        "period": 5,
+        "due_date": "2026-07-12",
+        "principal_due": 583.33,
+        "interest_due": 2.43,
+        "total_due": 585.76,
+        "status": "pending"
+      },
+      {
+        "period": 6,
+        "due_date": "2026-08-11",
+        "principal_due": 583.33,
+        "interest_due": 1.22,
+        "total_due": 584.55,
+        "status": "pending"
+      }
+    ],
+    "repayments": [
+      {
+        "payment_date": "2026-03-16 00:00",
+        "period": 1,
+        "amount": 590.62,
+        "principal_paid": 583.33,
+        "interest_paid": 7.29,
+        "penalty_paid": 0,
+        "waive_amount": 0
+      },
+      {
+        "payment_date": "2026-04-15 00:00",
+        "period": 2,
+        "amount": 589.41,
+        "principal_paid": 583.33,
+        "interest_paid": 6.08,
+        "penalty_paid": 0.0,
+        "waive_amount": 0
+      }
+    ],
+    "customer_info": {
+      "industry": "零售",
+      "credit_rating": "A",
+      "region": "雅加达",
+      "education": "高中"
+    }
+  }
+}

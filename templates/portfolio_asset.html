@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | {{ partner.name }} - {{ page_title }} 底层资产</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --accent-teal: #2E7D6E; --accent-amber: #E8A838; --accent-coral: #D8434F; --accent-mint: #4DB6AC; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f0ee 0%, #ebe5e3 100%); min-height: 100vh; color: var(--dark-blue); }
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover { background: rgba(255,255,255,0.1); }
+        .page { max-width: 1600px; margin: 0 auto; padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+        .page-header h1 { font-size: 1.25rem; font-weight: 700; }
+        .page-header .sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+        .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-teal); display: inline-block; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 24px; }
+        .kpi-card { background: var(--white); border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border-left: 4px solid var(--dark-blue); }
+        .kpi-card.highlight { border-left-color: var(--accent-teal); }
+        .kpi-card.warning { border-left-color: var(--accent-amber); }
+        .kpi-card.danger { border-left-color: var(--accent-coral); }
+        .kpi-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px; }
+        .kpi-value { font-size: 1.15rem; font-weight: 700; }
+        .analysis-row { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
+        .analysis-card { background: var(--white); border-radius: 10px; padding: 20px; flex: 1; min-width: 220px; max-width: 320px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); }
+        .analysis-card h4 { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; font-weight: 600; }
+        .pie-wrap { display: flex; align-items: center; gap: 20px; }
+        .pie-chart { width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0; }
+        .pie-legend { flex: 1; font-size: 0.8rem; }
+        .pie-legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .pie-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .pie-legend-label { flex: 1; }
+        .pie-legend-value { font-weight: 600; color: var(--dark-blue); }
+        .filter-bar { background: var(--white); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .filter-bar label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+        .filter-bar select { padding: 8px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); font-size: 0.85rem; color: var(--dark-blue); cursor: pointer; min-width: 120px; }
+        .portfolio-section { background: var(--white); border-radius: 10px; padding: 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); overflow-x: auto; }
+        .portfolio-table { width: 100%; min-width: 1200px; border-collapse: collapse; font-size: 0.8rem; }
+        .portfolio-table th, .portfolio-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .portfolio-table th { background: #F8FAFC; font-weight: 600; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .portfolio-table tr:hover { background: rgba(255,241,238,0.4); }
+        .portfolio-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .portfolio-table .status-active { color: var(--accent-teal); font-weight: 600; }
+        .portfolio-table .status-overdue { color: var(--accent-coral); font-weight: 600; }
+        .portfolio-table .status-closed { color: var(--text-muted); }
+        .portfolio-table .loan-id-link { color: var(--dark-blue); font-weight: 600; text-decoration: none; }
+        .portfolio-table .loan-id-link:hover { text-decoration: underline; color: var(--accent-teal); }
+        .empty-state { padding: 48px 24px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/partner/manage">资产商管理</a>
+                <a href="/partner/{{ partner.id }}/risk">{{ partner.name }}</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <a href="/partner/{{ partner.id }}/risk" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回风控
+                </a>
+                <h1 style="margin-top:12px;">{{ partner.name }} · {{ page_title }} 底层资产组合</h1>
+                <div class="sub">共 <span id="loanCount">{{ loans|length }}</span> 笔</div>
+            </div>
+        </div>
+
+        <!-- 关键指标 -->
+        <div class="section-title">关键指标</div>
+        <div class="kpi-grid">
+            <div class="kpi-card highlight"><div class="kpi-label">总放款额</div><div class="kpi-value">${{ "{:,.0f}".format(kpi_stats.total_disbursement) }}</div></div>
+            <div class="kpi-card"><div class="kpi-label">平均期限</div><div class="kpi-value">{{ kpi_stats.avg_term }} 月</div></div>
+            <div class="kpi-card"><div class="kpi-label">总逾期</div><div class="kpi-value">${{ "{:,.2f}".format(kpi_stats.total_overdue) }}</div></div>
+            <div class="kpi-card highlight"><div class="kpi-label">在贷余额</div><div class="kpi-value">${{ "{:,.0f}".format(kpi_stats.outstanding_balance) }}</div></div>
+            <div class="kpi-card {{ 'danger' if kpi_stats.dpd7_pct >= 5 else 'warning' if kpi_stats.dpd7_pct >= 2 else '' }}"><div class="kpi-label">DPD7+</div><div class="kpi-value">{{ kpi_stats.dpd7_pct }}%</div></div>
+            <div class="kpi-card"><div class="kpi-label">MOB1</div><div class="kpi-value">{{ "%.2f%%" % kpi_stats.mob1_pct if kpi_stats.mob1_pct is not none else "-" }}</div></div>
+        </div>
+
+        <!-- 分析区：饼图 -->
+        {% if loans %}
+        <div class="section-title">组合分析</div>
+        <div class="analysis-row">
+            <div class="analysis-card">
+                <h4>新客 / 老客</h4>
+                <div class="pie-wrap">
+                    <div class="pie-chart" id="pieCustomer" style="background: conic-gradient({{ customer_pie_gradient }});"></div>
+                    <div class="pie-legend">
+                        <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#2E7D6E;"></span><span class="pie-legend-label">新客</span><span class="pie-legend-value" id="newPct">{{ customer_stats.new_pct }}%</span></div>
+                        <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#4DB6AC;"></span><span class="pie-legend-label">老客</span><span class="pie-legend-value" id="retPct">{{ customer_stats.returning_pct }}%</span></div>
+                        <div class="pie-legend-item" style="font-size:0.72rem;color:var(--text-muted);"><span>新客 {{ customer_stats.new_count }} 笔</span> · <span>老客 {{ customer_stats.returning_count }} 笔</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="analysis-card">
+                <h4>产品分布</h4>
+                <div class="pie-wrap">
+                    <div class="pie-chart" id="pieProduct" style="background: conic-gradient({{ product_pie_gradient }});"></div>
+                    <div class="pie-legend" id="productLegend">
+                        {% for p in product_stats %}
+                        <div class="pie-legend-item"><span class="pie-legend-dot" style="background:{{ p.color }};"></span><span class="pie-legend-label">{{ p.name }}</span><span class="pie-legend-value">{{ p.pct }}%</span></div>
+                        {% endfor %}
+                        {% if product_stats %}
+                        <div class="pie-legend-item" style="font-size:0.72rem;color:var(--text-muted);">{% for p in product_stats %}{{ p.name }} {{ p.count }} 笔{% if not loop.last %} · {% endif %}{% endfor %}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="analysis-card">
+                <h4>信用评级</h4>
+                <div class="pie-wrap">
+                    <div class="pie-chart" id="pieCredit" style="background: conic-gradient({{ credit_pie_gradient }});"></div>
+                    <div class="pie-legend" id="creditLegend">
+                        {% for c in credit_stats %}
+                        <div class="pie-legend-item"><span class="pie-legend-dot" style="background:{{ c.color }};"></span><span class="pie-legend-label">{{ c.name }}</span><span class="pie-legend-value">{{ c.pct }}%</span></div>
+                        {% endfor %}
+                        {% if credit_stats %}
+                        <div class="pie-legend-item" style="font-size:0.72rem;color:var(--text-muted);">{% for c in credit_stats %}{{ c.name }} {{ c.count }} 笔{% if not loop.last %} · {% endif %}{% endfor %}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选区 -->
+        {% endif %}
+        <div class="filter-bar" {% if not loans %}style="display:none;"{% endif %}>
+            <label>新客/老客：</label>
+            <select id="filterCustomer" onchange="applyFilter()">
+                <option value="">全部</option>
+                <option value="new">新客</option>
+                <option value="returning">老客</option>
+            </select>
+            <label>产品类型：</label>
+            <select id="filterProduct" onchange="applyFilter()">
+                <option value="">全部</option>
+                {% for p in product_stats %}
+                <option value="{{ p.name }}">{{ p.name }}</option>
+                {% endfor %}
+            </select>
+            <label>信用评级：</label>
+            <select id="filterCredit" onchange="applyFilter()">
+                <option value="">全部</option>
+                {% for cr in credit_ratings %}
+                <option value="{{ cr }}">{{ cr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- 资产列表 -->
+        <div class="section-title">资产列表</div>
+        <div class="portfolio-section">
+            {% if loans %}
+            <table class="portfolio-table" id="loanTable">
+                <thead>
+                    <tr>
+                        <th>Loan ID</th>
+                        <th>新客/老客</th>
+                        <th>产品</th>
+                        <th>信用评级</th>
+                        <th class="num">放款金额</th>
+                        <th>放款时间</th>
+                        <th class="num">期限(月)</th>
+                        <th class="num">利率</th>
+                        <th class="num">罚息率</th>
+                        <th>Loan 状态</th>
+                        <th class="num">DPD</th>
+                        <th class="num">未偿本金</th>
+                        <th class="num">逾期本金</th>
+                        <th class="num">逾期利息</th>
+                        <th class="num">逾期罚息</th>
+                    </tr>
+                </thead>
+                <tbody id="loanBody">
+                    {% for loan in loans %}
+                    <tr data-customer="{{ loan.customer_type|default('returning') }}" data-product="{{ loan.product_type|default('-') }}" data-credit="{{ loan.credit_rating|default('-') }}">
+                        <td><a href="/partner/{{ partner.id }}/loan/{{ loan.loan_id }}" class="loan-id-link">{{ loan.loan_id }}</a></td>
+                        <td>{{ '新客' if loan.customer_type == 'new' else '老客' }}</td>
+                        <td>{{ loan.product_type|default('-') }}</td>
+                        <td>{{ loan.credit_rating|default('-') }}</td>
+                        <td class="num">${{ "{:,.0f}".format(loan.disbursement_amount or 0) }}</td>
+                        <td>{{ loan.disbursement_time or '-' }}</td>
+                        <td class="num">{{ loan.term_month or '-' }}</td>
+                        <td class="num">{{ "%.2f%%" % ((loan.custom_rate or 0) * 100) if loan.custom_rate is not none else '-' }}</td>
+                        <td class="num">{{ "%.2f%%" % ((loan.penalty_rate or 0) * 100) if loan.penalty_rate is not none else '-' }}</td>
+                        <td class="status-{{ loan.loan_status or 'active' }}">{{ loan.loan_status or 'active' }}</td>
+                        <td class="num">{{ loan.dpd or 0 }}</td>
+                        <td class="num">${{ "{:,.0f}".format(loan.outstanding_principal or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(loan.overdue_principal or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(loan.overdue_interest or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(loan.overdue_penalty or 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">暂无该期底层资产数据</div>
+            {% endif %}
+            <div class="empty-state" id="emptyState" style="display:none;">暂无符合筛选条件的数据</div>
+        </div>
+    </div>
+
+    <script>
+        function applyFilter() {
+            const cust = document.getElementById('filterCustomer').value;
+            const prod = document.getElementById('filterProduct').value;
+            const credit = document.getElementById('filterCredit').value;
+            const rows = document.querySelectorAll('#loanBody tr');
+            let visible = 0;
+            rows.forEach(r => {
+                const matchCust = !cust || r.dataset.customer === cust;
+                const matchProd = !prod || r.dataset.product === prod;
+                const matchCredit = !credit || r.dataset.credit === credit;
+                const show = matchCust && matchProd && matchCredit;
+                r.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            document.getElementById('loanCount').textContent = visible;
+            document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>

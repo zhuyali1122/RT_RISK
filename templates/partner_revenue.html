@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | {{ partner.name }} - 收益规模</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f0ee 0%, #ebe5e3 100%); min-height: 100vh; color: var(--dark-blue); }
+
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+
+        .page { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+        .page-header .left-group { display: flex; align-items: center; gap: 12px; }
+        .page-header h1 { font-size: 1.25rem; font-weight: 700; }
+        .page-header .sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+
+        .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--green); display: inline-block; }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 28px; }
+        .kpi-card { background: var(--white); border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border-left: 4px solid var(--dark-blue); }
+        .kpi-card.green { border-left-color: var(--green); }
+        .kpi-card.gold { border-left-color: var(--gold); }
+        .kpi-label { font-size: 0.7rem; color: var(--dark-blue); opacity: 0.75; margin-bottom: 4px; }
+        .kpi-value { font-size: 1.25rem; font-weight: 700; }
+        .kpi-sub { font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; }
+        .kpi-sub.up { color: var(--green); }
+        .kpi-sub.down { color: var(--red); }
+
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+        .chart-panel { background: var(--white); border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); }
+        .chart-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 14px; }
+
+        .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 160px; }
+        .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; }
+        .bar-pair { display: flex; gap: 2px; align-items: flex-end; width: 100%; height: 100%; }
+        .bar-pair > div { flex: 1; display: flex; align-items: flex-end; height: 100%; }
+        .bar-seg { width: 100%; border-radius: 2px 2px 0 0; transition: height 0.3s; }
+        .bar-seg.disb { background: var(--dark-blue); }
+        .bar-seg.coll { background: var(--teal); }
+        .bar-month { font-size: 0.62rem; color: var(--text-muted); margin-top: 6px; }
+
+        .line-wrap { position: relative; height: 160px; }
+        .line-wrap svg { width: 100%; height: 100%; }
+        .lp { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .la { opacity: 0.1; }
+        .ld { r: 3.5; }
+        .lc-x { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--text-muted); margin-top: 4px; }
+        .legend { display: flex; gap: 16px; margin-top: 10px; font-size: 0.68rem; color: var(--text-muted); }
+        .legend span { display: flex; align-items: center; gap: 4px; }
+        .legend .sw { width: 10px; height: 10px; border-radius: 2px; }
+
+        .table-panel { background: var(--white); border-radius: 10px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); overflow: hidden; margin-bottom: 28px; }
+        .table-panel .chart-title { padding: 18px 24px 0; }
+        .rev-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .rev-table th, .rev-table td { padding: 10px 14px; text-align: right; border-bottom: 1px solid var(--border); }
+        .rev-table th { background: #F8FAFC; color: var(--text-muted); font-weight: 600; font-size: 0.7rem; }
+        .rev-table th:first-child, .rev-table td:first-child { text-align: left; }
+        .rev-table tr:hover { background: rgba(255,241,238,0.4); }
+        .rev-table td:first-child { font-weight: 600; }
+        .up { color: var(--green); }
+        .down { color: var(--red); }
+
+        @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .charts-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/partner/manage">资产商管理</a>
+                <a class="active">{{ partner.name }}</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <div class="left-group">
+                    <a href="/partner/manage" class="btn-back" onclick="history.back();return false;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        返回列表
+                    </a>
+                    <h1>{{ partner.name }} · 收益规模</h1>
+                </div>
+                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · 联系人：{{ partner.contact }}</div>
+            </div>
+        </div>
+
+        <div id="content"></div>
+    </div>
+
+    <script>
+        const data = {{ revenue_data | tojson }};
+
+        function fmtK(n) {
+            if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+            return '$' + n.toLocaleString();
+        }
+
+        function render() {
+            if (!data || data.length === 0) { document.getElementById('content').innerHTML = '<p style="padding:40px;text-align:center;color:var(--text-muted)">暂无收益数据</p>'; return; }
+
+            const latest = data[data.length - 1];
+            const prev = data.length > 1 ? data[data.length - 2] : latest;
+            const totalRev = data.reduce((s, r) => s + r.net_revenue, 0);
+            const totalInt = data.reduce((s, r) => s + r.interest_income, 0);
+            const totalFee = data.reduce((s, r) => s + r.fee_income, 0);
+
+            const balD = latest.outstanding_balance - prev.outstanding_balance;
+            const revD = latest.net_revenue - prev.net_revenue;
+            const maxDisb = Math.max(...data.map(r => r.disbursement));
+            const maxBal = Math.max(...data.map(r => r.outstanding_balance));
+
+            const svgW = 500, svgH = 150, pad = 6;
+            const xStep = data.length > 1 ? (svgW - pad * 2) / (data.length - 1) : 0;
+            const mkPts = (arr, maxV) => arr.map((v, i) => [pad + i * xStep, svgH - pad - (v / maxV) * (svgH - pad * 2)]);
+            const balPts = mkPts(data.map(r => r.outstanding_balance), maxBal);
+            const yldPts = mkPts(data.map(r => r.avg_yield_annualized), 0.30);
+            const revPts = mkPts(data.map(r => r.net_revenue), Math.max(...data.map(r => r.net_revenue)));
+
+            const pl = pts => pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+            const ap = pts => { let p = `M ${pts[0][0].toFixed(1)},${svgH - pad}`; pts.forEach(([x, y]) => p += ` L ${x.toFixed(1)},${y.toFixed(1)}`); return p + ` L ${pts[pts.length-1][0].toFixed(1)},${svgH - pad} Z`; };
+
+            document.getElementById('content').innerHTML = `
+                <div class="section-title">收益概览 · 截至 ${latest.month}</div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">在贷余额</div><div class="kpi-value">${fmtK(latest.outstanding_balance)}</div><div class="kpi-sub ${balD >= 0 ? 'up' : 'down'}">${balD >= 0 ? '↑' : '↓'} ${fmtK(Math.abs(balD))} vs 上月</div></div>
+                    <div class="kpi-card"><div class="kpi-label">累计放款</div><div class="kpi-value">${fmtK(latest.cumulative_disbursement)}</div><div class="kpi-sub">运营 ${data.length} 个月</div></div>
+                    <div class="kpi-card green"><div class="kpi-label">累计净收益</div><div class="kpi-value" style="color:var(--green)">${fmtK(totalRev)}</div><div class="kpi-sub">利息 ${fmtK(totalInt)} + 手续费 ${fmtK(totalFee)}</div></div>
+                    <div class="kpi-card green"><div class="kpi-label">年化收益率</div><div class="kpi-value" style="color:var(--green)">${(latest.avg_yield_annualized * 100).toFixed(1)}%</div><div class="kpi-sub">目标 ≥ 15%</div></div>
+                    <div class="kpi-card gold"><div class="kpi-label">回收率</div><div class="kpi-value" style="color:var(--gold)">${(latest.collection_rate * 100).toFixed(1)}%</div><div class="kpi-sub">当月回收 ${fmtK(latest.collection)}</div></div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-panel">
+                        <div class="chart-title">月度放款 vs 回收</div>
+                        <div class="bar-chart">
+                            ${data.map(r => {
+                                const hD = Math.max(2, (r.disbursement / maxDisb) * 100);
+                                const hC = Math.max(2, (r.collection / maxDisb) * 100);
+                                return `<div class="bar-group"><div class="bar-pair"><div><div class="bar-seg disb" style="height:${hD}%"></div></div><div><div class="bar-seg coll" style="height:${hC}%"></div></div></div><div class="bar-month">${r.month.slice(5)}</div></div>`;
+                            }).join('')}
+                        </div>
+                        <div class="legend"><span><div class="sw" style="background:var(--dark-blue)"></div>放款</span><span><div class="sw" style="background:var(--teal)"></div>回收</span></div>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="chart-title">在贷余额 & 年化收益率</div>
+                        <div class="line-wrap">
+                            <svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none">
+                                <path class="la" d="${ap(balPts)}" fill="var(--dark-blue)"/>
+                                <polyline class="lp" points="${pl(balPts)}" stroke="var(--dark-blue)"/>
+                                ${balPts.map(([x, y]) => `<circle class="ld" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" fill="var(--dark-blue)"/>`).join('')}
+                                <polyline class="lp" points="${pl(yldPts)}" stroke="var(--green)" stroke-dasharray="5,3"/>
+                                ${yldPts.map(([x, y]) => `<circle class="ld" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" fill="var(--green)"/>`).join('')}
+                            </svg>
+                        </div>
+                        <div class="lc-x">${data.map(r => `<span>${r.month.slice(5)}</span>`).join('')}</div>
+                        <div class="legend"><span><div class="sw" style="background:var(--dark-blue)"></div>在贷余额</span><span><div class="sw" style="background:var(--green);border-radius:50%"></div>年化收益率</span></div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-panel">
+                        <div class="chart-title">月度净收益趋势</div>
+                        <div class="line-wrap">
+                            <svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none">
+                                <path class="la" d="${ap(revPts)}" fill="var(--green)"/>
+                                <polyline class="lp" points="${pl(revPts)}" stroke="var(--green)"/>
+                                ${revPts.map(([x, y]) => `<circle class="ld" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" fill="var(--green)"/>`).join('')}
+                            </svg>
+                        </div>
+                        <div class="lc-x">${data.map(r => `<span>${r.month.slice(5)}</span>`).join('')}</div>
+                        <div class="legend"><span><div class="sw" style="background:var(--green)"></div>净收益</span></div>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="chart-title">回收率走势</div>
+                        <div class="line-wrap">
+                            <svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none">
+                                ${(() => {
+                                    const crPts = mkPts(data.map(r => r.collection_rate), 1.0);
+                                    return `<polyline class="lp" points="${pl(crPts)}" stroke="var(--gold)"/>` +
+                                        crPts.map(([x, y]) => `<circle class="ld" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" fill="var(--gold)"/>`).join('');
+                                })()}
+                            </svg>
+                        </div>
+                        <div class="lc-x">${data.map(r => `<span>${r.month.slice(5)}</span>`).join('')}</div>
+                        <div class="legend"><span><div class="sw" style="background:var(--gold)"></div>回收率</span></div>
+                    </div>
+                </div>
+
+                <div class="table-panel">
+                    <div class="chart-title">月度明细</div>
+                    <table class="rev-table">
+                        <thead><tr><th>月份</th><th>放款金额</th><th>在贷余额</th><th>回收金额</th><th>利息收入</th><th>手续费</th><th>净收益</th><th>年化收益</th><th>回收率</th></tr></thead>
+                        <tbody>
+                            ${[...data].reverse().map((r, i, arr) => {
+                                const p = i < arr.length - 1 ? arr[i + 1] : null;
+                                const rt = p ? (r.net_revenue >= p.net_revenue ? 'up' : 'down') : '';
+                                return `<tr><td>${r.month}</td><td>${fmtK(r.disbursement)}</td><td>${fmtK(r.outstanding_balance)}</td><td>${fmtK(r.collection)}</td><td>${fmtK(r.interest_income)}</td><td>${fmtK(r.fee_income)}</td><td class="${rt}">${fmtK(r.net_revenue)}</td><td>${(r.avg_yield_annualized * 100).toFixed(1)}%</td><td>${(r.collection_rate * 100).toFixed(1)}%</td></tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        render();
+    </script>
+</body>
+</html>

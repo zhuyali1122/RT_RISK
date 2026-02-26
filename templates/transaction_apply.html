@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | 交易申请</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --blue-light: #EBF0F7; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: var(--light-pink); color: var(--dark-blue); }
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover { background: rgba(255,255,255,0.1); }
+
+        .page { max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+        .left-group { display: flex; align-items: center; gap: 12px; }
+        .page-header h1 { font-size: 1.35rem; font-weight: 700; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+        .btn-new { padding: 8px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; background: var(--dark-blue); color: var(--white); transition: all 0.15s; }
+        .btn-new:hover { background: #4A5B7A; }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
+        .tab { padding: 10px 24px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab:hover { color: var(--dark-blue); }
+        .tab.active { color: var(--dark-blue); font-weight: 600; border-bottom-color: var(--dark-blue); }
+        .tab .count { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.68rem; font-weight: 700; margin-left: 6px; background: var(--border); color: var(--text-muted); }
+        .tab.active .count { background: var(--dark-blue); color: var(--white); }
+
+        /* Panel */
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* Application list */
+        .app-card { background: var(--white); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 16px; overflow: hidden; transition: box-shadow 0.15s; }
+        .app-card:hover { box-shadow: 0 4px 12px rgba(59,74,106,0.08); }
+        .app-card-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .app-id { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; font-family: monospace; }
+        .app-title { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+        .app-meta { display: flex; gap: 16px; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap; }
+        .app-meta span { display: flex; align-items: center; gap: 4px; }
+
+        .status-badge { padding: 4px 12px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+        .status-draft { background: #F1F5F9; color: var(--text-muted); }
+        .status-pending_review { background: #FFF3E0; color: #E65100; }
+        .status-pending_committee { background: #E3F2FD; color: #1565C0; }
+        .status-approved { background: #E8F5E9; color: var(--green); }
+        .status-rejected { background: #FFEBEE; color: var(--red); }
+        .status-executing { background: #F3E5F5; color: #7B1FA2; }
+
+        /* Workflow timeline */
+        .app-card-workflow { padding: 0 24px 20px; }
+        .workflow-toggle { font-size: 0.78rem; color: var(--dark-blue); cursor: pointer; display: flex; align-items: center; gap: 4px; margin-bottom: 12px; user-select: none; }
+        .workflow-toggle svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.2s; }
+        .workflow-toggle.open svg { transform: rotate(90deg); }
+
+        .workflow-timeline { display: none; padding-left: 16px; border-left: 2px solid var(--border); }
+        .workflow-timeline.show { display: block; }
+
+        .wf-step { position: relative; padding: 0 0 20px 24px; }
+        .wf-step:last-child { padding-bottom: 0; }
+        .wf-dot {
+            position: absolute; left: -25px; top: 2px; width: 12px; height: 12px; border-radius: 50%;
+            border: 2px solid var(--border); background: var(--white);
+        }
+        .wf-step.completed .wf-dot { background: var(--green); border-color: var(--green); }
+        .wf-step.current .wf-dot { background: var(--gold); border-color: var(--gold); animation: pulse 1.5s infinite; }
+        .wf-step.pending .wf-dot { background: var(--white); border-color: var(--border); }
+
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,169,110,0.4); } 50% { box-shadow: 0 0 0 6px rgba(201,169,110,0); } }
+
+        .wf-title { font-size: 0.82rem; font-weight: 600; margin-bottom: 3px; }
+        .wf-info { font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; }
+        .wf-comment { font-size: 0.75rem; color: var(--dark-blue); background: var(--blue-light); padding: 6px 10px; border-radius: 6px; margin-top: 6px; display: inline-block; }
+
+        /* Action buttons in card */
+        .app-card-actions { padding: 12px 24px; background: #F8FAFC; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .btn-sm { padding: 6px 14px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; border: 1px solid var(--border); background: var(--white); color: var(--dark-blue); transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
+        .btn-sm:hover { background: var(--light-pink); }
+        .btn-sm svg { width: 14px; height: 14px; fill: currentColor; }
+        .btn-sm.primary { background: var(--dark-blue); color: var(--white); border-color: var(--dark-blue); }
+        .btn-sm.primary:hover { background: #4A5B7A; }
+
+        /* New application modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: var(--white); border-radius: 12px; width: 640px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+        .modal-header { padding: 20px 28px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 1.1rem; font-weight: 700; }
+        .modal-close { width: 32px; height: 32px; border-radius: 6px; border: none; background: none; cursor: pointer; font-size: 1.2rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+        .modal-close:hover { background: var(--light-pink); }
+        .modal-body { padding: 24px 28px; }
+        .modal-footer { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group.full { grid-column: 1 / -1; }
+        .form-label { font-size: 0.78rem; font-weight: 600; }
+        .form-label .req { color: var(--red); margin-left: 2px; }
+        .form-input, .form-select, .form-textarea {
+            padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px;
+            font-size: 0.85rem; color: var(--dark-blue); background: #F8FAFC; outline: none; font-family: inherit; transition: border-color 0.15s;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--dark-blue); background: var(--white); }
+        .form-textarea { resize: vertical; min-height: 80px; }
+
+        .upload-area {
+            border: 2px dashed var(--border); border-radius: 10px; padding: 24px; text-align: center;
+            cursor: pointer; transition: all 0.15s; position: relative;
+        }
+        .upload-area:hover { border-color: var(--dark-blue); background: var(--blue-light); }
+        .upload-area svg { width: 32px; height: 32px; fill: var(--text-muted); margin-bottom: 8px; }
+        .upload-area p { font-size: 0.82rem; color: var(--text-muted); }
+        .upload-area .hint { font-size: 0.7rem; color: #B0B8C4; margin-top: 4px; }
+        .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .upload-area .file-chosen { font-size: 0.82rem; color: var(--green); font-weight: 600; }
+
+        .empty-state { text-align: center; padding: 48px; color: var(--text-muted); }
+        .empty-state p { font-size: 0.88rem; margin-bottom: 16px; }
+
+        .status-labels { display: flex; gap: 6px; font-size: 0.7rem; }
+
+        @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } .modal { width: 95%; } }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/transaction/apply" class="active">交易申请</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div class="left-group">
+                <a href="/dashboard" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回
+                </a>
+                <h1>交易申请（投委会）</h1>
+            </div>
+            <button class="btn-new" onclick="openModal()">+ 新建申请</button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="all" onclick="switchTab('all')">全部 <span class="count" id="countAll">0</span></div>
+            <div class="tab" data-tab="pending" onclick="switchTab('pending')">审批中 <span class="count" id="countPending">0</span></div>
+            <div class="tab" data-tab="approved" onclick="switchTab('approved')">已通过 <span class="count" id="countApproved">0</span></div>
+            <div class="tab" data-tab="rejected" onclick="switchTab('rejected')">已拒绝 <span class="count" id="countRejected">0</span></div>
+        </div>
+
+        <div id="appList"></div>
+    </div>
+
+    <!-- New Application Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>新建投委会申请</h2>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">资产商 <span class="req">*</span></label>
+                        <select class="form-select" id="txnPartner">
+                            <option value="">请选择</option>
+                            {% for p in partners %}
+                            <option value="{{ p.id }}" data-name="{{ p.name }}">{{ p.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">交易类型 <span class="req">*</span></label>
+                        <select class="form-select" id="txnType">
+                            <option value="">请选择</option>
+                            <option>首次放款</option>
+                            <option>追加放款</option>
+                            <option>额度续期</option>
+                            <option>提前回收</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">申请金额 (USD) <span class="req">*</span></label>
+                        <input class="form-input" id="txnAmount" placeholder="例: 2,000,000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">期限（天）<span class="req">*</span></label>
+                        <input class="form-input" id="txnTenor" placeholder="例: 180">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">预期收益率</label>
+                        <input class="form-input" id="txnYield" placeholder="例: 18.5%">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">币种</label>
+                        <select class="form-select" id="txnCurrency">
+                            <option>USD</option>
+                            <option>IDR</option>
+                            <option>MXN</option>
+                            <option>PHP</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">申请摘要 <span class="req">*</span></label>
+                        <textarea class="form-textarea" id="txnSummary" placeholder="请简要描述本次交易申请的背景、目的和关键信息..."></textarea>
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">投委会申请报告 <span class="req">*</span></label>
+                        <div class="upload-area" id="uploadArea">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-6-7l-4 4h2.5v3h3v-3H16l-4-4z"/></svg>
+                            <p>点击或拖拽上传投委会报告</p>
+                            <div class="hint">支持 PDF, DOC, DOCX, XLSX 格式，最大 20MB</div>
+                            <input type="file" id="txnReport" accept=".pdf,.doc,.docx,.xlsx" onchange="onFileSelect(this)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-sm" onclick="closeModal()">取消</button>
+                <button class="btn-sm primary" onclick="submitApplication()">提交申请</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const applications = {{ applications | tojson }};
+        const statusMap = {
+            'draft': '草稿',
+            'pending_review': '风控审核中',
+            'pending_committee': '投委会审议中',
+            'approved': '已通过',
+            'rejected': '已拒绝',
+            'executing': '放款执行中'
+        };
+
+        let currentTab = 'all';
+
+        function fmtUSD(n) {
+            if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+            return '$' + n.toLocaleString();
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            renderList();
+        }
+
+        function filterApps(tab) {
+            if (tab === 'all') return applications;
+            if (tab === 'pending') return applications.filter(a => a.status.startsWith('pending') || a.status === 'executing');
+            if (tab === 'approved') return applications.filter(a => a.status === 'approved');
+            if (tab === 'rejected') return applications.filter(a => a.status === 'rejected');
+            return applications;
+        }
+
+        function renderList() {
+            const list = filterApps(currentTab);
+            const el = document.getElementById('appList');
+
+            document.getElementById('countAll').textContent = applications.length;
+            document.getElementById('countPending').textContent = applications.filter(a => a.status.startsWith('pending') || a.status === 'executing').length;
+            document.getElementById('countApproved').textContent = applications.filter(a => a.status === 'approved').length;
+            document.getElementById('countRejected').textContent = applications.filter(a => a.status === 'rejected').length;
+
+            if (list.length === 0) {
+                el.innerHTML = '<div class="empty-state"><p>暂无申请记录</p></div>';
+                return;
+            }
+
+            el.innerHTML = list.map(app => `
+                <div class="app-card">
+                    <div class="app-card-header">
+                        <div>
+                            <div class="app-id">${app.id}</div>
+                            <div class="app-title">${app.partner_name} · ${app.transaction_type}</div>
+                            <div class="app-meta">
+                                <span>金额：<strong>${fmtUSD(app.amount)}</strong></span>
+                                <span>期限：${app.tenor_days}天</span>
+                                <span>预期收益：${(app.expected_yield * 100).toFixed(1)}%</span>
+                                <span>提交：${app.submit_date}</span>
+                                <span>申请人：${app.applicant_name}</span>
+                            </div>
+                        </div>
+                        <span class="status-badge status-${app.status}">${statusMap[app.status] || app.status}</span>
+                    </div>
+
+                    <div class="app-card-workflow">
+                        <div class="workflow-toggle" onclick="toggleWorkflow(this)">
+                            <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+                            审批流程
+                        </div>
+                        <div class="workflow-timeline">
+                            ${app.workflow.map(w => `
+                                <div class="wf-step ${w.status}">
+                                    <div class="wf-dot"></div>
+                                    <div class="wf-title">${w.step}</div>
+                                    <div class="wf-info">
+                                        ${w.operator ? w.operator + ' · ' + w.role : '等待处理'}
+                                        ${w.date ? ' · ' + w.date : ''}
+                                    </div>
+                                    ${w.comment ? `<div class="wf-comment">${w.comment}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="app-card-actions">
+                        <div>
+                            ${app.report_file ? `<span class="btn-sm" onclick="alert('下载: ${app.report_file}')">
+                                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                                投委会报告
+                            </span>` : '<span style="font-size:0.72rem;color:var(--text-muted)">未上传报告</span>'}
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            ${app.status === 'pending_review' && !app.report_file ? `<span class="btn-sm primary" onclick="alert('请上传投委会报告')">上传报告</span>` : ''}
+                            <span class="btn-sm" onclick="alert('查看申请详情: ${app.id}')">查看详情</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleWorkflow(el) {
+            el.classList.toggle('open');
+            const timeline = el.nextElementSibling;
+            timeline.classList.toggle('show');
+        }
+
+        function openModal() { document.getElementById('modalOverlay').classList.add('show'); }
+        function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+        function onFileSelect(input) {
+            const area = document.getElementById('uploadArea');
+            if (input.files.length) {
+                area.querySelector('p').innerHTML = `<span class="file-chosen">✓ ${input.files[0].name}</span>`;
+                area.querySelector('.hint').textContent = `${(input.files[0].size / 1024 / 1024).toFixed(1)} MB`;
+            }
+        }
+
+        function submitApplication() {
+            const partner = document.getElementById('txnPartner');
+            const type = document.getElementById('txnType').value;
+            const amount = document.getElementById('txnAmount').value;
+            const summary = document.getElementById('txnSummary').value;
+            const report = document.getElementById('txnReport').files[0];
+
+            if (!partner.value || !type || !amount || !summary) {
+                alert('请填写所有必填项'); return;
+            }
+            if (!report) {
+                if (!confirm('尚未上传投委会报告，是否仍要提交？')) return;
+            }
+
+            const partnerName = partner.options[partner.selectedIndex].dataset.name;
+            const now = new Date().toISOString().slice(0, 10);
+
+            const newApp = {
+                id: 'TXN-' + now.replace(/-/g, '').slice(0,4) + '-' + String(applications.length + 1).padStart(3, '0'),
+                partner_id: partner.value,
+                partner_name: partnerName,
+                applicant: '{{ user.username }}',
+                applicant_name: '{{ user.display_name }}',
+                submit_date: now,
+                transaction_type: type,
+                amount: parseFloat(amount.replace(/,/g, '')) || 0,
+                currency: document.getElementById('txnCurrency').value,
+                tenor_days: parseInt(document.getElementById('txnTenor').value) || 0,
+                expected_yield: parseFloat(document.getElementById('txnYield').value) / 100 || 0,
+                summary: summary,
+                status: 'pending_review',
+                workflow: [
+                    { step: '提交申请', operator: '{{ user.display_name }}', role: '{{ user.role_label }}', date: now, status: 'completed', comment: '提交投委会审批' },
+                    { step: '风控审核', operator: '', role: '管理员', date: '', status: 'current', comment: '' },
+                    { step: '投委会决议', operator: '', role: '管理员', date: '', status: 'pending', comment: '' },
+                    { step: '放款执行', operator: '', role: '管理员', date: '', status: 'pending', comment: '' }
+                ],
+                report_file: report ? report.name : ''
+            };
+
+            applications.unshift(newApp);
+            closeModal();
+            switchTab('all');
+            alert('申请 ' + newApp.id + ' 已提交，等待风控审核。');
+        }
+
+        renderList();
+    </script>
+</body>
+</html>

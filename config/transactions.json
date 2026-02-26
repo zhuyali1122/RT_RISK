@@ -1,0 +1,48 @@
+{
+  "applications": [
+    {
+      "id": "TXN-2026-001",
+      "partner_id": "partner_alpha",
+      "partner_name": "KreditPro Indonesia",
+      "applicant": "pm",
+      "applicant_name": "李四",
+      "submit_date": "2026-01-15",
+      "transaction_type": "首次放款",
+      "amount": 3000000,
+      "currency": "USD",
+      "tenor_days": 180,
+      "expected_yield": 0.185,
+      "summary": "首笔放款至KreditPro Indonesia，用于印尼市场个人消费贷资产投放，已完成全部四项尽调。",
+      "status": "approved",
+      "workflow": [
+        { "step": "提交申请", "operator": "李四", "role": "项目经理", "date": "2026-01-15", "status": "completed", "comment": "提交投委会审批" },
+        { "step": "风控审核", "operator": "系统管理员", "role": "管理员", "date": "2026-01-16", "status": "completed", "comment": "风控指标符合准入标准，DPD30+低于1%，通过" },
+        { "step": "投委会决议", "operator": "系统管理员", "role": "管理员", "date": "2026-01-18", "status": "completed", "comment": "投委会全票通过，批准首笔$3M放款额度" },
+        { "step": "放款执行", "operator": "系统管理员", "role": "管理员", "date": "2026-01-20", "status": "completed", "comment": "已完成放款" }
+      ],
+      "report_file": "TXN-2026-001_投委会报告.pdf"
+    },
+    {
+      "id": "TXN-2026-002",
+      "partner_id": "partner_beta",
+      "partner_name": "QuickCash MX",
+      "applicant": "pm",
+      "applicant_name": "李四",
+      "submit_date": "2026-02-01",
+      "transaction_type": "首次放款",
+      "amount": 2000000,
+      "currency": "USD",
+      "tenor_days": 120,
+      "expected_yield": 0.22,
+      "summary": "首笔放款至QuickCash MX，用于墨西哥市场MCA资产投放，已完成尽调。",
+      "status": "pending_review",
+      "workflow": [
+        { "step": "提交申请", "operator": "李四", "role": "项目经理", "date": "2026-02-01", "status": "completed", "comment": "提交投委会审批" },
+        { "step": "风控审核", "operator": "", "role": "管理员", "date": "", "status": "current", "comment": "" },
+        { "step": "投委会决议", "operator": "", "role": "管理员", "date": "", "status": "pending", "comment": "" },
+        { "step": "放款执行", "operator": "", "role": "管理员", "date": "", "status": "pending", "comment": "" }
+      ],
+      "report_file": ""
+    }
+  ]
+}

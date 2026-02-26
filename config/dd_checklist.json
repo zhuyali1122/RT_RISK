@@ -1,0 +1,67 @@
+{
+  "modules": [
+    {
+      "id": "risk",
+      "name": "风险尽调",
+      "name_en": "Risk Due Diligence",
+      "icon": "🛡️",
+      "color": "#D8434F",
+      "items": [
+        { "id": "risk_01", "name": "风控模型与评分卡说明", "required": true },
+        { "id": "risk_02", "name": "历史逾期率与坏账率数据", "required": true },
+        { "id": "risk_03", "name": "贷后管理与催收流程", "required": true },
+        { "id": "risk_04", "name": "风险集中度分析", "required": true },
+        { "id": "risk_05", "name": "反欺诈策略与措施", "required": true },
+        { "id": "risk_06", "name": "压力测试报告", "required": false },
+        { "id": "risk_07", "name": "Vintage 分析报告", "required": false }
+      ]
+    },
+    {
+      "id": "legal",
+      "name": "法律尽调",
+      "name_en": "Legal Due Diligence",
+      "icon": "⚖️",
+      "color": "#3B4A6A",
+      "items": [
+        { "id": "legal_01", "name": "公司注册与营业执照", "required": true },
+        { "id": "legal_02", "name": "金融牌照与监管许可", "required": true },
+        { "id": "legal_03", "name": "股权结构与实际控制人", "required": true },
+        { "id": "legal_04", "name": "重大诉讼与合规记录", "required": true },
+        { "id": "legal_05", "name": "借贷合同模板", "required": true },
+        { "id": "legal_06", "name": "数据隐私与合规声明", "required": true },
+        { "id": "legal_07", "name": "关联交易披露", "required": false }
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "财务尽调",
+      "name_en": "Financial Due Diligence",
+      "icon": "💰",
+      "color": "#C9A96E",
+      "items": [
+        { "id": "fin_01", "name": "近三年审计财务报表", "required": true },
+        { "id": "fin_02", "name": "资产负债表与现金流分析", "required": true },
+        { "id": "fin_03", "name": "盈利模型与收入结构", "required": true },
+        { "id": "fin_04", "name": "资金来源与融资渠道", "required": true },
+        { "id": "fin_05", "name": "放贷规模与增长趋势", "required": true },
+        { "id": "fin_06", "name": "税务合规记录", "required": false },
+        { "id": "fin_07", "name": "银行对账单（近六个月）", "required": false }
+      ]
+    },
+    {
+      "id": "system",
+      "name": "系统尽调",
+      "name_en": "System Due Diligence",
+      "icon": "🖥️",
+      "color": "#2E7D6E",
+      "items": [
+        { "id": "sys_01", "name": "核心系统架构说明", "required": true },
+        { "id": "sys_02", "name": "数据安全与加密策略", "required": true },
+        { "id": "sys_03", "name": "API 对接能力与文档", "required": true },
+        { "id": "sys_04", "name": "系统容灾与备份方案", "required": true },
+        { "id": "sys_05", "name": "第三方安全审计报告", "required": false },
+        { "id": "sys_06", "name": "系统可用性 SLA 指标", "required": false }
+      ]
+    }
+  ]
+}

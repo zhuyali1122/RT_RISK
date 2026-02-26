@@ -1,0 +1,42 @@
+{
+  "partner_alpha": {
+    "2025-10": [
+      {"loan_id": "KP-MAT-202510-001", "disbursement_amount": 4200, "disbursement_time": "2024-10-08 10:00:00", "term_month": 12, "custom_rate": 0.018, "penalty_rate": 0.002, "loan_status": "active", "dpd": 0, "outstanding_principal": 3780, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.005, "credit_rating": "A"},
+      {"loan_id": "KP-MAT-202510-002", "disbursement_amount": 3800, "disbursement_time": "2025-04-15 14:20:00", "term_month": 6, "custom_rate": 0.02, "penalty_rate": 0.002, "loan_status": "active", "dpd": 0, "outstanding_principal": 3040, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.01, "credit_rating": "B"}
+    ],
+    "2025-11": [
+      {"loan_id": "KP-MAT-202511-001", "disbursement_amount": 4500, "disbursement_time": "2024-11-05 09:30:00", "term_month": 12, "custom_rate": 0.017, "penalty_rate": 0.002, "loan_status": "active", "dpd": 0, "outstanding_principal": 4050, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.005, "credit_rating": "C"},
+      {"loan_id": "KP-MAT-202511-002", "disbursement_amount": 3600, "disbursement_time": "2025-05-20 11:15:00", "term_month": 6, "custom_rate": 0.021, "penalty_rate": 0.0025, "loan_status": "active", "dpd": 3, "outstanding_principal": 3240, "overdue_principal": 72, "overdue_interest": 2.5, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.01, "credit_rating": "D"}
+    ],
+    "2025-12": [
+      {"loan_id": "KP-MAT-202512-001", "disbursement_amount": 5000, "disbursement_time": "2024-12-02 10:00:00", "term_month": 12, "custom_rate": 0.018, "penalty_rate": 0.002, "loan_status": "active", "dpd": 0, "outstanding_principal": 4500, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.005, "credit_rating": "A"},
+      {"loan_id": "KP-MAT-202512-002", "disbursement_amount": 4100, "disbursement_time": "2025-06-18 15:30:00", "term_month": 6, "custom_rate": 0.02, "penalty_rate": 0.002, "loan_status": "active", "dpd": 5, "outstanding_principal": 3690, "overdue_principal": 82, "overdue_interest": 3.1, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.01, "credit_rating": "B"}
+    ],
+    "2026-01": [
+      {"loan_id": "KP-MAT-202601-001", "disbursement_amount": 4800, "disbursement_time": "2025-01-10 09:00:00", "term_month": 12, "custom_rate": 0.017, "penalty_rate": 0.002, "loan_status": "active", "dpd": 0, "outstanding_principal": 4320, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.005, "credit_rating": "C"},
+      {"loan_id": "KP-MAT-202601-002", "disbursement_amount": 3900, "disbursement_time": "2025-07-25 14:00:00", "term_month": 6, "custom_rate": 0.021, "penalty_rate": 0.0025, "loan_status": "active", "dpd": 2, "outstanding_principal": 3510, "overdue_principal": 39, "overdue_interest": 1.2, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.01, "credit_rating": "D"}
+    ],
+    "2026-02": [
+      {"loan_id": "KP-MAT-202602-001", "disbursement_amount": 5200, "disbursement_time": "2025-02-05 11:00:00", "term_month": 12, "custom_rate": 0.018, "penalty_rate": 0.002, "loan_status": "active", "dpd": 0, "outstanding_principal": 4680, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.005, "credit_rating": "A"},
+      {"loan_id": "KP-MAT-202602-002", "disbursement_amount": 3400, "disbursement_time": "2025-08-12 10:30:00", "term_month": 6, "custom_rate": 0.02, "penalty_rate": 0.002, "loan_status": "active", "dpd": 0, "outstanding_principal": 3060, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.01, "credit_rating": "B"}
+    ]
+  },
+  "partner_beta": {
+    "2025-10": [
+      {"loan_id": "QC-MAT-202510-001", "disbursement_amount": 4500, "disbursement_time": "2024-10-12 09:15:00", "term_month": 12, "custom_rate": 0.022, "penalty_rate": 0.003, "loan_status": "active", "dpd": 0, "outstanding_principal": 4050, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.005, "credit_rating": "D"},
+      {"loan_id": "QC-MAT-202510-002", "disbursement_amount": 3200, "disbursement_time": "2025-04-20 14:00:00", "term_month": 6, "custom_rate": 0.023, "penalty_rate": 0.003, "loan_status": "active", "dpd": 0, "outstanding_principal": 2560, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.01, "credit_rating": "B"}
+    ],
+    "2025-11": [
+      {"loan_id": "QC-MAT-202511-001", "disbursement_amount": 4800, "disbursement_time": "2024-11-08 10:30:00", "term_month": 12, "custom_rate": 0.023, "penalty_rate": 0.003, "loan_status": "active", "dpd": 0, "outstanding_principal": 4320, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.01, "credit_rating": "C"},
+      {"loan_id": "QC-MAT-202511-002", "disbursement_amount": 3500, "disbursement_time": "2025-05-15 11:45:00", "term_month": 6, "custom_rate": 0.024, "penalty_rate": 0.003, "loan_status": "active", "dpd": 2, "outstanding_principal": 3150, "overdue_principal": 70, "overdue_interest": 2.1, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.015, "credit_rating": "D"}
+    ],
+    "2025-12": [
+      {"loan_id": "QC-MAT-202512-001", "disbursement_amount": 4200, "disbursement_time": "2024-12-05 09:00:00", "term_month": 12, "custom_rate": 0.022, "penalty_rate": 0.003, "loan_status": "active", "dpd": 0, "outstanding_principal": 3780, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.005, "credit_rating": "A"},
+      {"loan_id": "QC-MAT-202512-002", "disbursement_amount": 3800, "disbursement_time": "2025-06-22 15:20:00", "term_month": 6, "custom_rate": 0.023, "penalty_rate": 0.003, "loan_status": "active", "dpd": 4, "outstanding_principal": 3420, "overdue_principal": 76, "overdue_interest": 2.8, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.01, "credit_rating": "B"}
+    ],
+    "2026-01": [
+      {"loan_id": "QC-MAT-202601-001", "disbursement_amount": 4600, "disbursement_time": "2025-01-12 10:00:00", "term_month": 12, "custom_rate": 0.023, "penalty_rate": 0.003, "loan_status": "active", "dpd": 0, "outstanding_principal": 4140, "overdue_principal": 0, "overdue_interest": 0, "overdue_penalty": 0, "customer_type": "new", "product_type": "标准(12月)", "mob1_rate": 0.005, "credit_rating": "C"},
+      {"loan_id": "QC-MAT-202601-002", "disbursement_amount": 2900, "disbursement_time": "2025-07-18 14:30:00", "term_month": 6, "custom_rate": 0.024, "penalty_rate": 0.003, "loan_status": "active", "dpd": 1, "outstanding_principal": 2610, "overdue_principal": 29, "overdue_interest": 0.9, "overdue_penalty": 0, "customer_type": "returning", "product_type": "短期(6月)", "mob1_rate": 0.01, "credit_rating": "D"}
+    ]
+  }
+}

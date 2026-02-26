@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | 交易审批</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --blue-light: #EBF0F7; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: var(--light-pink); color: var(--dark-blue); }
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover { background: rgba(255,255,255,0.1); }
+
+        .page { max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+        .left-group { display: flex; align-items: center; gap: 12px; }
+        .page-header h1 { font-size: 1.35rem; font-weight: 700; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+        .stat-card { background: var(--white); border-radius: 10px; padding: 18px 20px; border: 1px solid var(--border); text-align: center; }
+        .stat-val { font-size: 1.6rem; font-weight: 800; margin-bottom: 2px; }
+        .stat-label { font-size: 0.72rem; color: var(--text-muted); }
+        .stat-pending .stat-val { color: #E65100; }
+        .stat-approved .stat-val { color: var(--green); }
+        .stat-rejected .stat-val { color: var(--red); }
+        .stat-total .stat-val { color: var(--dark-blue); }
+
+        .app-card { background: var(--white); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 16px; overflow: hidden; transition: box-shadow 0.15s; }
+        .app-card:hover { box-shadow: 0 4px 12px rgba(59,74,106,0.08); }
+        .app-card-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .app-id { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; font-family: monospace; }
+        .app-title { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+        .app-meta { display: flex; gap: 16px; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap; }
+        .app-meta span { display: flex; align-items: center; gap: 4px; }
+        .app-summary { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; padding: 0 24px 12px; }
+
+        .status-badge { padding: 4px 12px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+        .status-draft { background: #F1F5F9; color: var(--text-muted); }
+        .status-pending_review { background: #FFF3E0; color: #E65100; }
+        .status-pending_committee { background: #E3F2FD; color: #1565C0; }
+        .status-approved { background: #E8F5E9; color: var(--green); }
+        .status-rejected { background: #FFEBEE; color: var(--red); }
+        .status-executing { background: #F3E5F5; color: #7B1FA2; }
+
+        .app-card-workflow { padding: 0 24px 20px; }
+        .workflow-toggle { font-size: 0.78rem; color: var(--dark-blue); cursor: pointer; display: flex; align-items: center; gap: 4px; margin-bottom: 12px; user-select: none; }
+        .workflow-toggle svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.2s; }
+        .workflow-toggle.open svg { transform: rotate(90deg); }
+        .workflow-timeline { display: none; padding-left: 16px; border-left: 2px solid var(--border); }
+        .workflow-timeline.show { display: block; }
+        .wf-step { position: relative; padding: 0 0 20px 24px; }
+        .wf-step:last-child { padding-bottom: 0; }
+        .wf-dot { position: absolute; left: -25px; top: 2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); background: var(--white); }
+        .wf-step.completed .wf-dot { background: var(--green); border-color: var(--green); }
+        .wf-step.current .wf-dot { background: var(--gold); border-color: var(--gold); animation: pulse 1.5s infinite; }
+        .wf-step.pending .wf-dot { background: var(--white); border-color: var(--border); }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,169,110,0.4); } 50% { box-shadow: 0 0 0 6px rgba(201,169,110,0); } }
+        .wf-title { font-size: 0.82rem; font-weight: 600; margin-bottom: 3px; }
+        .wf-info { font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; }
+        .wf-comment { font-size: 0.75rem; color: var(--dark-blue); background: var(--blue-light); padding: 6px 10px; border-radius: 6px; margin-top: 6px; display: inline-block; }
+
+        .app-card-actions { padding: 12px 24px; background: #F8FAFC; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .btn-sm { padding: 6px 14px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; border: 1px solid var(--border); background: var(--white); color: var(--dark-blue); transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
+        .btn-sm:hover { background: var(--light-pink); }
+        .btn-sm svg { width: 14px; height: 14px; fill: currentColor; }
+        .btn-sm.approve { background: var(--green); color: var(--white); border-color: var(--green); }
+        .btn-sm.approve:hover { background: #256B5D; }
+        .btn-sm.reject { background: var(--white); color: var(--red); border-color: var(--red); }
+        .btn-sm.reject:hover { background: #FFEBEE; }
+
+        .review-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; }
+        .review-modal-overlay.show { display: flex; }
+        .review-modal { background: var(--white); border-radius: 12px; width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+        .review-modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .review-modal-header h3 { font-size: 1rem; font-weight: 700; }
+        .review-modal-body { padding: 20px 24px; }
+        .review-modal-body textarea { width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.85rem; resize: vertical; }
+        .review-modal-body textarea:focus { outline: none; border-color: var(--dark-blue); }
+        .review-modal-body label { display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 8px; }
+        .review-modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+        .empty-state { text-align: center; padding: 48px; color: var(--text-muted); font-size: 0.88rem; }
+        @media (max-width: 768px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/transaction/review" class="active">交易审批</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div class="left-group">
+                <a href="/dashboard" class="btn-back">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    返回
+                </a>
+                <h1>交易审批</h1>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card stat-total">
+                <div class="stat-val" id="sAll">0</div>
+                <div class="stat-label">全部申请</div>
+            </div>
+            <div class="stat-card stat-pending">
+                <div class="stat-val" id="sPending">0</div>
+                <div class="stat-label">待审批</div>
+            </div>
+            <div class="stat-card stat-approved">
+                <div class="stat-val" id="sApproved">0</div>
+                <div class="stat-label">已通过</div>
+            </div>
+            <div class="stat-card stat-rejected">
+                <div class="stat-val" id="sRejected">0</div>
+                <div class="stat-label">已拒绝</div>
+            </div>
+        </div>
+
+        <div id="appList"></div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="review-modal-overlay" id="reviewOverlay" onclick="if(event.target===this)closeReview()">
+        <div class="review-modal">
+            <div class="review-modal-header">
+                <h3 id="reviewTitle">审批意见</h3>
+                <button style="border:none;background:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted)" onclick="closeReview()">×</button>
+            </div>
+            <div class="review-modal-body">
+                <label>审批意见 <span style="color:var(--red)">*</span></label>
+                <textarea id="reviewComment" placeholder="请输入审批意见..."></textarea>
+            </div>
+            <div class="review-modal-footer">
+                <button class="btn-sm" onclick="closeReview()">取消</button>
+                <button class="btn-sm reject" id="btnReject" style="display:none" onclick="doAction('reject')">拒绝</button>
+                <button class="btn-sm approve" id="btnApprove" style="display:none" onclick="doAction('approve')">通过</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const applications = {{ applications | tojson }};
+        const statusMap = {
+            'draft': '草稿', 'pending_review': '风控审核中', 'pending_committee': '投委会审议中',
+            'approved': '已通过', 'rejected': '已拒绝', 'executing': '放款执行中'
+        };
+        let reviewAppId = null, reviewAction = null;
+
+        function fmtUSD(n) {
+            if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+            return '$' + n.toLocaleString();
+        }
+
+        function updateStats() {
+            document.getElementById('sAll').textContent = applications.length;
+            document.getElementById('sPending').textContent = applications.filter(a => a.status.startsWith('pending') || a.status === 'executing').length;
+            document.getElementById('sApproved').textContent = applications.filter(a => a.status === 'approved').length;
+            document.getElementById('sRejected').textContent = applications.filter(a => a.status === 'rejected').length;
+        }
+
+        function renderList() {
+            updateStats();
+            const el = document.getElementById('appList');
+
+            const pending = applications.filter(a => a.status.startsWith('pending') || a.status === 'executing');
+            const done = applications.filter(a => a.status === 'approved' || a.status === 'rejected');
+            const sorted = [...pending, ...done];
+
+            if (sorted.length === 0) {
+                el.innerHTML = '<div class="empty-state">暂无待审批的交易申请</div>';
+                return;
+            }
+
+            el.innerHTML = sorted.map(app => {
+                const needsAction = app.status === 'pending_review' || app.status === 'pending_committee';
+                return `
+                <div class="app-card">
+                    <div class="app-card-header">
+                        <div>
+                            <div class="app-id">${app.id}</div>
+                            <div class="app-title">${app.partner_name} · ${app.transaction_type}</div>
+                            <div class="app-meta">
+                                <span>金额：<strong>${fmtUSD(app.amount)}</strong></span>
+                                <span>期限：${app.tenor_days}天</span>
+                                <span>预期收益：${(app.expected_yield * 100).toFixed(1)}%</span>
+                                <span>提交：${app.submit_date}</span>
+                                <span>申请人：${app.applicant_name}</span>
+                            </div>
+                        </div>
+                        <span class="status-badge status-${app.status}">${statusMap[app.status] || app.status}</span>
+                    </div>
+                    <div class="app-summary">${app.summary}</div>
+
+                    <div class="app-card-workflow">
+                        <div class="workflow-toggle" onclick="toggleWorkflow(this)">
+                            <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+                            审批流程
+                        </div>
+                        <div class="workflow-timeline">
+                            ${app.workflow.map(w => `
+                                <div class="wf-step ${w.status}">
+                                    <div class="wf-dot"></div>
+                                    <div class="wf-title">${w.step}</div>
+                                    <div class="wf-info">
+                                        ${w.operator ? w.operator + ' · ' + w.role : '等待处理'}
+                                        ${w.date ? ' · ' + w.date : ''}
+                                    </div>
+                                    ${w.comment ? `<div class="wf-comment">${w.comment}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="app-card-actions">
+                        <div>
+                            ${app.report_file ? `<span class="btn-sm" onclick="alert('下载: ${app.report_file}')">
+                                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                                投委会报告
+                            </span>` : '<span style="font-size:0.72rem;color:var(--text-muted)">未上传报告</span>'}
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            ${needsAction ? `
+                                <button class="btn-sm reject" onclick="openReview('${app.id}','reject')">拒绝</button>
+                                <button class="btn-sm approve" onclick="openReview('${app.id}','approve')">通过</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function toggleWorkflow(el) {
+            el.classList.toggle('open');
+            el.nextElementSibling.classList.toggle('show');
+        }
+
+        function openReview(id, action) {
+            reviewAppId = id;
+            reviewAction = action;
+            document.getElementById('reviewTitle').textContent = action === 'approve' ? '审批通过' : '拒绝申请';
+            document.getElementById('btnApprove').style.display = action === 'approve' ? 'inline-flex' : 'none';
+            document.getElementById('btnReject').style.display = action === 'reject' ? 'inline-flex' : 'none';
+            document.getElementById('reviewComment').value = '';
+            document.getElementById('reviewOverlay').classList.add('show');
+        }
+
+        function closeReview() { document.getElementById('reviewOverlay').classList.remove('show'); }
+
+        function doAction(action) {
+            const comment = document.getElementById('reviewComment').value.trim();
+            if (!comment) { alert('请输入审批意见'); return; }
+
+            const app = applications.find(a => a.id === reviewAppId);
+            if (!app) return;
+
+            const now = new Date().toISOString().slice(0, 10);
+
+            const currentStep = app.workflow.find(w => w.status === 'current');
+            if (currentStep) {
+                currentStep.status = 'completed';
+                currentStep.operator = '{{ user.display_name }}';
+                currentStep.date = now;
+                currentStep.comment = comment;
+            }
+
+            if (action === 'reject') {
+                app.status = 'rejected';
+                app.workflow.filter(w => w.status === 'pending').forEach(w => w.status = 'pending');
+            } else {
+                const nextPending = app.workflow.find(w => w.status === 'pending');
+                if (nextPending) {
+                    nextPending.status = 'current';
+                    if (app.status === 'pending_review') app.status = 'pending_committee';
+                    else if (app.status === 'pending_committee') app.status = 'executing';
+                } else {
+                    app.status = 'approved';
+                }
+            }
+
+            closeReview();
+            renderList();
+            alert(`申请 ${reviewAppId} 已${action === 'approve' ? '通过' : '拒绝'}`);
+        }
+
+        renderList();
+    </script>
+</body>
+</html>

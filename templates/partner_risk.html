@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | {{ partner.name }} - 风控监控</title>
+    <style>
+        :root {
+            --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF;
+            --text-muted: #8A95A5; --border: #E2E8F0;
+            --accent-teal: #2E7D6E; --accent-amber: #E8A838; --accent-coral: #D8434F; --accent-mint: #4DB6AC;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f0ee 0%, #ebe5e3 100%); min-height: 100vh; color: var(--dark-blue); }
+
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+
+        .page { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+        .page-header .left-group { display: flex; align-items: center; gap: 12px; }
+        .page-header h1 { font-size: 1.25rem; font-weight: 700; }
+        .page-header .sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+
+        .date-selector { display: flex; align-items: center; gap: 10px; }
+        .date-selector label { font-size: 0.8rem; color: var(--text-muted); }
+        .date-selector select { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); font-size: 0.82rem; color: var(--dark-blue); cursor: pointer; }
+        .page-header .date-selector, .page-header .currency-selector { display: flex; align-items: center; gap: 10px; }
+        .page-header .header-right { display: flex; align-items: center; gap: 24px; }
+        .currency-selector label { font-size: 0.8rem; color: var(--text-muted); }
+
+        .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-teal); display: inline-block; }
+        .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0; }
+        .section-header .section-title { margin-bottom: 0; }
+        .currency-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; font-size: 0.72rem; }
+        .currency-toggle button { padding: 4px 12px; border: none; background: var(--white); color: var(--text-muted); cursor: pointer; font-weight: 600; font-family: inherit; transition: all 0.15s; }
+        .currency-toggle button.active { background: var(--dark-blue); color: var(--white); }
+        .currency-toggle button:hover:not(.active) { background: var(--light-pink); }
+        .vintage-header-right { display: flex; align-items: center; gap: 12px; }
+        .vintage-mode-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; font-size: 0.78rem; }
+        .vintage-mode-toggle button { padding: 5px 14px; border: none; background: var(--white); color: var(--text-muted); cursor: pointer; font-weight: 600; font-family: inherit; transition: all 0.15s; }
+        .vintage-mode-toggle button.active { background: var(--accent-teal); color: var(--white); }
+        .vintage-mode-toggle button:hover:not(.active) { background: var(--light-pink); }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 28px; }
+        .kpi-card { background: var(--white); border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border-left: 4px solid var(--dark-blue); }
+        .kpi-card.highlight { border-left-color: var(--accent-teal); }
+        .kpi-card.warning { border-left-color: var(--accent-amber); }
+        .kpi-card.danger { border-left-color: var(--accent-coral); }
+        .kpi-label { font-size: 0.7rem; color: var(--dark-blue); opacity: 0.75; margin-bottom: 4px; }
+        .kpi-value { font-size: 1.25rem; font-weight: 700; }
+        .kpi-value.rate { font-size: 1rem; }
+        .kpi-local { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+
+        .dpd-section { background: var(--white); border-radius: 10px; padding: 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); }
+        .dpd-layout { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+        .dpd-pie-wrap { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; min-width: 200px; }
+        .dpd-pie { width: 160px; height: 160px; border-radius: 50%; flex-shrink: 0; }
+        .dpd-pie-legend { margin-top: 16px; font-size: 0.78rem; }
+        .dpd-pies-row { display: flex; gap: 24px; flex-wrap: wrap; }
+        .dpd-pie-wrap .dpd-pie-title { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+        .dpd-pie-legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .dpd-pie-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .dpd-pie-legend-label { min-width: 28px; }
+        .dpd-pie-legend-value { font-weight: 600; color: var(--dark-blue); }
+        .dpd-table-wrap { flex: 1; min-width: 320px; }
+        .dpd-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .dpd-table th, .dpd-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--light-pink); }
+        .dpd-table th { background: var(--light-pink); font-weight: 600; }
+        .dpd-table tr:hover { background: rgba(255,241,238,0.5); }
+
+        .vintage-section { background: var(--white); border-radius: 10px; padding: 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); overflow-x: auto; }
+        .vintage-table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 0.78rem; }
+        .vintage-table th, .vintage-table td { padding: 10px 8px; text-align: center; border: 1px solid var(--light-pink); }
+        .vintage-table th { background: var(--dark-blue); color: var(--white); font-weight: 600; }
+        .vintage-table th.text-left, .vintage-table td.text-left { text-align: left; }
+        .vintage-table tr:nth-child(even) { background: rgba(255,241,238,0.3); }
+        .rate-low { color: var(--accent-teal); }
+        .rate-mid { color: var(--accent-amber); }
+        .rate-high { color: var(--accent-coral); }
+        .vintage-month-link { color: var(--dark-blue); font-weight: 600; text-decoration: none; }
+        .vintage-month-link:hover { text-decoration: underline; color: var(--accent-teal); }
+
+        .collection-section { background: var(--white); border-radius: 10px; padding: 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); overflow-x: auto; }
+        .collection-table { width: 100%; min-width: 1200px; border-collapse: collapse; font-size: 0.78rem; }
+        .collection-table th, .collection-table td { padding: 10px 8px; text-align: center; border: 1px solid var(--light-pink); }
+        .collection-table th { background: var(--dark-blue); color: var(--white); font-weight: 600; }
+        .collection-table th.text-left, .collection-table td.text-left { text-align: left; }
+        .collection-table .collection-col-amount { text-align: right; }
+        .collection-table tr:nth-child(even) { background: rgba(255,241,238,0.3); }
+
+        /* Alert Panel */
+        .alert-panel { background: var(--white); border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border-left: 4px solid var(--accent-coral); }
+        .alert-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .alert-panel-title { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .alert-panel-title svg { width: 20px; height: 20px; }
+        .alert-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 700; background: var(--accent-coral); color: var(--white); }
+        .alert-item { padding: 14px 16px; border-radius: 8px; margin-bottom: 8px; display: flex; gap: 14px; align-items: flex-start; transition: background 0.15s; }
+        .alert-item:last-child { margin-bottom: 0; }
+        .alert-item:hover { background: rgba(255,241,238,0.5); }
+        .alert-item.severity-high { background: #FFF5F5; border: 1px solid #FED7D7; }
+        .alert-item.severity-medium { background: #FFFBEB; border: 1px solid #FEF3C7; }
+        .alert-item.severity-low { background: #F0FDF4; border: 1px solid #BBF7D0; }
+        .alert-item.resolved { opacity: 0.55; }
+        .alert-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+        .alert-dot.high { background: var(--accent-coral); }
+        .alert-dot.medium { background: var(--accent-amber); }
+        .alert-dot.low { background: var(--accent-teal); }
+        .alert-content { flex: 1; }
+        .alert-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .alert-title { font-size: 0.82rem; font-weight: 600; }
+        .alert-date { font-size: 0.7rem; color: var(--text-muted); }
+        .alert-detail { font-size: 0.75rem; color: #5A6577; line-height: 1.6; }
+        .alert-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; margin-left: 8px; }
+        .alert-tag.open { background: #FEE2E2; color: var(--accent-coral); }
+        .alert-tag.resolved { background: #D1FAE5; color: var(--accent-teal); }
+
+        /* Priority Indicators */
+        .priority-section { background: var(--white); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); }
+        .priority-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .pri-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; position: relative; overflow: hidden; }
+        .pri-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .pri-card.safe::before { background: var(--accent-teal); }
+        .pri-card.warn::before { background: var(--accent-amber); }
+        .pri-card.danger::before { background: var(--accent-coral); }
+        .pri-label { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pri-value { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
+        .pri-value.safe { color: var(--accent-teal); }
+        .pri-value.warn { color: var(--accent-amber); }
+        .pri-value.danger { color: var(--accent-coral); }
+        .pri-sub { font-size: 0.62rem; color: var(--text-muted); line-height: 1.5; }
+        .pri-sub strong { color: var(--dark-blue); }
+        .pri-bar-bg { height: 5px; background: #E2E8F0; border-radius: 3px; margin: 6px 0 4px; position: relative; overflow: visible; }
+        @media (max-width: 1100px) { .priority-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 700px) { .priority-grid { grid-template-columns: repeat(2, 1fr); } }
+        .pri-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+        .pri-bar.safe { background: var(--accent-teal); }
+        .pri-bar.warn { background: var(--accent-amber); }
+        .pri-bar.danger { background: var(--accent-coral); }
+
+        /* Coverage gauge */
+        .coverage-gauge { position: relative; margin: 10px 0 4px; }
+        .gauge-track { height: 8px; background: #E2E8F0; border-radius: 4px; position: relative; overflow: visible; }
+        .gauge-zone { position: absolute; top: 0; height: 100%; }
+        .gauge-zone.danger-zone { left: 0; background: rgba(216,67,79,0.2); border-radius: 4px 0 0 4px; }
+        .gauge-zone.warn-zone { background: rgba(232,168,56,0.2); }
+        .gauge-zone.safe-zone { background: rgba(46,125,110,0.15); border-radius: 0 4px 4px 0; }
+        .gauge-marker { position: absolute; top: -4px; width: 3px; height: 16px; border-radius: 2px; z-index: 2; }
+        .gauge-pointer { position: absolute; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--white); z-index: 3; box-shadow: 0 1px 4px rgba(0,0,0,0.3); transform: translateX(-50%); }
+        .gauge-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.62rem; color: var(--text-muted); }
+        .gauge-label-line { position: absolute; bottom: -14px; font-size: 0.6rem; transform: translateX(-50%); white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="/dashboard">概览</a>
+                <a href="/partner/manage">资产商管理</a>
+                <a class="active">{{ partner.name }}</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <div class="left-group">
+                    <a href="/partner/manage" class="btn-back">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        返回列表
+                    </a>
+                    <h1>{{ partner.name }} · 风控监控</h1>
+                </div>
+                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · 联系人：{{ partner.contact }}</div>
+            </div>
+            <div class="header-right">
+                <div class="date-selector">
+                    <label>数据日期：</label>
+                    <select id="dateSelect"></select>
+                </div>
+                <div class="currency-selector">
+                    <label>货币：</label>
+                    <div class="currency-toggle currency-toggle-header">
+                        <button class="active" onclick="switchHeaderCurrency('usd',this)">USD</button>
+                        <button onclick="switchHeaderCurrency('local',this)">{{ local_currency }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="content"></div>
+    </div>
+
+    <script>
+        const partnerId = '{{ partner.id }}';
+        const riskData = {{ risk_data | tojson }};
+        const alerts = {{ alerts | tojson }};
+        const priorityIndicators = {{ priority_indicators | tojson }};
+        const localCurrency = '{{ local_currency }}';
+        const exchangeRate = {{ exchange_rate }};
+
+        function fmtLocal(nUsd) {
+            if (nUsd === null || nUsd === undefined || nUsd === '') return '-';
+            const x = parseFloat(nUsd);
+            if (isNaN(x)) return '-';
+            const local = x * exchangeRate;
+            if (localCurrency === 'IDR') {
+                if (local >= 1e12) return localCurrency + ' ' + (local / 1e12).toFixed(1) + 'T';
+                if (local >= 1e9) return localCurrency + ' ' + (local / 1e9).toFixed(1) + 'B';
+                if (local >= 1e6) return localCurrency + ' ' + (local / 1e6).toFixed(1) + 'M';
+                return localCurrency + ' ' + local.toLocaleString(undefined, {maximumFractionDigits: 0});
+            }
+            if (local >= 1e9) return localCurrency + ' ' + (local / 1e9).toFixed(2) + 'B';
+            if (local >= 1e6) return localCurrency + ' ' + (local / 1e6).toFixed(1) + 'M';
+            if (local >= 1e3) return localCurrency + ' ' + (local / 1e3).toFixed(0) + 'K';
+            return localCurrency + ' ' + local.toLocaleString(undefined, {maximumFractionDigits: 0});
+        }
+
+        function fmtUSD(n) {
+            if (n === null || n === undefined || n === '') return '-';
+            const x = parseFloat(n);
+            if (isNaN(x)) return '-';
+            if (x >= 1e6) return '$' + (x / 1e6).toFixed(1) + 'M';
+            if (x >= 1e3) return '$' + (x / 1e3).toFixed(0) + 'K';
+            return '$' + x.toLocaleString();
+        }
+        function fmtValUSD(n) {
+            if (n === null || n === undefined || n === '') return '-';
+            const x = parseFloat(n);
+            if (isNaN(x)) return '-';
+            if (x >= 1e6) return (x / 1e6).toFixed(1) + 'M';
+            if (x >= 1e3) return (x / 1e3).toFixed(0) + 'K';
+            return x.toLocaleString();
+        }
+        function fmtValLocal(n) {
+            if (n === null || n === undefined || n === '') return '-';
+            const x = parseFloat(n);
+            if (isNaN(x)) return '-';
+            const local = x * exchangeRate;
+            if (localCurrency === 'IDR') {
+                if (local >= 1e12) return (local / 1e12).toFixed(1) + 'T';
+                if (local >= 1e9) return (local / 1e9).toFixed(1) + 'B';
+                if (local >= 1e6) return (local / 1e6).toFixed(1) + 'M';
+                return local.toLocaleString(undefined, {maximumFractionDigits: 0});
+            }
+            if (local >= 1e9) return (local / 1e9).toFixed(2) + 'B';
+            if (local >= 1e6) return (local / 1e6).toFixed(1) + 'M';
+            if (local >= 1e3) return (local / 1e3).toFixed(0) + 'K';
+            return local.toLocaleString(undefined, {maximumFractionDigits: 0});
+        }
+        function fmtAmount(n) {
+            return (window.currencyMode || 'usd') === 'usd' ? fmtValUSD(n) : fmtValLocal(n);
+        }
+
+        function fmtNum(n) {
+            if (n === null || n === undefined || n === '') return '-';
+            const x = parseFloat(n);
+            if (isNaN(x)) return '-';
+            if (x >= 1e8) return (x / 1e8).toFixed(2) + '亿';
+            if (x >= 1e4) return (x / 1e4).toFixed(2) + '万';
+            return x.toLocaleString();
+        }
+        function fmtPct(n) {
+            if (n === null || n === undefined || n === '') return '-';
+            const x = parseFloat(n);
+            if (isNaN(x)) return '-';
+            if (typeof n === 'string' && n.startsWith('0E')) return '0.00%';
+            return (x * 100).toFixed(2) + '%';
+        }
+        function rateClass(v) {
+            const x = parseFloat(v);
+            if (isNaN(x) || (typeof v === 'string' && v.startsWith('0E'))) return 'rate-low';
+            if (x >= 0.05) return 'rate-high';
+            if (x >= 0.02) return 'rate-mid';
+            return 'rate-low';
+        }
+
+        function renderAlerts() {
+            const open = alerts.filter(a => a.status === 'open');
+            if (alerts.length === 0) return '';
+            return `
+                <div class="alert-panel">
+                    <div class="alert-panel-header">
+                        <div class="alert-panel-title">
+                            <svg viewBox="0 0 24 24" fill="var(--accent-coral)"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                            对账预警
+                            ${open.length > 0 ? `<span class="alert-badge">${open.length} 项待处理</span>` : ''}
+                        </div>
+                    </div>
+                    ${alerts.map(a => `
+                        <div class="alert-item severity-${a.severity} ${a.status === 'resolved' ? 'resolved' : ''}">
+                            <div class="alert-dot ${a.severity}"></div>
+                            <div class="alert-content">
+                                <div class="alert-head">
+                                    <span>
+                                        <span class="alert-title">${a.title}</span>
+                                        <span class="alert-tag ${a.status}">${a.status === 'open' ? '待处理' : '已解决'}</span>
+                                    </span>
+                                    <span class="alert-date">${a.date}</span>
+                                </div>
+                                <div class="alert-detail">${a.detail}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderPriority() {
+            const pi = priorityIndicators;
+            if (!pi) return '';
+
+            const lev = pi.leverage_ratio;
+            const levPct = Math.min((lev.current / lev.limit) * 100, 100);
+            const levClass = levPct >= 90 ? 'danger' : levPct >= 70 ? 'warn' : 'safe';
+
+            const py = pi.priority_yield;
+            const pyVal = (py.current * 100).toFixed(2);
+            const pyTarget = (py.target * 100).toFixed(2);
+            const pyClass = py.current >= py.target ? 'safe' : 'warn';
+
+            const cov = pi.coverage_ratio;
+            const covClass = cov.current <= cov.liquidation ? 'danger' : cov.current <= cov.margin_call ? 'danger' : cov.current <= cov.baseline ? 'warn' : 'safe';
+            const gaugeMax = Math.max(cov.baseline * 1.5, cov.current * 1.2);
+            const toPercent = v => Math.min((v / gaugeMax) * 100, 100);
+
+            const mg = pi.margin_deposit;
+            const mgPct = Math.min((mg.current / mg.required) * 100, 100);
+            const mgClass = mgPct >= 100 ? 'safe' : mgPct >= 90 ? 'warn' : 'danger';
+
+            const gt = pi.guarantee_deposit;
+            const gtPct = Math.min((gt.current / gt.required) * 100, 100);
+            const gtClass = gtPct >= 100 ? 'safe' : gtPct >= 90 ? 'warn' : 'danger';
+
+            return `
+                <div class="section-title">优先级指标</div>
+                <div class="priority-section">
+                    <div class="priority-grid">
+                        <div class="pri-card ${levClass}">
+                            <div class="pri-label">杠杆比例</div>
+                            <div class="pri-value ${levClass}">${lev.current.toFixed(1)}x</div>
+                            <div class="pri-bar-bg"><div class="pri-bar ${levClass}" style="width:${levPct}%"></div></div>
+                            <div class="pri-sub">上限 <strong>${lev.limit.toFixed(1)}x</strong>　使用率 <strong>${levPct.toFixed(0)}%</strong></div>
+                        </div>
+
+                        <div class="pri-card ${pyClass}">
+                            <div class="pri-label">优先收益率</div>
+                            <div class="pri-value ${pyClass}">${pyVal}%</div>
+                            <div class="pri-bar-bg"><div class="pri-bar ${pyClass}" style="width:${Math.min((py.current / py.target) * 100, 100)}%"></div></div>
+                            <div class="pri-sub">目标 <strong>${pyTarget}%</strong>　${py.current >= py.target ? '✓ 达标' : '⚠ 未达标'}</div>
+                        </div>
+
+                        <div class="pri-card ${covClass}">
+                            <div class="pri-label">覆盖倍数</div>
+                            <div class="pri-value ${covClass}">${cov.current.toFixed(2)}x</div>
+                            <div class="coverage-gauge">
+                                <div class="gauge-track">
+                                    <div class="gauge-zone danger-zone" style="left:0;width:${toPercent(cov.liquidation)}%"></div>
+                                    <div class="gauge-zone warn-zone" style="left:${toPercent(cov.liquidation)}%;width:${toPercent(cov.margin_call) - toPercent(cov.liquidation)}%"></div>
+                                    <div class="gauge-zone warn-zone" style="left:${toPercent(cov.margin_call)}%;width:${toPercent(cov.baseline) - toPercent(cov.margin_call)}%"></div>
+                                    <div class="gauge-zone safe-zone" style="left:${toPercent(cov.baseline)}%;width:${100 - toPercent(cov.baseline)}%"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(cov.liquidation)}%;background:var(--accent-coral)"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(cov.margin_call)}%;background:var(--accent-amber)"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(cov.baseline)}%;background:var(--accent-teal)"></div>
+                                    <div class="gauge-pointer" style="left:${toPercent(cov.current)}%;background:${covClass === 'safe' ? 'var(--accent-teal)' : covClass === 'warn' ? 'var(--accent-amber)' : 'var(--accent-coral)'}"></div>
+                                </div>
+                            </div>
+                            <div class="pri-sub" style="margin-top:10px;line-height:1.7;">
+                                <span style="color:var(--accent-coral)">■</span> 平仓 <strong>${cov.liquidation.toFixed(2)}x</strong>
+                                <span style="color:var(--accent-amber)">■</span> 补仓 <strong>${cov.margin_call.toFixed(2)}x</strong>
+                                <span style="color:var(--accent-teal)">■</span> 基准 <strong>${cov.baseline.toFixed(2)}x</strong>
+                            </div>
+                        </div>
+
+                        <div class="pri-card ${mgClass}">
+                            <div class="pri-label">保证金</div>
+                            <div class="pri-value ${mgClass}">$${(mg.current / 1e6).toFixed(2)}M</div>
+                            <div class="pri-bar-bg"><div class="pri-bar ${mgClass}" style="width:${mgPct}%"></div></div>
+                            <div class="pri-sub">最低要求 <strong>$${(mg.required / 1e6).toFixed(2)}M</strong>　${mgPct >= 100 ? '✓ 充足' : '⚠ 不足'}</div>
+                        </div>
+
+                        <div class="pri-card ${gtClass}">
+                            <div class="pri-label">担保金</div>
+                            <div class="pri-value ${gtClass}">$${(gt.current / 1e6).toFixed(2)}M</div>
+                            <div class="pri-bar-bg"><div class="pri-bar ${gtClass}" style="width:${gtPct}%"></div></div>
+                            <div class="pri-sub">最低要求 <strong>$${(gt.required / 1e6).toFixed(2)}M</strong>　${gtPct >= 100 ? '✓ 充足' : '⚠ 不足'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function render(row) {
+            const dpd = row.dpd_distribution || [];
+            const vintage = row.vintage_data || [];
+
+            return `
+                ${renderAlerts()}
+
+                <div class="section-title">核心指标 · ${row.stat_date}</div>
+                <div class="kpi-grid">
+                    <div class="kpi-card highlight"><div class="kpi-label">累计放款</div><div class="kpi-value amount-cell" data-usd="${fmtValUSD(row.cumulative_disbursement)}" data-local="${fmtValLocal(row.cumulative_disbursement)}">${fmtAmount(row.cumulative_disbursement)}</div></div>
+                    <div class="kpi-card highlight"><div class="kpi-label">当前余额</div><div class="kpi-value amount-cell" data-usd="${fmtValUSD(row.current_balance)}" data-local="${fmtValLocal(row.current_balance)}">${fmtAmount(row.current_balance)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">平均久期</div><div class="kpi-value">${(row.avg_duration != null && row.avg_duration !== undefined && row.avg_duration !== '') ? parseFloat(row.avg_duration).toFixed(1) + ' 月' : '-'}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">M0 占比</div><div class="kpi-value rate">${fmtPct(row.m0_ratio)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">日均利率</div><div class="kpi-value rate">${fmtPct(row.avg_daily_rate)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">放款加权利率</div><div class="kpi-value rate">${fmtPct(row.disbursement_weighted_rate)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">活跃借款笔数</div><div class="kpi-value">${fmtNum(row.active_loans)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">活跃借款人数</div><div class="kpi-value">${fmtNum(row.active_borrowers)}</div></div>
+                    <div class="kpi-card ${parseFloat(row.overdue_1_plus_ratio) >= 0.05 ? 'danger' : parseFloat(row.overdue_1_plus_ratio) >= 0.02 ? 'warning' : ''}"><div class="kpi-label">逾期 1+ 率</div><div class="kpi-value rate">${fmtPct(row.overdue_1_plus_ratio)}</div></div>
+                    <div class="kpi-card ${parseFloat(row.overdue_3_plus_ratio) >= 0.03 ? 'danger' : parseFloat(row.overdue_3_plus_ratio) >= 0.01 ? 'warning' : ''}"><div class="kpi-label">逾期 3+ 率</div><div class="kpi-value rate">${fmtPct(row.overdue_3_plus_ratio)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">逾期 7+ 率</div><div class="kpi-value rate">${fmtPct(row.overdue_7_plus_ratio)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">逾期 30+ 率</div><div class="kpi-value rate">${fmtPct(row.overdue_30_plus_ratio)}</div></div>
+                </div>
+
+                ${renderPriority()}
+
+                <div class="section-header">
+                    <div class="section-title">DPD 逾期账龄分布</div>
+                </div>
+                <div class="dpd-section">
+                    <div class="dpd-layout">
+                        <div class="dpd-pies-row">
+                            <div class="dpd-pie-wrap">
+                                <div class="dpd-pie-title">DPD 账龄</div>
+                                <div class="dpd-pie" style="background: conic-gradient(${dpd.length ? dpd.map((d, i) => {
+                                    const pct = (parseFloat(d.balance_ratio) || 0) * 100;
+                                    const colors = ['#4DB6AC','#E8A838','#F5A623','#E67E22','#D8434F','#D8434F','#D8434F'];
+                                    const prev = dpd.slice(0,i).reduce((s,x) => s + (parseFloat(x.balance_ratio)||0)*100, 0);
+                                    return colors[Math.min(i,6)] + ' ' + prev + '% ' + (prev + pct) + '%';
+                                }).join(', ') : '#E2E8F0 0% 100%'});"></div>
+                                <div class="dpd-pie-legend">
+                                    ${dpd.map((d, i) => {
+                                        const colors = ['#4DB6AC','#E8A838','#F5A623','#E67E22','#D8434F','#D8434F','#D8434F'];
+                                        const pct = (parseFloat(d.balance_ratio) || 0) * 100;
+                                        return `<div class="dpd-pie-legend-item"><span class="dpd-pie-legend-dot" style="background:${colors[Math.min(i,6)]}"></span><span class="dpd-pie-legend-label">${d.bucket}</span><span class="dpd-pie-legend-value">${pct.toFixed(1)}%</span></div>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                            <div class="dpd-pie-wrap">
+                                <div class="dpd-pie-title">客户信用评级</div>
+                                <div class="dpd-pie" style="background: conic-gradient(${(row.credit_rating_distribution || []).length ? (row.credit_rating_distribution || []).map((d, i) => {
+                                    const pct = (parseFloat(d.ratio) || 0) * 100;
+                                    const colors = ['#2E7D6E','#4DB6AC','#E8A838','#D8434F'];
+                                    const prev = (row.credit_rating_distribution || []).slice(0,i).reduce((s,x) => s + (parseFloat(x.ratio)||0)*100, 0);
+                                    return colors[Math.min(i,3)] + ' ' + prev + '% ' + (prev + pct) + '%';
+                                }).join(', ') : '#E2E8F0 0% 100%'});"></div>
+                                <div class="dpd-pie-legend">
+                                    ${(row.credit_rating_distribution || []).map((d, i) => {
+                                        const colors = ['#2E7D6E','#4DB6AC','#E8A838','#D8434F'];
+                                        const pct = (parseFloat(d.ratio) || 0) * 100;
+                                        return `<div class="dpd-pie-legend-item"><span class="dpd-pie-legend-dot" style="background:${colors[Math.min(i,3)]}"></span><span class="dpd-pie-legend-label">${d.rating}</span><span class="dpd-pie-legend-value">${pct.toFixed(1)}%</span></div>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dpd-table-wrap">
+                            <table class="dpd-table">
+                                <thead><tr><th>账龄</th><th class="dpd-col-amount">余额</th><th>余额占比</th><th>借款笔数</th><th>借款人数</th></tr></thead>
+                                <tbody>${dpd.map(d => `<tr><td><a href="/partner/${partnerId}/dpd/${d.bucket}" class="vintage-month-link"><strong>${d.bucket}</strong></a></td><td class="dpd-col-amount amount-cell" data-usd="${fmtValUSD(d.balance)}" data-local="${fmtValLocal(d.balance)}">${fmtAmount(d.balance)}</td><td>${fmtPct(d.balance_ratio)}</td><td>${fmtNum(d.loan_count)}</td><td>${fmtNum(d.borrower_count)}</td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <div class="section-title">Vintage 账龄分析</div>
+                    <div class="vintage-mode-toggle">
+                        <button class="${(window.vintageMode || 'dpd') === 'dpd' ? 'active' : ''}" onclick="switchVintageMode('dpd', this)">DPD</button>
+                        <button class="${(window.vintageMode || 'dpd') === 'mob' ? 'active' : ''}" onclick="switchVintageMode('mob', this)">MOB</button>
+                    </div>
+                </div>
+                <div class="vintage-section">
+                    <table class="vintage-table">
+                        <thead><tr>${(window.vintageMode || 'dpd') === 'dpd'
+                            ? '<th class="text-left">放款月</th><th class="vnt-col-amount">放款金额</th><th class="vnt-col-amount">当前余额</th><th>DPD1</th><th>DPD3</th><th>DPD7</th><th>DPD15</th><th>DPD30</th>'
+                            : '<th class="text-left">放款月</th><th class="vnt-col-amount">放款金额</th><th class="vnt-col-amount">当前余额</th><th>MOB1</th><th>MOB2</th><th>MOB3</th><th>MOB4</th><th>MOB5</th><th>MOB6</th><th>MOB7</th><th>MOB8</th><th>MOB9</th><th>MOB10</th><th>MOB11</th><th>MOB12</th>'
+                        }</tr></thead>
+                        <tbody>${(window.vintageMode || 'dpd') === 'dpd'
+                            ? vintage.map(v => `<tr>
+                                <td class="text-left"><a href="/partner/${partnerId}/vintage/${v.disbursement_month}" class="vintage-month-link">${v.disbursement_month}</a></td>
+                                <td class="vnt-col-amount amount-cell" data-usd="${fmtValUSD(v.disbursement_amount)}" data-local="${fmtValLocal(v.disbursement_amount)}">${fmtAmount(v.disbursement_amount)}</td>
+                                <td class="vnt-col-amount amount-cell" data-usd="${fmtValUSD(v.current_balance)}" data-local="${fmtValLocal(v.current_balance)}">${fmtAmount(v.current_balance)}</td>
+                                <td class="${rateClass(v.dpd1_rate)}">${fmtPct(v.dpd1_rate)}</td>
+                                <td class="${rateClass(v.dpd3_rate)}">${fmtPct(v.dpd3_rate)}</td>
+                                <td class="${rateClass(v.dpd7_rate)}">${fmtPct(v.dpd7_rate)}</td>
+                                <td class="${rateClass(v.dpd15_rate)}">${fmtPct(v.dpd15_rate)}</td>
+                                <td class="${rateClass(v.dpd30_rate)}">${fmtPct(v.dpd30_rate)}</td>
+                            </tr>`).join('')
+                            : vintage.map(v => `<tr>
+                                <td class="text-left"><a href="/partner/${partnerId}/vintage/${v.disbursement_month}" class="vintage-month-link">${v.disbursement_month}</a></td>
+                                <td class="vnt-col-amount amount-cell" data-usd="${fmtValUSD(v.disbursement_amount)}" data-local="${fmtValLocal(v.disbursement_amount)}">${fmtAmount(v.disbursement_amount)}</td>
+                                <td class="vnt-col-amount amount-cell" data-usd="${fmtValUSD(v.current_balance)}" data-local="${fmtValLocal(v.current_balance)}">${fmtAmount(v.current_balance)}</td>
+                                ${[1,2,3,4,5,6,7,8,9,10,11,12].map(i => {
+                                    const r = v['mob'+i+'_rate'];
+                                    return `<td class="${r != null ? rateClass(r) : ''}">${r != null ? fmtPct(r) : '-'}</td>`;
+                                }).join('')}
+                            </tr>`).join('')
+                        }</tbody>
+                    </table>
+                </div>
+
+                <div class="section-header">
+                    <div class="section-title">回收报表</div>
+                </div>
+                <div class="collection-section">
+                    <table class="collection-table">
+                        <thead><tr>
+                            <th class="text-left">到期月</th>
+                            <th class="collection-col-amount">到期金额</th>
+                            <th class="collection-col-amount">d0入催</th><th class="collection-col-amount">d1入催</th><th class="collection-col-amount">d3入催</th><th class="collection-col-amount">d7入催</th><th class="collection-col-amount">d30入催</th><th class="collection-col-amount">d60入催</th><th class="collection-col-amount">d90入催</th>
+                            <th class="collection-col-amount">d1回收</th><th class="collection-col-amount">d3回收</th><th class="collection-col-amount">d7回收</th><th class="collection-col-amount">d30回收</th><th class="collection-col-amount">d60回收</th><th class="collection-col-amount">d90回收</th>
+                        </tr></thead>
+                        <tbody>${(row.collection_report || []).map(r => `<tr>
+                            <td class="text-left"><a href="/partner/${partnerId}/maturity/${r.maturity_month}" class="vintage-month-link"><strong>${r.maturity_month}</strong></a></td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.due_amount)}" data-local="${fmtValLocal(r.due_amount)}">${fmtAmount(r.due_amount)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d0_into_collection)}" data-local="${fmtValLocal(r.d0_into_collection)}">${fmtAmount(r.d0_into_collection)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d1_into_collection)}" data-local="${fmtValLocal(r.d1_into_collection)}">${fmtAmount(r.d1_into_collection)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d3_into_collection)}" data-local="${fmtValLocal(r.d3_into_collection)}">${fmtAmount(r.d3_into_collection)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d7_into_collection)}" data-local="${fmtValLocal(r.d7_into_collection)}">${fmtAmount(r.d7_into_collection)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d30_into_collection)}" data-local="${fmtValLocal(r.d30_into_collection)}">${fmtAmount(r.d30_into_collection)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d60_into_collection)}" data-local="${fmtValLocal(r.d60_into_collection)}">${fmtAmount(r.d60_into_collection)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d90_into_collection)}" data-local="${fmtValLocal(r.d90_into_collection)}">${fmtAmount(r.d90_into_collection)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d1_recovery)}" data-local="${fmtValLocal(r.d1_recovery)}">${fmtAmount(r.d1_recovery)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d3_recovery)}" data-local="${fmtValLocal(r.d3_recovery)}">${fmtAmount(r.d3_recovery)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d7_recovery)}" data-local="${fmtValLocal(r.d7_recovery)}">${fmtAmount(r.d7_recovery)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d30_recovery)}" data-local="${fmtValLocal(r.d30_recovery)}">${fmtAmount(r.d30_recovery)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d60_recovery)}" data-local="${fmtValLocal(r.d60_recovery)}">${fmtAmount(r.d60_recovery)}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d90_recovery)}" data-local="${fmtValLocal(r.d90_recovery)}">${fmtAmount(r.d90_recovery)}</td>
+                        </tr>`).join('')}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function switchHeaderCurrency(mode, btn) {
+            window.currencyMode = mode;
+            const toggle = btn ? btn.parentElement : document.querySelector('.currency-toggle-header');
+            if (toggle) {
+                toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                if (btn) btn.classList.add('active');
+            }
+            document.querySelectorAll('.amount-cell').forEach(cell => {
+                if (!cell.dataset.usd) return;
+                cell.textContent = mode === 'usd' ? cell.dataset.usd : cell.dataset.local;
+            });
+        }
+
+        function switchVintageMode(mode, btn) {
+            window.vintageMode = mode;
+            const toggle = btn.parentElement;
+            toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (typeof window._updateVintageContent === 'function') {
+                window._updateVintageContent();
+            }
+        }
+
+        (function init() {
+            const content = document.getElementById('content');
+            const dateSelect = document.getElementById('dateSelect');
+            const sorted = [...riskData].sort((a,b) => b.stat_date.localeCompare(a.stat_date));
+            const dataByDate = {};
+            sorted.forEach((r, i) => {
+                dataByDate[r.stat_date] = r;
+                const opt = document.createElement('option');
+                opt.value = r.stat_date;
+                opt.textContent = r.stat_date + (i === 0 ? ' (最新)' : '');
+                if (i === 0) opt.selected = true;
+                dateSelect.appendChild(opt);
+            });
+            function update() { content.innerHTML = render(dataByDate[dateSelect.value]); }
+            window._updateVintageContent = update;
+            dateSelect.addEventListener('change', update);
+            update();
+        })();
+    </script>
+</body>
+</html>

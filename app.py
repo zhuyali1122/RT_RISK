@@ -11,7 +11,8 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+# Vercel 等 serverless 需固定 secret_key，否则 session 无法跨请求
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-me-in-production")
 
 BASE_DIR = os.path.dirname(__file__)
 CONFIG_PATH = os.path.join(BASE_DIR, "config", "users.json")
@@ -24,10 +25,14 @@ DPD_PORTFOLIO_PATH = os.path.join(BASE_DIR, "config", "dpd_portfolio.json")
 MATURITY_PORTFOLIO_PATH = os.path.join(BASE_DIR, "config", "maturity_portfolio.json")
 LOAN_DETAILS_PATH = os.path.join(BASE_DIR, "config", "loan_details.json")
 DD_TEMPLATES_DIR = os.path.join(BASE_DIR, "dd_templates")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+# Vercel serverless 仅 /tmp 可写
+UPLOAD_DIR = os.path.join("/tmp", "rt_risk_uploads") if os.getenv("VERCEL") else os.path.join(BASE_DIR, "uploads")
 
-os.makedirs(DD_TEMPLATES_DIR, exist_ok=True)
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+try:
+    os.makedirs(DD_TEMPLATES_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except OSError:
+    pass
 
 
 def load_user_config():

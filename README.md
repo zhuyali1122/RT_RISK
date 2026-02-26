@@ -2,6 +2,15 @@
 
 PostgreSQL 数据库连接与 Web 查询项目。
 
+## Vercel 部署
+
+1. 在 [Vercel](https://vercel.com) 导入 GitHub 仓库 `RT_RISK`
+2. 在项目设置 → Environment Variables 添加：
+   - `DATABASE_URL`：数据库连接串
+   - `SECRET_KEY`：会话密钥（随机字符串）
+   - `DB_HOST_IP`：（可选）域名解析失败时用 IP 直连
+3. 部署后访问生成的 URL
+
 ## 环境配置
 
 1. 安装依赖：

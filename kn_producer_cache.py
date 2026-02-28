@@ -54,35 +54,6 @@ def load_producer_full_cache():
         return None, None
 
 
-def get_cache_debug_info():
-    """调试用：返回缓存文件路径、是否存在、加载结果"""
-    abs_path = os.path.abspath(CACHE_FILE)
-    exists = os.path.isfile(CACHE_FILE)
-    info = {
-        "cache_file": abs_path,
-        "file_exists": exists,
-        "producer_count": 0,
-        "last_updated": None,
-        "load_ok": False,
-        "error": None,
-    }
-    if not exists:
-        info["error"] = "缓存文件不存在"
-        return info
-    try:
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            d = json.load(f)
-        producers = d.get("producers", {})
-        info["producer_count"] = len(producers)
-        info["last_updated"] = d.get("last_updated")
-        info["load_ok"] = bool(producers)
-        if not producers:
-            info["error"] = "producers 为空"
-    except Exception as e:
-        info["error"] = str(e)
-    return info
-
-
 def save_producer_full_cache(producers: dict):
     """保存生产商全量数据到缓存文件"""
     _ensure_cache_dir()

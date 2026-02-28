@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | 投资组合</title>
@@ -176,6 +177,9 @@
         }
         .region-chip:hover { background: rgba(59,74,106,0.08); border-color: var(--dark-blue); }
         .region-chip .count { font-weight: 700; color: var(--dark-blue); font-size: 0.9rem; }
+        /* 类型分布 - 完整饼图 */
+        .type-pie-wrap { width: 100%; height: 280px; }
+
         .dim-bars { display: flex; flex-direction: column; gap: 8px; }
         .dim-bar { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; }
         .dim-bar .label { min-width: 80px; color: var(--text-muted); }
@@ -191,14 +195,16 @@
         <div class="left">
             <div class="logo">CHUAN</div>
             <nav>
-                <a href="/dashboard">概览</a>
-                <a href="/portfolio" class="active">投资组合</a>
+                <a href="{{ app_root }}/dashboard">概览</a>
+                <a href="{{ app_root }}/partner/manage">资产商管理</a>
+                <a href="{{ app_root }}/help">Help</a>
+                <a href="{{ app_root }}/portfolio" class="active">投资组合</a>
             </nav>
         </div>
         <div class="user-info">
             <span>{{ user.display_name }}</span>
             <span class="role-badge">{{ user.role_label }}</span>
-            <a href="/logout" class="btn-link">退出</a>
+            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
         </div>
     </div>
 
@@ -206,7 +212,7 @@
         <!-- Page Header -->
         <div class="page-header">
             <div style="display:flex;align-items:center;gap:12px;">
-                <a href="/dashboard" class="btn-back">
+                <a href="{{ app_root }}/dashboard" class="btn-back">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                     返回概览
                 </a>
@@ -268,7 +274,7 @@
             </div>
         </div>
 
-        <!-- Platform Holdings -->
+        <!-- Platform Holdings (Trade) - 数据来自 spv_initial_params -->
         <div class="section">
             <div class="section-title">平台持仓明细</div>
             <div class="card">
@@ -279,7 +285,9 @@
                                 <th>平台名称</th>
                                 <th>产品类型</th>
                                 <th>区域</th>
-                                <th class="text-right">持仓金额 (USD)</th>
+                                <th class="text-right">投资总量 (USD)</th>
+                                <th class="text-right">预期年化收益率</th>
+                                <th>开始时间</th>
                                 <th class="text-right">占比</th>
                             </tr>
                         </thead>
@@ -308,17 +316,8 @@
                 <div class="section-title">行业与地域分布</div>
                 <div class="grid-2">
                     <div class="card">
-                        <div class="card-title">行业分布（Top 3）<span class="drill-hint">（点击下钻）</span></div>
-                        <div class="chart-container chart-compact">
-                            <div class="donut-wrap">
-                                <canvas id="donutIndustry" width="140" height="140"></canvas>
-                                <div class="donut-center">
-                                    <div class="val" id="donutIndustryCenter">-</div>
-                                    <div class="lbl">行业</div>
-                                </div>
-                            </div>
-                            <div class="legend" id="legendIndustry"></div>
-                        </div>
+                        <div class="card-title">类型分布<span class="drill-hint">（点击下钻）</span></div>
+                        <div id="typePieChart" class="type-pie-wrap"></div>
                     </div>
                     <div class="card">
                         <div class="card-title">地域分布（约 10 国）<span class="drill-hint">（点击国家下钻）</span></div>
@@ -330,7 +329,7 @@
                 <div class="section-title">其他维度</div>
                 <div class="grid-3">
                     <div class="card">
-                        <div class="card-title">项目成熟程度</div>
+                        <div class="card-title">优先级</div>
                         <div class="dim-bars" id="dimMaturity"></div>
                     </div>
                     <div class="card">
@@ -350,13 +349,13 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>名称</th>
-                                    <th>地域</th>
-                                    <th>地区</th>
-                                    <th>行业</th>
-                                    <th>成熟度</th>
-                                    <th>场景</th>
+                                    <th>项目</th>
+                                    <th>编号</th>
+                                    <th>资产地域</th>
                                     <th>类型</th>
+                                    <th>场景</th>
+                                    <th>负责人</th>
+                                    <th>集团额度</th>
                                 </tr>
                             </thead>
                             <tbody id="producerDetailBody"></tbody>
@@ -369,28 +368,33 @@
 
     <script>
         const data = {{ portfolio | tojson }};
-        const fund = data.fund;
+        const fund = data.fund || {};
 
         /* ---- helpers ---- */
         function fmtUSD(n) {
+            if (n == null || n === '' || isNaN(n)) return '-';
+            n = Number(n);
             if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
             if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
             return '$' + n.toLocaleString();
         }
-        function fmtPct(n) { return (n * 100).toFixed(2) + '%'; }
+        function fmtPct(n) {
+            if (n == null || n === '' || isNaN(n)) return '-';
+            return (Number(n) * 100).toFixed(2) + '%';
+        }
 
         /* ---- Meta ---- */
         document.getElementById('metaInfo').innerHTML =
-            `${fund.name}<br>净值日期：${fund.nav_date}`;
+            `${fund.name || '-'}<br>净值日期：${fund.nav_date || '-'}`;
 
         /* ---- KPIs ---- */
         const kpis = [
-            { label: '基金净值 (NAV/Unit)', value: fund.nav_per_unit.toFixed(4), sub: '成立日：' + fund.inception_date },
-            { label: '资产管理规模 (AUM)', value: fmtUSD(fund.total_aum), sub: fund.currency },
-            { label: '本年累计回报 (YTD)', value: fmtPct(fund.ytd_return), cls: 'positive', sub: '2025 YTD' },
-            { label: '年化收益率', value: fmtPct(fund.annualized_return), cls: 'positive', sub: 'Since Inception' },
-            { label: '夏普比率', value: fund.sharpe_ratio.toFixed(2), sub: '风险调整收益' },
-            { label: '加权平均久期', value: fund.weighted_duration_days + ' 天', sub: '组合加权' },
+            { label: '基金净值 (NAV/Unit)', value: fund.nav_per_unit != null ? Number(fund.nav_per_unit).toFixed(4) : '-', sub: '成立日：' + (fund.inception_date || '-') },
+            { label: '资产管理规模 (AUM)', value: fund.total_aum != null ? fmtUSD(fund.total_aum) : '-', sub: fund.currency || 'USD' },
+            { label: '本年累计回报 (YTD)', value: fund.ytd_return != null ? fmtPct(fund.ytd_return) : '-', cls: fund.ytd_return != null && fund.ytd_return >= 0 ? 'positive' : '', sub: 'YTD' },
+            { label: '年化收益率', value: fund.annualized_return != null ? fmtPct(fund.annualized_return) : '-', cls: fund.annualized_return != null && fund.annualized_return >= 0 ? 'positive' : '', sub: 'Since Inception' },
+            { label: '夏普比率', value: fund.sharpe_ratio != null ? Number(fund.sharpe_ratio).toFixed(2) : '-', sub: '风险调整收益' },
+            { label: '加权平均久期', value: fund.weighted_duration_days != null ? fund.weighted_duration_days + ' 天' : '-', sub: '组合加权' },
         ];
         const kpiRow = document.getElementById('kpiRow');
         kpis.forEach(k => {
@@ -406,9 +410,9 @@
         const cumLoans = fund.cumulative_loan_count ?? 0;
         const cumBorrowers = fund.cumulative_borrower_count ?? 0;
         const cumKpis = [
-            { label: '累积放款总额', value: fmtUSD(cumDisb), sub: fund.currency || 'USD' },
-            { label: '累积借款总量', value: cumLoans.toLocaleString() + ' 笔', sub: '历史放款笔数' },
-            { label: '累积借款人数', value: cumBorrowers.toLocaleString() + ' 人', sub: '当前在贷人数' },
+            { label: '累积放款总额', value: cumDisb > 0 ? fmtUSD(cumDisb) : '-', sub: fund.currency || 'USD' },
+            { label: '累积借款总量', value: cumLoans > 0 ? cumLoans.toLocaleString() + ' 笔' : '-', sub: '历史放款笔数' },
+            { label: '累积借款人数', value: cumBorrowers > 0 ? cumBorrowers.toLocaleString() + ' 人' : '-', sub: '当前在贷人数' },
         ];
         const cumRow = document.getElementById('cumulativeRow');
         cumKpis.forEach(k => {
@@ -433,31 +437,43 @@
             canvas.style.width = size + 'px';
             canvas.style.height = size + 'px';
 
-            const cx = size / 2, cy = size / 2, r = 60, lineW = 18;
-            let startAngle = -Math.PI / 2;
-
-            items.forEach((item, i) => {
-                const sweep = item.pct * 2 * Math.PI;
+            items = items || [];
+            if (items.length > 0) {
+                let startAngle = -Math.PI / 2;
+                items.forEach((item, i) => {
+                    const sweep = (item.pct || 0) * 2 * Math.PI;
+                    ctx.beginPath();
+                    ctx.arc(size/2, size/2, 60, startAngle, startAngle + sweep);
+                    ctx.lineWidth = 18;
+                    ctx.strokeStyle = COLORS[i % COLORS.length];
+                    ctx.lineCap = 'butt';
+                    ctx.stroke();
+                    startAngle += sweep;
+                });
+            } else {
                 ctx.beginPath();
-                ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
-                ctx.lineWidth = lineW;
-                ctx.strokeStyle = COLORS[i % COLORS.length];
-                ctx.lineCap = 'butt';
+                ctx.arc(size/2, size/2, 60, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#E2E8F0';
+                ctx.lineWidth = 18;
                 ctx.stroke();
-                startAngle += sweep;
-            });
-
-            document.getElementById(canvasId.replace('donut','donut') + 'Center')
-                .textContent = centerText;
+            }
+            const centerId = canvasId + 'Center';
+            const centerEl = document.getElementById(centerId);
+            if (centerEl) centerEl.textContent = centerText;
         }
 
         function buildLegend(containerId, items) {
             const el = document.getElementById(containerId);
+            items = items || [];
+            if (items.length === 0) {
+                el.innerHTML = '<div class="legend-item" style="color:var(--text-muted)">暂无数据</div>';
+                return;
+            }
             items.forEach((item, i) => {
                 el.innerHTML += `<div class="legend-item">
                     <div class="legend-left">
                         <div class="legend-dot" style="background:${COLORS[i % COLORS.length]}"></div>
-                        <span>${item.name}</span>
+                        <span>${item.name || '-'}</span>
                     </div>
                     <span class="legend-pct">${fmtPct(item.pct)}</span>
                     <span class="legend-val">${fmtUSD(item.value)}</span>
@@ -465,43 +481,60 @@
             });
         }
 
-        drawDonut('donutProduct', data.allocation_by_product, fmtUSD(fund.total_aum));
-        buildLegend('legendProduct', data.allocation_by_product);
-
-        drawDonut('donutRegion', data.allocation_by_region, data.allocation_by_region.length + ' 区域');
-        buildLegend('legendRegion', data.allocation_by_region);
+        const allocProduct = data.allocation_by_product || [];
+        const allocRegion = data.allocation_by_region || [];
+        drawDonut('donutProduct', allocProduct, allocProduct.length > 0 ? fmtUSD(fund.total_aum) : '暂无数据');
+        buildLegend('legendProduct', allocProduct);
+        drawDonut('donutRegion', allocRegion, allocRegion.length > 0 ? (allocRegion.length + ' 区域') : '暂无数据');
+        buildLegend('legendRegion', allocRegion);
 
         /* ---- Monthly Returns Bar Chart ---- */
         const monthlyEl = document.getElementById('monthlyChart');
-        const maxReturn = Math.max(...data.monthly_returns.map(m => m.return));
-        data.monthly_returns.forEach(m => {
-            const pct = (m.return / maxReturn * 100).toFixed(0);
-            const label = m.month.slice(2).replace('-','/');
-            const color = m.return >= 0.009 ? 'var(--green)' : 'var(--dark-blue)';
-            monthlyEl.innerHTML += `<div class="bar-row">
-                <div class="bar-label">${label}</div>
-                <div class="bar-track">
-                    <div class="bar-fill" style="width:${pct}%;background:${color}">${fmtPct(m.return)}</div>
-                </div>
-                <div class="bar-val">${fmtPct(m.return)}</div>
-            </div>`;
-        });
+        const monthlyReturns = data.monthly_returns || [];
+        if (monthlyReturns.length === 0) {
+            monthlyEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">暂无数据</div>';
+        } else {
+            const maxReturn = Math.max(...monthlyReturns.map(m => m.return || 0), 0.001);
+            monthlyReturns.forEach(m => {
+                const pct = ((m.return || 0) / maxReturn * 100).toFixed(0);
+                const label = (m.month || '').slice(2).replace('-','/') || '-';
+                const color = (m.return || 0) >= 0.009 ? 'var(--green)' : 'var(--dark-blue)';
+                monthlyEl.innerHTML += `<div class="bar-row">
+                    <div class="bar-label">${label}</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:${pct}%;background:${color}">${fmtPct(m.return)}</div>
+                    </div>
+                    <div class="bar-val">${fmtPct(m.return)}</div>
+                </div>`;
+            });
+        }
 
         /* ---- Holdings Table ---- */
         const tbody = document.getElementById('holdingsBody');
-        data.allocation_by_platform.forEach(p => {
-            const tagCls = p.type === 'PL' ? 'tag-pl' : p.type === 'MCA' ? 'tag-mca' : 'tag-mixed';
+        const platformAlloc = data.allocation_by_platform || [];
+        if (platformAlloc.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">暂无数据</td></tr>';
+        } else {
+        platformAlloc.forEach(p => {
+            const tagCls = (p.type || '').includes('PL') ? 'tag-pl' : (p.type || '').includes('MCA') ? 'tag-mca' : 'tag-mixed';
+            const principal = p.principal_amount != null ? p.principal_amount : p.value;
+            const agreedVal = p.agreed_rate;
+            const agreedFmt = (agreedVal != null && agreedVal !== '' && agreedVal !== '-') ? (typeof agreedVal === 'number' ? (agreedVal <= 1 ? (agreedVal * 100).toFixed(2) : agreedVal.toFixed(2)) + '%' : agreedVal + '%') : '-';
+            const effDate = p.effective_date || p.effectiveDate || '-';
             tbody.innerHTML += `<tr>
-                <td><strong>${p.name}</strong></td>
-                <td><span class="tag ${tagCls}">${p.type}</span></td>
-                <td>${p.region}</td>
-                <td class="text-right">${'$' + p.value.toLocaleString()}</td>
-                <td class="text-right">${fmtPct(p.pct)}</td>
+                <td><strong>${p.name||'-'}</strong></td>
+                <td><span class="tag ${tagCls}">${p.type||'-'}</span></td>
+                <td>${p.region||'-'}</td>
+                <td class="text-right">${principal != null && principal > 0 ? '$' + Number(principal).toLocaleString() : '-'}</td>
+                <td class="text-right">${agreedFmt}</td>
+                <td>${effDate}</td>
+                <td class="text-right">${p.pct != null ? fmtPct(p.pct) : '-'}</td>
             </tr>`;
         });
+        }
 
         /* ---- Risk / DPD ---- */
-        const risk = data.risk_metrics;
+        const risk = data.risk_metrics || {};
         const dpd = [
             { label: '正常 (Current)', value: risk.current_dpd_0, color: 'var(--green)' },
             { label: 'DPD 1-30', value: risk.current_dpd_1_30, color: '#C9A96E' },
@@ -510,15 +543,21 @@
             { label: 'DPD 90+', value: risk.current_dpd_90_plus, color: '#8B2F3A' },
         ];
         const riskEl = document.getElementById('riskRow');
-        dpd.forEach(d => {
-            riskEl.innerHTML += `<div class="risk-cell">
-                <div class="risk-label">${d.label}</div>
-                <div class="risk-value" style="color:${d.color}">${fmtPct(d.value)}</div>
-                <div class="risk-bar">
-                    <div class="risk-bar-fill" style="width:${(d.value*100).toFixed(1)}%;background:${d.color}"></div>
-                </div>
-            </div>`;
-        });
+        const hasRiskData = dpd.some(d => d.value != null && !isNaN(d.value));
+        if (!hasRiskData) {
+            riskEl.innerHTML = '<div class="risk-cell" style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-muted)">暂无数据</div>';
+        } else {
+            dpd.forEach(d => {
+                const val = d.value != null && !isNaN(d.value) ? d.value : 0;
+                riskEl.innerHTML += `<div class="risk-cell">
+                    <div class="risk-label">${d.label}</div>
+                    <div class="risk-value" style="color:${d.color}">${fmtPct(val)}</div>
+                    <div class="risk-bar">
+                        <div class="risk-bar-fill" style="width:${(val*100).toFixed(1)}%;background:${d.color}"></div>
+                    </div>
+                </div>`;
+            });
+        }
 
         /* ========== Tab 切换 ========== */
         document.querySelectorAll('.page-tab').forEach(btn => {
@@ -540,7 +579,7 @@
             const kpis = document.getElementById('producerKpis');
             kpis.innerHTML = '<div class="kpi"><div class="kpi-label">加载中</div><div class="kpi-value">...</div></div>';
             try {
-                const res = await fetch('/api/producers/data');
+                const res = await fetch((window.APP_ROOT||'')+'/api/producers/data');
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
                 producerData = data;
@@ -563,21 +602,17 @@
 
             // KPIs
             const kpiEl = document.getElementById('producerKpis');
+            const typeCount = Object.keys(agg.by_type||{}).length || Object.keys(agg.by_industry||{}).length;
             kpiEl.innerHTML = `
-                <div class="kpi"><div class="kpi-label">总数量</div><div class="kpi-value">${total}</div><div class="kpi-sub">生产商</div></div>
+                <div class="kpi"><div class="kpi-label">总数量</div><div class="kpi-value">${total}</div><div class="kpi-sub">项目</div></div>
                 <div class="kpi"><div class="kpi-label">地域数</div><div class="kpi-value">${Object.keys(agg.by_region||{}).length}</div><div class="kpi-sub">地区</div></div>
-                <div class="kpi"><div class="kpi-label">行业数</div><div class="kpi-value">${Object.keys(agg.by_industry||{}).length}</div><div class="kpi-sub">行业</div></div>
+                <div class="kpi"><div class="kpi-label">类型数</div><div class="kpi-value">${typeCount}</div><div class="kpi-sub">类型</div></div>
             `;
 
-            // 行业饼图（仅 Top 3）
-            const byIndustry = agg.by_industry || {};
-            const industryAll = Object.entries(byIndustry).map(([k,v]) => ({name:k, value:v.count, pct:v.count/total, items:v.items})).sort((a,b)=>b.value-a.value);
-            const industryItems = industryAll.slice(0, 3);
-            const industryRest = industryAll.slice(3).reduce((acc, x) => ({ count: acc.count + x.value, items: acc.items.concat(x.items) }), { count: 0, items: [] });
-            if (industryRest.count > 0) industryItems.push({ name: '其他', value: industryRest.count, pct: industryRest.count/total, items: industryRest.items });
-            const industryTotal = industryItems.reduce((s, x) => s + x.value, 0);
-            industryItems.forEach(x => { x.pct = x.value / industryTotal; });
-            renderIndustryDonut(industryItems, total);
+            // 类型柱状图（优先类型，无则用行业；展示全部）
+            const byDim = (agg.by_type && Object.keys(agg.by_type).length > 0) ? agg.by_type : (agg.by_industry || {});
+            const typeItems = Object.entries(byDim).map(([k,v]) => ({name:k, value:v.count, pct:v.count/total, items:v.items})).sort((a,b)=>b.value-a.value);
+            renderTypePieChart(typeItems, total);
 
             // 世界地图（按国家，约 Top 10）
             const byCountry = agg.by_country || {};
@@ -595,77 +630,41 @@
             drillStack = [];
         }
 
-        function renderIndustryDonut(items, total) {
-            const canvas = document.getElementById('donutIndustry');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const dpr = window.devicePixelRatio || 1;
-            const size = 140;
-            canvas.width = size * dpr;
-            canvas.height = size * dpr;
-            ctx.scale(dpr, dpr);
-            canvas.style.width = size + 'px';
-            canvas.style.height = size + 'px';
-
-            const cx = size/2, cy = size/2, r = 52, lineW = 16;
-            let startAngle = -Math.PI/2;
+        let typePieChart = null;
+        function renderTypePieChart(items, total) {
+            const el = document.getElementById('typePieChart');
+            if (!el) return;
+            if (typePieChart) typePieChart.dispose();
+            typePieChart = echarts.init(el);
             const COLORS = ['#3B4A6A','#2E7D6E','#C9A96E','#7B8BA5','#D4816B','#5B6B8A'];
-
-            items.forEach((item, i) => {
-                const sweep = item.pct * 2 * Math.PI;
-                ctx.beginPath();
-                ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
-                ctx.lineWidth = lineW;
-                ctx.strokeStyle = COLORS[i % COLORS.length];
-                ctx.lineCap = 'butt';
-                ctx.stroke();
-                ctx.save();
-                const midAngle = startAngle + sweep/2;
-                const tx = cx + (r - lineW/2) * Math.cos(midAngle);
-                const ty = cy + (r - lineW/2) * Math.sin(midAngle);
-                ctx.translate(tx, ty);
-                ctx.rotate(midAngle + Math.PI/2);
-                ctx.font = '9px sans-serif';
-                ctx.fillStyle = '#333';
-                ctx.textAlign = 'center';
-                ctx.fillText(item.name.length > 4 ? item.name.slice(0,4)+'…' : item.name, 0, 4);
-                ctx.restore();
-                startAngle += sweep;
-            });
-
-            document.getElementById('donutIndustryCenter').textContent = total;
-            const legend = document.getElementById('legendIndustry');
-            legend.innerHTML = '';
-            items.forEach((item, i) => {
-                const div = document.createElement('div');
-                div.className = 'legend-item';
-                div.style.cursor = 'pointer';
-                div.innerHTML = `
-                    <div class="legend-left">
-                        <div class="legend-dot" style="background:${COLORS[i%COLORS.length]}"></div>
-                        <span>${item.name}</span>
-                    </div>
-                    <span class="legend-pct">${(item.pct*100).toFixed(1)}%</span>
-                    <span class="legend-val">${item.value}</span>
-                `;
-                div.onclick = () => drillDown('industry', item.name, item.items);
-                legend.appendChild(div);
-            });
-
-            canvas.onclick = (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left - size/2;
-                const y = e.clientY - rect.top - size/2;
-                const angle = Math.atan2(y, x) + Math.PI/2;
-                let a = angle < 0 ? angle + 2*Math.PI : angle;
-                let idx = 0;
-                for (let i = 0; i < items.length; i++) {
-                    const sweep = items[i].pct * 2 * Math.PI;
-                    if (a < sweep) { idx = i; break; }
-                    a -= sweep;
-                }
-                if (items[idx]) drillDown('industry', items[idx].name, items[idx].items);
+            const seriesData = items.map((item, i) => ({
+                name: item.name,
+                value: item.value,
+                itemStyle: { color: COLORS[i % COLORS.length] },
+                items: item.items,
+            }));
+            const option = {
+                tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                series: [{
+                    type: 'pie',
+                    radius: '58%',
+                    center: ['50%', '45%'],
+                    data: seriesData,
+                    label: {
+                        position: 'outside',
+                        formatter: '{b}\n{c}',
+                        fontSize: 11,
+                    },
+                    labelLine: { show: true, length: 8, length2: 6 },
+                    emphasis: { scale: false, itemStyle: { shadowBlur: 8, shadowOffsetX: 0 } },
+                }],
             };
+            typePieChart.setOption(option);
+            typePieChart.off('click');
+            typePieChart.on('click', (params) => {
+                if (params.data && params.data.items) drillDown('type', params.data.name, params.data.items);
+            });
+            window.addEventListener('resize', () => typePieChart?.resize());
         }
 
         let worldMapChart = null;
@@ -679,7 +678,7 @@
             worldMapChart = echarts.init(el);
 
             try {
-                const worldJson = await fetch('/static/geo/world.json').then(r => r.json());
+                const worldJson = await fetch((window.APP_ROOT||'')+'/static/geo/world.json').then(r => r.json());
                 echarts.registerMap('world', worldJson);
             } catch (e) {
                 el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">地图加载失败，请检查网络</div>';
@@ -783,13 +782,13 @@
             const tbody = document.getElementById('producerDetailBody');
             tbody.innerHTML = items.map(r => `
                 <tr>
-                    <td><strong>${r.name||'-'}</strong></td>
-                    <td>${r.region||'-'}</td>
-                    <td>${r.region_detail||'-'}</td>
-                    <td>${r.industry||'-'}</td>
-                    <td>${r.maturity||'-'}</td>
-                    <td>${r.scenario||'-'}</td>
-                    <td>${r.type||'-'}</td>
+                    <td><strong>${r.name||r['项目']||'-'}</strong></td>
+                    <td>${r.number||r['编号']||'-'}</td>
+                    <td>${r.region||r['资产地域']||'-'}</td>
+                    <td>${r.type||r['类型']||'-'}</td>
+                    <td>${r.scenario||r['场景']||'-'}</td>
+                    <td>${r.owner||r['负责人']||'-'}</td>
+                    <td class="text-right">${r['集团额度'] ? Number(r['集团额度']).toLocaleString() : '-'}</td>
                 </tr>
             `).join('');
         }

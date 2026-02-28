@@ -1,4 +1,7 @@
 .env
+RT_RISK_share/
+config/cache/
+.cursor/
 __pycache__/
 *.pyc
 .venv/

@@ -1,0 +1,6 @@
+{% if data_source is defined %}
+<div class="data-source-status" id="dataSourceStatus">
+    <span class="ds-label">数据来源：</span>
+    <span class="ds-value ds-{{ data_source }}">{% if data_source == 'cache' %}缓存{% else %}数据库{% endif %}</span>
+</div>
+{% endif %}

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | 登录</title>
@@ -603,7 +604,7 @@
             btn.textContent = '登录中...';
 
             try {
-                const res = await fetch('/api/login', {
+                const res = await fetch((window.APP_ROOT||'')+'/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })

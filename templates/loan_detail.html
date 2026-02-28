@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | {{ loan.loan_id }} - Loan 详情</title>
@@ -25,10 +26,10 @@
         .page-header .sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
         .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-teal); display: inline-block; }
         .section-block { background: var(--white); border-radius: 10px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); overflow-x: auto; }
-        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
-        .info-item { padding: 12px 16px; background: #F8FAFC; border-radius: 8px; }
-        .info-item .label { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
-        .info-item .value { font-size: 0.95rem; font-weight: 600; }
+        .info-grid, .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+        .info-item, .status-item { padding: 12px 16px; background: #F8FAFC; border-radius: 8px; }
+        .info-item .label, .status-item .label { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
+        .info-item .value, .status-item .value { font-size: 0.95rem; font-weight: 600; }
         .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
         .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
         .data-table th { background: #F8FAFC; font-weight: 600; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; }
@@ -44,15 +45,16 @@
         <div class="left">
             <div class="logo">CHUAN</div>
             <nav>
-                <a href="/dashboard">概览</a>
-                <a href="/partner/manage">资产商管理</a>
-                <a href="/partner/{{ partner.id }}/risk">{{ partner.name }}</a>
+                <a href="{{ app_root }}/dashboard">概览</a>
+                <a href="{{ app_root }}/partner/manage">资产商管理</a>
+                <a href="{{ app_root }}/help">Help</a>
+                <a href="{{ app_root }}/partner/{{ partner.id }}/risk">{{ partner.name }}</a>
             </nav>
         </div>
         <div class="user-info">
             <span>{{ user.display_name }}</span>
             <span class="role-badge">{{ user.role_label }}</span>
-            <a href="/logout" class="btn-link">退出</a>
+            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
         </div>
     </div>
 
@@ -63,22 +65,48 @@
                 返回
             </a>
             <h1>{{ loan.loan_id }}</h1>
-            <div class="sub">放款 ${{ "{:,.0f}".format(loan.disbursement_amount or 0) }} · {{ loan.loan_status or 'active' }} · DPD {{ loan.dpd or 0 }}</div>
+            <div class="sub">放款 ${{ "{:,.0f}".format(loan.disbursement_amount or 0) }} · {{ loan.loan_status or 'active' }} · DPD {{ loan.dpd or 0 }}{% if loan.outstanding_principal %} · 未偿本金 ${{ "{:,.0f}".format(loan.outstanding_principal) }}{% endif %}</div>
+        </div>
+
+        <!-- 合同信息 -->
+        {% if contract_no and contract_no != '-' %}
+        <div class="section-title">合同信息</div>
+        <div class="section-block">
+            <div class="status-grid">
+                <div class="status-item"><div class="label">合同号</div><div class="value">{{ contract_no }}</div></div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Loan 基础信息 -->
+        <div class="section-title">Loan 基础信息</div>
+        <div class="section-block">
+            <div class="status-grid">
+                <div class="status-item"><div class="label">Loan ID</div><div class="value">{{ loan.loan_id }}</div></div>
+                <div class="status-item"><div class="label">放款时间</div><div class="value">{{ (loan.disbursement_time|string)[:10] if loan.disbursement_time else '-' }}</div></div>
+                <div class="status-item"><div class="label">放款金额</div><div class="value">${{ "{:,.0f}".format(loan.disbursement_amount or 0) }}</div></div>
+                <div class="status-item"><div class="label">期限(月)</div><div class="value">{{ loan.term_month or loan.term_months or '-' }}</div></div>
+                <div class="status-item"><div class="label">到期日</div><div class="value">{{ (loan.loan_maturity_date|string)[:10] if loan.loan_maturity_date else '-' }}</div></div>
+                <div class="status-item"><div class="label">客户ID</div><div class="value">{{ loan.customer_id or '-' }}</div></div>
+                <div class="status-item"><div class="label">合同号</div><div class="value">{{ loan.contract_no or loan.get('contract_no') or '-' }}</div></div>
+                <div class="status-item"><div class="label">DPD</div><div class="value">{{ loan.dpd or 0 }}</div></div>
+                <div class="status-item"><div class="label">未偿本金</div><div class="value">${{ "{:,.0f}".format(loan.outstanding_principal or 0) }}</div></div>
+            </div>
         </div>
 
         <!-- 客户基础信息 -->
         <div class="section-title">客户基础信息</div>
         <div class="section-block">
             <div class="info-grid">
-                <div class="info-item"><div class="label">行业</div><div class="value">{{ customer_info.industry|default('-') }}</div></div>
                 <div class="info-item"><div class="label">信用评级</div><div class="value">{{ customer_info.credit_rating|default('-') }}</div></div>
+                <div class="info-item"><div class="label">行业</div><div class="value">{{ customer_info.industry|default('-') }}</div></div>
                 <div class="info-item"><div class="label">地区</div><div class="value">{{ customer_info.region|default('-') }}</div></div>
                 <div class="info-item"><div class="label">教育程度</div><div class="value">{{ customer_info.education|default('-') }}</div></div>
             </div>
         </div>
 
         <!-- 还款计划 -->
-        <div class="section-title">还款计划</div>
+        <div class="section-title">还款计划{% if schedule %}（共 {{ schedule|length }} 期）{% endif %}</div>
         <div class="section-block">
             {% if schedule %}
             <table class="data-table">
@@ -95,11 +123,11 @@
                 <tbody>
                     {% for s in schedule %}
                     <tr>
-                        <td>{{ s.period }}</td>
-                        <td>{{ s.due_date }}</td>
-                        <td class="num">${{ "{:,.2f}".format(s.principal_due or 0) }}</td>
-                        <td class="num">${{ "{:,.2f}".format(s.interest_due or 0) }}</td>
-                        <td class="num">${{ "{:,.2f}".format(s.total_due or 0) }}</td>
+                        <td>{{ s.period or s.period_no }}</td>
+                        <td>{{ (s.due_date|string)[:10] if s.due_date else '-' }}</td>
+                        <td class="num">${{ "{:,.2f}".format(s.principal_due or s.principal or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(s.interest_due or s.interest or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(s.total_due or s.total or 0) }}</td>
                         <td class="status-{{ s.status|default('pending') }}">{{ '已还' if s.status == 'paid' else '待还' }}</td>
                     </tr>
                     {% endfor %}
@@ -117,25 +145,33 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>还款类型</th>
                         <th>还款日期</th>
                         <th class="num">期次</th>
                         <th class="num">还款金额</th>
                         <th class="num">还款本金</th>
                         <th class="num">还款利息</th>
                         <th class="num">还款罚息</th>
+                        <th class="num">展期费</th>
                         <th class="num">Waive</th>
+                        <th>交易ID</th>
+                        <th>是否结清</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for r in repayments %}
                     <tr>
-                        <td>{{ r.payment_date }}</td>
-                        <td class="num">{{ r.period }}</td>
-                        <td class="num">${{ "{:,.2f}".format(r.amount or 0) }}</td>
-                        <td class="num">${{ "{:,.2f}".format(r.principal_paid or 0) }}</td>
-                        <td class="num">${{ "{:,.2f}".format(r.interest_paid or 0) }}</td>
-                        <td class="num">${{ "{:,.2f}".format(r.penalty_paid or 0) }}</td>
-                        <td class="num">${{ "{:,.2f}".format(r.waive_amount or 0) }}</td>
+                        <td>{% if r.repayment_type == 1 or r.repayment_type == '1' %}按期{% elif r.repayment_type == 2 or r.repayment_type == '2' %}提前结清{% elif r.repayment_type == 3 or r.repayment_type == '3' %}展期结清{% elif r.repayment_type == 4 or r.repayment_type == '4' %}部分还清{% elif r.repayment_type == 5 or r.repayment_type == '5' %}逾期还款{% else %}{{ r.repayment_type or '-' }}{% endif %}</td>
+                        <td>{{ (r.repayment_date|string)[:10] if r.repayment_date else (r.payment_date|string)[:10] if r.payment_date else '-' }}</td>
+                        <td class="num">{{ r.repayment_term or r.period or '-' }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.total_repayment or r.amount or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.principal_repayment or r.principal_paid or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.interest_repayment or r.interest_paid or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.penalty_repayment or r.penalty_paid or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.extension_fee or 0) }}</td>
+                        <td class="num">${{ "{:,.2f}".format(r.waiver_amount or r.waive_amount or 0) }}</td>
+                        <td>{{ r.repayment_txn_id or '-' }}</td>
+                        <td>{% if r.is_settled == true or r.is_settled == 1 or r.is_settled == '1' %}是{% elif r.is_settled == false or r.is_settled == 0 or r.is_settled == '0' %}否{% else %}{{ r.is_settled or '-' }}{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

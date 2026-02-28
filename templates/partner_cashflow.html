@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    {% include '_app_root.html' %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | {{ partner.name }} - 现金流预测</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f0ee 0%, #ebe5e3 100%); min-height: 100vh; color: var(--dark-blue); padding-bottom: 24px; }
+        .data-source-status { position: fixed; bottom: 0; left: 0; right: 0; height: 24px; background: var(--dark-blue); color: rgba(255,255,255,0.85); font-size: 0.72rem; display: flex; align-items: center; justify-content: center; gap: 6px; z-index: 1000; }
+        .data-source-status .ds-label { opacity: 0.8; }
+        .data-source-status .ds-value { font-weight: 600; }
+        .data-source-status .ds-cache { color: #7DD3C0; }
+        .data-source-status .ds-database { color: #F9A825; }
+
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+
+        .page { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+        .page-header .header-right { display: flex; align-items: center; gap: 24px; }
+        .page-header .left-group { display: flex; align-items: center; gap: 12px; }
+        .currency-selector { flex-direction: column; align-items: flex-end; gap: 4px; }
+        .currency-selector .currency-selector-row { display: flex; align-items: center; gap: 10px; }
+        .currency-selector label { font-size: 0.8rem; color: var(--text-muted); }
+        .currency-selector .exchange-rate-hint { font-size: 0.7rem; color: var(--text-muted); text-align: right; }
+        .currency-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; font-size: 0.72rem; }
+        .currency-toggle button { padding: 4px 12px; border: none; background: var(--white); color: var(--text-muted); cursor: pointer; font-weight: 600; font-family: inherit; transition: all 0.15s; }
+        .currency-toggle button.active { background: var(--dark-blue); color: var(--white); }
+        .currency-toggle button:hover:not(.active) { background: var(--light-pink); }
+        .page-header h1 { font-size: 1.25rem; font-weight: 700; }
+        .page-header .sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+        .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
+        .btn-back:hover { background: var(--dark-blue); color: var(--white); }
+        .cache-status { font-size: 0.72rem; color: var(--text-muted); margin-right: 12px; }
+        .cache-empty { color: var(--gold); }
+        .btn-refresh { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); color: var(--dark-blue); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-right: 16px; }
+        .btn-refresh:hover { background: var(--teal); color: var(--white); border-color: var(--teal); }
+        .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-refresh.loading svg { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-pdf { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); color: var(--dark-blue); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-right: 8px; }
+        .btn-pdf:hover { background: var(--teal); color: var(--white); border-color: var(--teal); }
+        .btn-pdf:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-pdf.loading svg { animation: spin 0.8s linear infinite; }
+
+        /* PDF 导出：仅保留内容，隐藏按钮/选择器等 */
+        body.pdf-export .data-source-status { display: none !important; }
+        body.pdf-export .btn-back,
+        body.pdf-export .btn-pdf,
+        body.pdf-export .btn-refresh,
+        body.pdf-export .cache-status,
+        body.pdf-export .header-right,
+        body.pdf-export .no-pdf { display: none !important; }
+        body.pdf-export .page { max-width: 190mm; padding: 16px; background: #fff; }
+        body.pdf-export .page-header .left-group { margin-left: 0; }
+        body.pdf-export .kpi-card,
+        body.pdf-export .chart-panel,
+        body.pdf-export .table-panel { break-inside: avoid; page-break-inside: avoid; }
+        body.pdf-export .cf-bar-chart { height: 160px; }
+
+        .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--teal); display: inline-block; }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+        .kpi-card { background: var(--white); border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border-left: 4px solid var(--teal); }
+        .kpi-label { font-size: 0.7rem; color: var(--dark-blue); opacity: 0.75; margin-bottom: 4px; }
+        .kpi-value { font-size: 1.25rem; font-weight: 700; }
+        .kpi-sub { font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; }
+        .kpi-dual { display: flex; flex-direction: column; gap: 2px; }
+        .kpi-dual .kpi-local { font-size: 1rem; font-weight: 700; }
+        .kpi-dual .kpi-usd { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+
+        .chart-panel { background: var(--white); border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); margin-bottom: 28px; }
+        .chart-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 14px; }
+        .cf-bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 200px; padding: 0 4px; }
+        .cf-bar-group { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+        .cf-bar { width: 100%; min-width: 16px; max-width: 48px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--teal) 0%, #3d9d94 100%); transition: height 0.3s; }
+        .cf-bar-month { font-size: 0.62rem; color: var(--text-muted); margin-top: 8px; }
+        .cf-bar-value { font-size: 0.68rem; font-weight: 600; color: var(--teal); margin-top: 4px; }
+
+        .table-panel { background: var(--white); border-radius: 10px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); overflow: hidden; margin-bottom: 28px; }
+        .cf-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .cf-table th, .cf-table td { padding: 10px 14px; text-align: right; border-bottom: 1px solid var(--border); }
+        .cf-table th { background: #F8FAFC; color: var(--text-muted); font-weight: 600; font-size: 0.7rem; }
+        .cf-table th:first-child, .cf-table td:first-child { text-align: left; }
+        .cf-table tr:hover { background: rgba(77,182,172,0.08); }
+        .cf-table td:first-child { font-weight: 600; }
+
+        .cf-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 12px; padding: 10px 14px; background: #F8FAFC; border-radius: 8px; }
+        @media (max-width: 900px) { .kpi-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="{{ app_root }}/dashboard">概览</a>
+                <a href="{{ app_root }}/partner/manage">资产商管理</a>
+                <a href="{{ app_root }}/help">Help</a>
+                <a class="active">{{ partner.name }}</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <div class="left-group">
+                    <a href="{{ app_root }}/partner/manage" class="btn-back">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        返回列表
+                    </a>
+                    <h1>{{ partner.name }} · 现金流预测</h1>
+                </div>
+                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · 基于在贷还款计划</div>
+                <div class="no-pdf" style="margin-top:10px;display:flex;gap:16px;font-size:0.8rem;">
+                    <a href="{{ app_root }}/partner/{{ partner.id }}/risk" style="color:var(--text-muted);text-decoration:none;">风控监控</a>
+                    <a href="{{ app_root }}/partner/{{ partner.id }}/revenue" style="color:var(--text-muted);text-decoration:none;">收益规模</a>
+                    <span style="color:var(--teal);font-weight:600;">现金流</span>
+                </div>
+            </div>
+            <div class="header-right">
+                {% if use_cashflow_cache %}
+                <div class="cache-status">
+                    {% if cache_last_updated %}
+                    <span class="cache-time" title="数据缓存时间">缓存于 {{ cache_last_updated or '-' }}</span>
+                    {% else %}
+                    <span class="cache-empty">暂无缓存，请点击刷新加载</span>
+                    {% endif %}
+                </div>
+                <button class="btn-refresh" onclick="refreshCashflow()" title="从数据库重新拉取并缓存">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    刷新
+                </button>
+                {% endif %}
+                <button class="btn-pdf" onclick="downloadPDF()" title="下载当前页面为 PDF">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    下载 PDF
+                </button>
+                {% if local_currency != 'USD' %}
+                <div class="currency-selector">
+                    <div class="currency-selector-row">
+                        <label>币种</label>
+                        <div class="currency-toggle currency-toggle-header">
+                            <button class="active" onclick="switchHeaderCurrency('usd',this)">USD</button>
+                            <button onclick="switchHeaderCurrency('local',this)">{{ local_currency }}</button>
+                        </div>
+                    </div>
+                    <span class="exchange-rate-hint">1 USD = {% if exchange_rate >= 1000 %}{{ "{:,.0f}".format(exchange_rate) }}{% else %}{{ "{:.2f}".format(exchange_rate) }}{% endif %} {{ local_currency }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="content"></div>
+    </div>
+
+    <script>
+        const partnerId = '{{ partner.id }}';
+        const data = {{ cashflow_data | tojson }};
+        const localCurrency = '{{ local_currency }}';
+        const exchangeRate = {{ exchange_rate }};
+
+        async function refreshCashflow() {
+            const btn = document.querySelector('.btn-refresh');
+            if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+            try {
+                const res = await fetch((window.APP_ROOT || '') + '/api/partner/' + partnerId + '/refresh-cashflow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const result = await res.json();
+                if (result.ok) {
+                    location.reload();
+                } else {
+                    alert('刷新失败: ' + (result.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('刷新失败: ' + e.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+            }
+        }
+
+        async function downloadPDF() {
+            const btn = document.querySelector('.btn-pdf');
+            if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+            try {
+                document.body.classList.add('pdf-export');
+                const el = document.querySelector('.page');
+                const name = ({{ partner.name|tojson }} || 'report').replace(/[\/\\:*?"<>|]/g, '_');
+                const opt = {
+                    margin: [12, 12, 12, 12],
+                    filename: name + '_现金流预测.pdf',
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css'], avoid: ['tr', '.kpi-card', '.chart-panel', '.table-panel'] }
+                };
+                await html2pdf().set(opt).from(el).save();
+            } catch (e) {
+                alert('下载失败: ' + (e.message || '未知错误'));
+            } finally {
+                document.body.classList.remove('pdf-export');
+                if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+            }
+        }
+
+        function _num(x) {
+            if (x === null || x === undefined || x === '') return null;
+            const n = parseFloat(x);
+            return isNaN(n) ? null : n;
+        }
+        function fmtFormat(n) {
+            const x = _num(n);
+            if (x === null) return '-';
+            if (x >= 1e6) return (x / 1e6).toFixed(1) + 'M';
+            if (x >= 1e3) return (x / 1e3).toFixed(0) + 'K';
+            return x.toLocaleString(undefined, {maximumFractionDigits: 0});
+        }
+        function getUsdVal(n) {
+            const local = _num(n);
+            return local != null && exchangeRate > 0 ? local / exchangeRate : local;
+        }
+        function fmtDisplayUSD(n) { const v = fmtFormat(n); return v === '-' ? v : '$' + v; }
+        function fmtDisplayLocal(n) { return fmtFormat(n); }
+        function fmtK(n) {
+            return (window.currencyMode || 'usd') === 'usd' ? fmtDisplayUSD(getUsdVal(n)) : fmtDisplayLocal(n);
+        }
+
+        function render() {
+            if (!data || data.length === 0) {
+                document.getElementById('content').innerHTML = '<p style="padding:40px;text-align:center;color:var(--text-muted)">暂无现金流预测数据（需有在贷 Loan 及还款计划）</p>';
+                return;
+            }
+            const total = data.reduce((s, r) => s + (r.expected_inflow || 0), 0);
+            const nextMonth = data[0];
+            const maxVal = Math.max(...data.map(r => r.expected_inflow || 0), 1);
+            const barMaxH = 140;
+
+            document.getElementById('content').innerHTML = `
+                <div class="section-title">现金流预测 · 未来 12 个月</div>
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">12 个月预期回收</div>
+                        ${(localCurrency || 'USD') === 'USD' ? `<div class="kpi-value">${fmtK(total)}</div>` : `<div class="kpi-value kpi-dual"><span class="kpi-local">${fmtDisplayLocal(total)}</span><span class="kpi-usd">${fmtDisplayUSD(getUsdVal(total))}</span></div>`}
+                        <div class="kpi-sub">按 98% 回收率估算</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">下月预期回收</div>
+                        ${(localCurrency || 'USD') === 'USD' ? `<div class="kpi-value">${fmtK(nextMonth.expected_inflow)}</div>` : `<div class="kpi-value kpi-dual"><span class="kpi-local">${fmtDisplayLocal(nextMonth.expected_inflow)}</span><span class="kpi-usd">${fmtDisplayUSD(getUsdVal(nextMonth.expected_inflow))}</span></div>`}
+                        <div class="kpi-sub">${nextMonth.month}</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">预测期数</div>
+                        <div class="kpi-value">${data.length} 个月</div>
+                        <div class="kpi-sub">${data[0].month} ～ ${data[data.length-1].month}</div>
+                    </div>
+                </div>
+
+                <div class="chart-panel">
+                    <div class="chart-title">月度预期回收</div>
+                    <div class="cf-bar-chart">
+                        ${data.map(r => {
+                            const h = Math.max(8, (r.expected_inflow / maxVal) * barMaxH);
+                            return '<div class="cf-bar-group" title="'+r.month+': 预期 '+fmtK(r.expected_inflow)+'">'+
+                                '<div class="cf-bar" style="height:'+h+'px"></div>'+
+                                '<div class="cf-bar-month">'+r.month.slice(5)+'</div>'+
+                                '<div class="cf-bar-value">'+fmtK(r.expected_inflow)+'</div>'+
+                            '</div>';
+                        }).join('')}
+                    </div>
+                    <div class="cf-hint">基于 raw_loan.repayment_schedule 中未到期应还金额，按月份汇总；仅考虑 calc_overdue 中 loan_status 1/2 的活跃贷款。</div>
+                </div>
+
+                <div class="table-panel">
+                    <div class="chart-title">月度明细</div>
+                    <table class="cf-table">
+                        <thead><tr><th>月份</th><th>应还本金</th><th>应还利息</th><th>预期回收</th><th>涉及笔数</th></tr></thead>
+                        <tbody>
+                            ${data.map(r => `<tr><td>${r.month}</td><td>${fmtK(r.principal)}</td><td>${fmtK(r.interest)}</td><td>${fmtK(r.expected_inflow)}</td><td>${r.loan_count || '-'}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function switchHeaderCurrency(mode, btn) {
+            window.currencyMode = mode;
+            const toggle = btn ? btn.parentElement : document.querySelector('.currency-toggle-header');
+            if (toggle) {
+                toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                if (btn) btn.classList.add('active');
+            }
+            render();
+        }
+
+        render();
+    </script>
+    {% include '_data_source_status.html' %}
+</body>
+</html>

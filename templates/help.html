@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    {% include '_app_root.html' %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | Help - {{ title }}</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --teal: #4DB6AC; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f0ee 0%, #ebe5e3 100%); min-height: 100vh; color: var(--dark-blue); }
+
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .left { display: flex; align-items: center; gap: 24px; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; }
+        .top-bar nav { display: flex; gap: 4px; }
+        .top-bar nav a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.82rem; padding: 6px 14px; border-radius: 6px; transition: all 0.15s; }
+        .top-bar nav a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+        .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
+        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+
+        .page { max-width: 1000px; margin: 0 auto; padding: 32px 24px; display: flex; gap: 32px; }
+        .help-sidebar { flex-shrink: 0; width: 220px; position: sticky; top: 24px; align-self: flex-start; }
+        .help-sidebar-section { margin-bottom: 24px; }
+        .help-sidebar h3 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .help-sidebar .doc-list { list-style: none; }
+        .help-sidebar .doc-list li { margin-bottom: 4px; }
+        .help-sidebar .doc-list a { color: var(--dark-blue); text-decoration: none; font-size: 0.88rem; display: block; padding: 4px 0; }
+        .help-sidebar .doc-list a:hover { color: var(--teal); }
+        .help-sidebar .doc-list a.active { color: var(--teal); font-weight: 600; }
+        .help-sidebar .toc { list-style: none; }
+        .help-sidebar .toc li { margin-bottom: 2px; }
+        .help-sidebar .toc a { color: var(--text-muted); text-decoration: none; font-size: 0.8rem; display: block; padding: 3px 0; line-height: 1.4; }
+        .help-sidebar .toc a:hover { color: var(--teal); }
+        .help-sidebar .toc .toc-h1 { padding-left: 0; font-weight: 600; color: var(--dark-blue); }
+        .help-sidebar .toc .toc-h2 { padding-left: 12px; }
+        .help-sidebar .toc .toc-h3 { padding-left: 24px; font-size: 0.76rem; }
+
+        .help-content { flex: 1; min-width: 0; background: var(--white); border-radius: 12px; padding: 32px 40px; box-shadow: 0 2px 12px rgba(59,74,106,0.08); overflow: hidden; }
+        .help-content h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid var(--teal); scroll-margin-top: 16px; }
+        .help-content h2 { font-size: 1.15rem; margin: 28px 0 12px; color: var(--dark-blue); scroll-margin-top: 16px; }
+        .help-content h3 { font-size: 1rem; margin: 20px 0 8px; color: var(--dark-blue); scroll-margin-top: 16px; }
+        .help-content p { margin-bottom: 12px; line-height: 1.7; font-size: 0.9rem; }
+        .help-content ul, .help-content ol { margin: 12px 0 20px 24px; line-height: 1.7; }
+        .help-content table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.85rem; }
+        .help-content th, .help-content td { padding: 10px 14px; text-align: left; border: 1px solid var(--border); }
+        .help-content th { background: #F8FAFC; font-weight: 600; color: var(--dark-blue); }
+        .help-content tr:hover { background: rgba(255,241,238,0.3); }
+        .help-content code { background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+        .help-content pre { background: #F8FAFC; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 0.82rem; border: 1px solid var(--border); }
+        .help-content hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+        .help-content blockquote { border-left: 4px solid var(--teal); padding-left: 16px; margin: 16px 0; color: var(--text-muted); font-style: italic; }
+        .help-meta { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <div class="logo">CHUAN</div>
+            <nav>
+                <a href="{{ app_root }}/dashboard">概览</a>
+                <a href="{{ app_root }}/partner/manage">资产商管理</a>
+                <a href="{{ app_root }}/help" class="active">Help</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            {% if user %}
+            <span>{{ user.display_name }}</span>
+            <span class="role-badge">{{ user.role_label }}</span>
+            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
+            {% else %}
+            <a href="{{ app_root }}/login" class="btn-link">登录</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="page">
+        <aside class="help-sidebar">
+            <div class="help-sidebar-section">
+                <h3>文档</h3>
+                <ul class="doc-list">
+                    {% for doc in doc_list %}
+                    <li><a href="{{ app_root }}/help/{{ doc.slug }}" class="{% if doc_slug == doc.slug %}active{% endif %}">{{ doc.title }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% if toc %}
+            <div class="help-sidebar-section">
+                <h3>本文目录</h3>
+                <ul class="toc">
+                    {% for item in toc %}
+                    <li><a href="#{{ item.slug }}" class="toc-h{{ item.level }}">{{ item.title }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </aside>
+
+        <main class="help-content">
+            {% if content %}
+            <div class="help-meta">文档：{{ title }} · 算法变更时请同步更新 docs/help/{{ title }}.md</div>
+            <div class="help-body">{{ content | safe }}</div>
+            {% else %}
+            <h1>文档不存在</h1>
+            <p>未找到文档。请检查 <code>docs/help/</code> 目录，或访问 <a href="{{ app_root }}/help/metrics">指标计算说明</a>。</p>
+            {% endif %}
+        </main>
+    </div>
+</body>
+</html>

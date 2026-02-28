@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | 资产商管理</title>
@@ -24,6 +25,11 @@
         .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
         .page-header .left-group { display: flex; align-items: center; gap: 12px; }
         .page-header h1 { font-size: 1.35rem; font-weight: 700; }
+        .page-header .right-group { display: flex; align-items: center; gap: 12px; }
+        .btn-refresh { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); color: var(--dark-blue); cursor: pointer; transition: all 0.15s; }
+        .btn-refresh:hover { background: var(--dark-blue); color: var(--white); border-color: var(--dark-blue); }
+        .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-refresh svg { width: 16px; height: 16px; fill: currentColor; }
         .btn-back { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--dark-blue); text-decoration: none; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); transition: all 0.15s; white-space: nowrap; }
         .btn-back:hover { background: var(--dark-blue); color: var(--white); }
         .summary { font-size: 0.82rem; color: var(--text-muted); }
@@ -58,6 +64,9 @@
         .p-kpi-value.warn { color: var(--gold); }
         .p-kpi-value.danger { color: var(--red); }
         .p-kpi-value.good { color: var(--green); }
+        .p-kpi-dual { display: flex; flex-direction: column; gap: 2px; }
+        .p-kpi-dual .p-kpi-local { font-size: 1rem; font-weight: 700; }
+        .p-kpi-dual .p-kpi-usd { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
         .p-card-footer { padding: 12px 24px; background: #F8FAFC; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); }
         .p-card-footer .enter { color: var(--dark-blue); font-weight: 600; display: flex; align-items: center; gap: 4px; }
         .p-card-footer .enter svg { width: 14px; height: 14px; fill: currentColor; }
@@ -75,9 +84,22 @@
         .rv-card-footer { padding: 12px 24px; background: #F8FAFC; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); }
         .rv-card-footer .enter { color: var(--dark-blue); font-weight: 600; display: flex; align-items: center; gap: 4px; }
         .rv-card-footer .enter svg { width: 14px; height: 14px; fill: currentColor; }
+        .rv-card-link { outline: none; }
+        .rv-card-link:focus .rv-card { box-shadow: 0 6px 20px rgba(59,74,106,0.12); }
         .rv-delta { font-size: 0.65rem; font-weight: 600; }
         .rv-delta.up { color: var(--green); }
         .rv-delta.down { color: var(--red); }
+        .rv-dual-currency { display: flex; flex-direction: column; gap: 2px; }
+        .rv-dual-currency .rv-local { font-size: 1rem; font-weight: 700; }
+        .rv-dual-currency .rv-usd { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+
+        /* 底部状态栏 - 数据来源 */
+        .data-source-status { position: fixed; bottom: 0; left: 0; right: 0; height: 24px; background: var(--dark-blue); color: rgba(255,255,255,0.85); font-size: 0.72rem; display: flex; align-items: center; justify-content: center; gap: 6px; z-index: 1000; }
+        .data-source-status .ds-label { opacity: 0.8; }
+        .data-source-status .ds-value { font-weight: 600; }
+        .data-source-status .ds-cache { color: #7DD3C0; }
+        .data-source-status .ds-database { color: #F9A825; }
+        body { padding-bottom: 24px; }
 
         @media (max-width: 768px) { .partner-cards { grid-template-columns: 1fr; } }
     </style>
@@ -87,27 +109,34 @@
         <div class="left">
             <div class="logo">CHUAN</div>
             <nav>
-                <a href="/dashboard">概览</a>
-                <a href="/partner/manage" class="active">资产商管理</a>
+                <a href="{{ app_root }}/dashboard">概览</a>
+                <a href="{{ app_root }}/partner/manage" class="active">资产商管理</a>
+                <a href="{{ app_root }}/help">Help</a>
             </nav>
         </div>
         <div class="user-info">
             <span>{{ user.display_name }}</span>
             <span class="role-badge">{{ user.role_label }}</span>
-            <a href="/logout" class="btn-link">退出</a>
+            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
         </div>
     </div>
 
     <div class="page">
         <div class="page-header">
             <div class="left-group">
-                <a href="/dashboard" class="btn-back">
+                <a href="{{ app_root }}/dashboard" class="btn-back">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                     返回
                 </a>
                 <h1>资产商管理</h1>
             </div>
-            <div class="summary">共 {{ partners|length }} 个资产商</div>
+            <div class="right-group">
+                <button type="button" class="btn-refresh" id="btnRefreshAll" title="从数据库强制重新加载所有生产商的风控、收益、现金流数据">
+                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    刷新全部数据
+                </button>
+                <span class="summary">共 {{ partners|length }} 个资产商</span>
+            </div>
         </div>
 
         <div class="main-tabs">
@@ -119,28 +148,36 @@
                 <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
                 收益规模
             </div>
+            <div class="main-tab" onclick="switchMainTab('cashflow')">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                现金流
+            </div>
         </div>
 
         <!-- Risk Panel -->
         <div class="tab-panel active" id="panel-risk">
             <div class="partner-cards">
                 {% for p in partners %}
-                <div class="p-card" onclick="location.href='/partner/{{ p.id }}/risk'">
+                <div class="p-card" onclick="location.href='{{ app_root }}/partner/{{ p.id }}/risk'">
                     <div class="p-card-header">
                         <div>
                             <div class="p-card-name">{{ p.name }}</div>
                             <div class="p-card-sub">
                                 <span class="status-dot {{ 'active' if p.status == 'active' else 'inactive' }}"></span>
-                                {{ p.country }} · 入驻 {{ p.onboard_date }}
+                                {{ p.country }}{% if p.onboard_date and p.onboard_date != '-' %} · 入驻 {{ p.onboard_date }}{% else %} · 生产商{% endif %}
                             </div>
                         </div>
-                        <span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' }}">{{ p.product_type }}</span>
+                        <span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' if p.product_type == 'MCA' else 'tag-pl' }}">{{ p.product_type or '-' }}</span>
                     </div>
                     <div class="p-card-body">
                         <div class="p-kpi-grid">
                             <div class="p-kpi">
                                 <div class="p-kpi-label">当前余额</div>
-                                <div class="p-kpi-value">{{ p.latest.current_balance_fmt }}</div>
+                                {% if p.is_usd %}
+                                <div class="p-kpi-value">{{ p.latest.current_balance_usd }}</div>
+                                {% else %}
+                                <div class="p-kpi-value p-kpi-dual"><span class="p-kpi-local">{{ p.latest.current_balance_local }}</span><span class="p-kpi-usd">{{ p.latest.current_balance_usd }}</span></div>
+                                {% endif %}
                             </div>
                             <div class="p-kpi">
                                 <div class="p-kpi-label">M0 占比</div>
@@ -152,7 +189,11 @@
                             </div>
                             <div class="p-kpi">
                                 <div class="p-kpi-label">累计放款</div>
-                                <div class="p-kpi-value">{{ p.latest.cum_disb_fmt }}</div>
+                                {% if p.is_usd %}
+                                <div class="p-kpi-value">{{ p.latest.cum_disb_usd }}</div>
+                                {% else %}
+                                <div class="p-kpi-value p-kpi-dual"><span class="p-kpi-local">{{ p.latest.cum_disb_local }}</span><span class="p-kpi-usd">{{ p.latest.cum_disb_usd }}</span></div>
+                                {% endif %}
                             </div>
                             <div class="p-kpi">
                                 <div class="p-kpi-label">活跃借款人</div>
@@ -160,7 +201,11 @@
                             </div>
                             <div class="p-kpi">
                                 <div class="p-kpi-label">月放贷规模</div>
-                                <div class="p-kpi-value">{{ p.monthly_volume_fmt }}</div>
+                                {% if p.is_usd %}
+                                <div class="p-kpi-value">{{ p.monthly_volume_usd }}</div>
+                                {% else %}
+                                <div class="p-kpi-value p-kpi-dual"><span class="p-kpi-local">{{ p.monthly_volume_local }}</span><span class="p-kpi-usd">{{ p.monthly_volume_usd }}</span></div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -175,25 +220,52 @@
 
         <!-- Revenue Panel -->
         <div class="tab-panel" id="panel-revenue"></div>
+
+        <!-- Cash Flow Panel -->
+        <div class="tab-panel" id="panel-cashflow"></div>
     </div>
 
     <script>
         const partnersRevenue = {{ partners_revenue | tojson }};
+        const partnersCashflow = {{ partners_cashflow | tojson }};
 
         function switchMainTab(tab) {
-            document.querySelectorAll('.main-tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'risk' ? 0 : 1)));
+            const idx = { risk: 0, revenue: 1, cashflow: 2 }[tab] ?? 0;
+            document.querySelectorAll('.main-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
             document.getElementById('panel-risk').classList.toggle('active', tab === 'risk');
             document.getElementById('panel-revenue').classList.toggle('active', tab === 'revenue');
+            document.getElementById('panel-cashflow').classList.toggle('active', tab === 'cashflow');
             if (tab === 'revenue' && !document.getElementById('panel-revenue').dataset.loaded) {
                 renderRevenue();
                 document.getElementById('panel-revenue').dataset.loaded = '1';
             }
+            if (tab === 'cashflow' && !document.getElementById('panel-cashflow').dataset.loaded) {
+                renderCashflow();
+                document.getElementById('panel-cashflow').dataset.loaded = '1';
+            }
         }
 
+        function fmtFormat(n) {
+            if (n == null || n === undefined || isNaN(n)) return '-';
+            if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+            return n.toLocaleString(undefined, {maximumFractionDigits: 0});
+        }
         function fmtK(n) {
-            if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
-            if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
-            return '$' + n.toLocaleString();
+            const v = fmtFormat(n);
+            return v === '-' ? v : '$' + v;
+        }
+        function fmtDual(localVal, exchangeRate, localCurrency) {
+            if (localVal == null || localVal === undefined) return { local: '-', usd: '-' };
+            const rate = parseFloat(exchangeRate);
+            const validRate = !isNaN(rate) && rate > 0;
+            const usdVal = validRate ? (Number(localVal) / rate) : Number(localVal);
+            const localStr = fmtFormat(localVal);
+            const usdStr = fmtFormat(usdVal);
+            return {
+                local: localStr === '-' ? '-' : localStr,
+                usd: usdStr === '-' ? '-' : '$' + usdStr
+            };
         }
 
         function renderRevenue() {
@@ -204,11 +276,20 @@
                 const latest = d[d.length - 1];
                 const prev = d.length > 1 ? d[d.length - 2] : latest;
                 const totalRevenue = d.reduce((s, r) => s + r.net_revenue, 0);
+                const rate = parseFloat(p.exchange_rate) || 1;
+                const isUsd = (p.local_currency || 'USD') === 'USD';
 
                 const balDelta = latest.outstanding_balance - prev.outstanding_balance;
                 const balUp = balDelta >= 0;
                 const revDelta = latest.net_revenue - prev.net_revenue;
                 const revUp = revDelta >= 0;
+
+                const balD = fmtDual(latest.outstanding_balance, rate, p.local_currency);
+                const cumD = fmtDual(latest.cumulative_disbursement, rate, p.local_currency);
+                const netD = fmtDual(latest.net_revenue, rate, p.local_currency);
+                const totD = fmtDual(totalRevenue, rate, p.local_currency);
+                const balDeltaD = fmtDual(Math.abs(balDelta), rate, p.local_currency);
+                const revDeltaD = fmtDual(Math.abs(revDelta), rate, p.local_currency);
 
                 const maxBal = Math.max(...d.map(r => r.outstanding_balance));
                 const svgW = 300, svgH = 48, pad = 2;
@@ -219,8 +300,10 @@
                 pts.forEach(([x, y]) => area += ` L ${x.toFixed(1)},${y.toFixed(1)}`);
                 area += ` L ${pts[pts.length-1][0].toFixed(1)},${svgH - pad} Z`;
 
+                const url = (window.APP_ROOT || '') + '/partner/' + encodeURIComponent(p.id) + '/revenue';
                 return `
-                <div class="rv-card" onclick="location.href='/partner/${p.id}/revenue'">
+                <a href="${url}" class="rv-card-link" style="display:block;text-decoration:none;color:inherit">
+                <div class="rv-card">
                     <div class="rv-card-header">
                         <div>
                             <div class="p-card-name">${p.name}</div>
@@ -235,8 +318,8 @@
                         <div class="p-kpi-grid">
                             <div class="p-kpi">
                                 <div class="p-kpi-label">在贷余额</div>
-                                <div class="p-kpi-value">${fmtK(latest.outstanding_balance)}</div>
-                                <div class="rv-delta ${balUp ? 'up' : 'down'}">${balUp ? '↑' : '↓'} ${fmtK(Math.abs(balDelta))}</div>
+                                ${isUsd ? `<div class="p-kpi-value">${balD.usd}</div>` : `<div class="p-kpi-value rv-dual-currency"><span class="rv-local">${balD.local}</span><span class="rv-usd">${balD.usd}</span></div>`}
+                                <div class="rv-delta ${balUp ? 'up' : 'down'}">${balUp ? '↑' : '↓'} ${isUsd ? balDeltaD.usd : balDeltaD.local + ' / ' + balDeltaD.usd}</div>
                             </div>
                             <div class="p-kpi">
                                 <div class="p-kpi-label">年化收益率</div>
@@ -248,16 +331,16 @@
                             </div>
                             <div class="p-kpi">
                                 <div class="p-kpi-label">累计放款</div>
-                                <div class="p-kpi-value">${fmtK(latest.cumulative_disbursement)}</div>
+                                ${isUsd ? `<div class="p-kpi-value">${cumD.usd}</div>` : `<div class="p-kpi-value rv-dual-currency"><span class="rv-local">${cumD.local}</span><span class="rv-usd">${cumD.usd}</span></div>`}
                             </div>
                             <div class="p-kpi">
                                 <div class="p-kpi-label">当月净收益</div>
-                                <div class="p-kpi-value good">${fmtK(latest.net_revenue)}</div>
-                                <div class="rv-delta ${revUp ? 'up' : 'down'}">${revUp ? '↑' : '↓'} ${fmtK(Math.abs(revDelta))}</div>
+                                ${isUsd ? `<div class="p-kpi-value good">${netD.usd}</div>` : `<div class="p-kpi-value good rv-dual-currency"><span class="rv-local">${netD.local}</span><span class="rv-usd">${netD.usd}</span></div>`}
+                                <div class="rv-delta ${revUp ? 'up' : 'down'}">${revUp ? '↑' : '↓'} ${isUsd ? revDeltaD.usd : revDeltaD.local + ' / ' + revDeltaD.usd}</div>
                             </div>
                             <div class="p-kpi">
                                 <div class="p-kpi-label">累计净收益</div>
-                                <div class="p-kpi-value good">${fmtK(totalRevenue)}</div>
+                                ${isUsd ? `<div class="p-kpi-value good">${totD.usd}</div>` : `<div class="p-kpi-value good rv-dual-currency"><span class="rv-local">${totD.local}</span><span class="rv-usd">${totD.usd}</span></div>`}
                             </div>
                         </div>
                     </div>
@@ -276,9 +359,106 @@
                         <span>数据截至 ${latest.month} · 运营 ${d.length} 个月</span>
                         <span class="enter">查看详情 <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
                     </div>
-                </div>`;
+                </div>
+                </a>`;
             }).join('') + '</div>';
         }
+
+        function renderCashflow() {
+            const el = document.getElementById('panel-cashflow');
+            el.innerHTML = '<div class="partner-cards">' + partnersCashflow.map(p => {
+                const d = p.cashflow_data || [];
+                const rate = parseFloat(p.exchange_rate) || 1;
+                const isUsd = (p.local_currency || 'USD') === 'USD';
+                const totalD = fmtDual(p.total_expected || 0, rate, p.local_currency);
+                const nextMonth = d[0];
+                const nextD = nextMonth ? fmtDual(nextMonth.expected_inflow, rate, p.local_currency) : { local: '-', usd: '-' };
+
+                const maxVal = Math.max(...d.map(r => r.expected_inflow || 0), 1);
+                const svgW = 300, svgH = 48, pad = 2;
+                const xStep = d.length > 1 ? (svgW - pad * 2) / (d.length - 1) : 0;
+                const pts = d.map((r, i) => [pad + i * xStep, svgH - pad - ((r.expected_inflow || 0) / maxVal) * (svgH - pad * 2)]);
+                const polyline = pts.length ? pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ') : '';
+                let area = '';
+                if (pts.length) {
+                    area = `M ${pts[0][0].toFixed(1)},${svgH - pad}`;
+                    pts.forEach(([x, y]) => area += ` L ${x.toFixed(1)},${y.toFixed(1)}`);
+                    area += ` L ${pts[pts.length-1][0].toFixed(1)},${svgH - pad} Z`;
+                }
+
+                const url = (window.APP_ROOT || '') + '/partner/' + encodeURIComponent(p.id) + '/cashflow';
+                return `
+                <a href="${url}" class="rv-card-link" style="display:block;text-decoration:none;color:inherit">
+                <div class="rv-card">
+                    <div class="rv-card-header">
+                        <div>
+                            <div class="p-card-name">${p.name}</div>
+                            <div class="p-card-sub">
+                                <span class="status-dot active"></span>
+                                ${p.country} · ${p.product_type}
+                            </div>
+                        </div>
+                        <span class="tag ${p.product_type === 'PL' ? 'tag-pl' : 'tag-mca'}">${p.product_type}</span>
+                    </div>
+                    <div class="rv-card-body">
+                        <div class="p-kpi-grid">
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">下月预期回收</div>
+                                ${isUsd ? `<div class="p-kpi-value good">${nextD.usd}</div>` : `<div class="p-kpi-value good rv-dual-currency"><span class="rv-local">${nextD.local}</span><span class="rv-usd">${nextD.usd}</span></div>`}
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">12 个月预期</div>
+                                ${isUsd ? `<div class="p-kpi-value good">${totalD.usd}</div>` : `<div class="p-kpi-value good rv-dual-currency"><span class="rv-local">${totalD.local}</span><span class="rv-usd">${totalD.usd}</span></div>`}
+                            </div>
+                            <div class="p-kpi">
+                                <div class="p-kpi-label">预测期数</div>
+                                <div class="p-kpi-value">${d.length} 个月</div>
+                            </div>
+                        </div>
+                    </div>
+                    ${d.length ? `
+                    <div class="rv-spark">
+                        <svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none">
+                            <path class="sp-area" d="${area}" fill="var(--teal)"/>
+                            <polyline class="sp-path" points="${polyline}" stroke="var(--teal)"/>
+                        </svg>
+                        <div class="rv-spark-legend">
+                            <span>${d[0].month}</span>
+                            <span style="font-size:0.58rem;color:var(--text-muted)">预期回收趋势</span>
+                            <span>${d[d.length-1].month}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div class="rv-card-footer">
+                        <span>基于在贷还款计划预测 · 回收率 98%</span>
+                        <span class="enter">查看详情 <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
+                    </div>
+                </div>
+                </a>`;
+            }).join('') + '</div>';
+        }
+
+        document.getElementById('btnRefreshAll')?.addEventListener('click', async function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = '刷新中...';
+            const base = (window.APP_ROOT || '') || '';
+            try {
+                const res = await fetch(base + '/api/partner/refresh-all-cache', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                    return;
+                }
+                alert(data.error || '刷新失败');
+            } catch (e) {
+                alert('刷新失败：' + (e.message || '网络错误'));
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> 刷新全部数据';
+            }
+        });
     </script>
+    {% include '_data_source_status.html' %}
 </body>
 </html>

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | 告警面板</title>
@@ -82,21 +83,23 @@
         <div class="left">
             <div class="logo">CHUAN</div>
             <nav>
-                <a href="/dashboard">概览</a>
-                <a href="/alert/panel" class="active">告警面板</a>
+                <a href="{{ app_root }}/dashboard">概览</a>
+                <a href="{{ app_root }}/partner/manage">资产商管理</a>
+                <a href="{{ app_root }}/help">Help</a>
+                <a href="{{ app_root }}/alert/panel" class="active">告警面板</a>
             </nav>
         </div>
         <div class="user-info">
             <span>{{ user.display_name }}</span>
             <span class="role-badge">{{ user.role_label }}</span>
-            <a href="/logout" class="btn-link">退出</a>
+            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
         </div>
     </div>
 
     <div class="page">
         <div class="page-header">
             <div class="left-group">
-                <a href="/dashboard" class="btn-back">
+                <a href="{{ app_root }}/dashboard" class="btn-back">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                     返回
                 </a>
@@ -116,7 +119,7 @@
                     <span class="badge {{ 'none' if open_count == 0 else '' }}">
                         {{ open_count }} 项待处理
                     </span>
-                    <a href="/partner/{{ p.id }}/risk" class="link" style="margin-left:auto;font-size:0.75rem;">查看风控详情 →</a>
+                    <a href="{{ app_root }}/partner/{{ p.id }}/risk" class="link" style="margin-left:auto;font-size:0.75rem;">查看风控详情 →</a>
                 </div>
                 {% if p.alerts %}
                 {% for a in p.alerts %}
@@ -169,7 +172,7 @@
                     {% set status = 'danger' if cur <= liq else ('warn' if cur <= base else 'safe') %}
                     {% set status_text = '平仓预警' if cur <= liq else ('补仓预警' if cur <= margin else ('低于基准' if cur <= base else '正常')) %}
                     <tr>
-                        <td><a href="/partner/{{ p.id }}/risk" class="link">{{ p.name }}</a></td>
+                        <td><a href="{{ app_root }}/partner/{{ p.id }}/risk" class="link">{{ p.name }}</a></td>
                         <td>{{ p.country }}</td>
                         <td><span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' }}">{{ p.product_type }}</span></td>
                         <td class="num"><strong>{{ "%.2f"|format(cur) }}x</strong></td>
@@ -177,15 +180,15 @@
                         <td class="num">{{ "%.2f"|format(margin) }}x</td>
                         <td class="num">{{ "%.2f"|format(liq) }}x</td>
                         <td><span class="status {{ status }}">{{ status_text }}</span></td>
-                        <td><a href="/partner/{{ p.id }}/risk" class="link">详情</a></td>
+                        <td><a href="{{ app_root }}/partner/{{ p.id }}/risk" class="link">详情</a></td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td><a href="/partner/{{ p.id }}/risk" class="link">{{ p.name }}</a></td>
+                        <td><a href="{{ app_root }}/partner/{{ p.id }}/risk" class="link">{{ p.name }}</a></td>
                         <td>{{ p.country }}</td>
                         <td><span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' }}">{{ p.product_type }}</span></td>
                         <td class="num" colspan="5">暂无覆盖倍数数据</td>
-                        <td><a href="/partner/{{ p.id }}/risk" class="link">详情</a></td>
+                        <td><a href="{{ app_root }}/partner/{{ p.id }}/risk" class="link">详情</a></td>
                     </tr>
                     {% endif %}
                     {% endfor %}

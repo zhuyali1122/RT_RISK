@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | {{ partner.name }} - 风控监控</title>
@@ -11,7 +12,12 @@
             --accent-teal: #2E7D6E; --accent-amber: #E8A838; --accent-coral: #D8434F; --accent-mint: #4DB6AC;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f0ee 0%, #ebe5e3 100%); min-height: 100vh; color: var(--dark-blue); }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f0ee 0%, #ebe5e3 100%); min-height: 100vh; color: var(--dark-blue); padding-bottom: 24px; }
+        .data-source-status { position: fixed; bottom: 0; left: 0; right: 0; height: 24px; background: var(--dark-blue); color: rgba(255,255,255,0.85); font-size: 0.72rem; display: flex; align-items: center; justify-content: center; gap: 6px; z-index: 1000; }
+        .data-source-status .ds-label { opacity: 0.8; }
+        .data-source-status .ds-value { font-weight: 600; }
+        .data-source-status .ds-cache { color: #7DD3C0; }
+        .data-source-status .ds-database { color: #F9A825; }
 
         .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
         .top-bar .left { display: flex; align-items: center; gap: 24px; }
@@ -38,7 +44,10 @@
         .date-selector select { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); font-size: 0.82rem; color: var(--dark-blue); cursor: pointer; }
         .page-header .date-selector, .page-header .currency-selector { display: flex; align-items: center; gap: 10px; }
         .page-header .header-right { display: flex; align-items: center; gap: 24px; }
+        .currency-selector { flex-direction: column; align-items: flex-start; gap: 4px; }
+        .currency-selector .currency-selector-row { display: flex; align-items: center; gap: 10px; }
         .currency-selector label { font-size: 0.8rem; color: var(--text-muted); }
+        .currency-selector .exchange-rate-hint { font-size: 0.7rem; color: var(--text-muted); }
 
         .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-teal); display: inline-block; }
         .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0; }
@@ -52,6 +61,40 @@
         .vintage-mode-toggle button { padding: 5px 14px; border: none; background: var(--white); color: var(--text-muted); cursor: pointer; font-weight: 600; font-family: inherit; transition: all 0.15s; }
         .vintage-mode-toggle button.active { background: var(--accent-teal); color: var(--white); }
         .vintage-mode-toggle button:hover:not(.active) { background: var(--light-pink); }
+        .cache-status { font-size: 0.72rem; color: var(--text-muted); margin-right: 12px; }
+        .cache-empty { color: var(--accent-amber); }
+        .btn-refresh-risk { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); color: var(--dark-blue); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-right: 16px; }
+        .btn-refresh-risk:hover { background: var(--accent-teal); color: var(--white); border-color: var(--accent-teal); }
+        .btn-refresh-risk:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-refresh-risk.loading svg { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-pdf { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); color: var(--dark-blue); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-right: 8px; }
+        .btn-pdf:hover { background: var(--accent-teal); color: var(--white); border-color: var(--accent-teal); }
+        .btn-pdf:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-pdf.loading svg { animation: spin 0.8s linear infinite; }
+
+        /* PDF 导出：仅保留内容，隐藏按钮/选择器等 */
+        body.pdf-export .btn-back,
+        body.pdf-export .btn-pdf,
+        body.pdf-export .btn-refresh-risk,
+        body.pdf-export .cache-status,
+        body.pdf-export .date-selector,
+        body.pdf-export .currency-selector,
+        body.pdf-export .exchange-rate-hint,
+        body.pdf-export .header-right { display: none !important; }
+        body.pdf-export .data-source-status { display: none !important; }
+        body.pdf-export .vintage-mode-toggle,
+        body.pdf-export .vintage-header-right { display: none !important; }
+        body.pdf-export .no-pdf { display: none !important; }
+        body.pdf-export .page { max-width: 190mm; padding: 16px; background: #fff; }
+        body.pdf-export .page-header .left-group { margin-left: 0; }
+        body.pdf-export .kpi-card,
+        body.pdf-export .dpd-section,
+        body.pdf-export .vintage-section,
+        body.pdf-export .collection-section,
+        body.pdf-export .alert-panel,
+        body.pdf-export .priority-section,
+        body.pdf-export .chart-panel { break-inside: avoid; page-break-inside: avoid; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 28px; }
         .kpi-card { background: var(--white); border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); border-left: 4px solid var(--dark-blue); }
@@ -128,12 +171,14 @@
 
         /* Priority Indicators */
         .priority-section { background: var(--white); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(59,74,106,0.08); }
-        .priority-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .priority-grid { display: grid; grid-template-columns: repeat(6, minmax(140px, 1fr)); gap: 10px; }
         .pri-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; position: relative; overflow: hidden; }
         .pri-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
         .pri-card.safe::before { background: var(--accent-teal); }
         .pri-card.warn::before { background: var(--accent-amber); }
         .pri-card.danger::before { background: var(--accent-coral); }
+        .pri-card-empty::before { background: var(--border); }
+        .pri-value-empty { color: var(--text-muted); font-weight: 600; }
         .pri-label { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .pri-value { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
         .pri-value.safe { color: var(--accent-teal); }
@@ -142,8 +187,8 @@
         .pri-sub { font-size: 0.62rem; color: var(--text-muted); line-height: 1.5; }
         .pri-sub strong { color: var(--dark-blue); }
         .pri-bar-bg { height: 5px; background: #E2E8F0; border-radius: 3px; margin: 6px 0 4px; position: relative; overflow: visible; }
-        @media (max-width: 1100px) { .priority-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 700px) { .priority-grid { grid-template-columns: repeat(2, 1fr); } }
+        .priority-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 1100px) { .priority-grid { min-width: 900px; } }
         .pri-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
         .pri-bar.safe { background: var(--accent-teal); }
         .pri-bar.warn { background: var(--accent-amber); }
@@ -160,22 +205,38 @@
         .gauge-pointer { position: absolute; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--white); z-index: 3; box-shadow: 0 1px 4px rgba(0,0,0,0.3); transform: translateX(-50%); }
         .gauge-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.62rem; color: var(--text-muted); }
         .gauge-label-line { position: absolute; bottom: -14px; font-size: 0.6rem; transform: translateX(-50%); white-space: nowrap; }
+
+        /* Coverage breakdown */
+        .coverage-breakdown { margin-top: 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .coverage-breakdown summary { padding: 10px 14px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: var(--light-pink); color: var(--dark-blue); }
+        .coverage-breakdown summary:hover { background: rgba(255,241,238,0.8); }
+        .coverage-breakdown-content { padding: 16px; background: #FAFBFC; }
+        .breakdown-sub { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 12px; }
+        .breakdown-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .breakdown-table th, .breakdown-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .breakdown-table th { background: var(--light-pink); font-weight: 600; }
+        .breakdown-table td:nth-child(2) { text-align: right; font-variant-numeric: tabular-nums; }
+        .breakdown-row-value td { background: rgba(46,125,110,0.08); }
+        .breakdown-row-loan td { background: rgba(59,74,106,0.06); }
+        .breakdown-row-result td { background: rgba(46,125,110,0.12); font-weight: 700; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
     <div class="top-bar">
         <div class="left">
             <div class="logo">CHUAN</div>
             <nav>
-                <a href="/dashboard">概览</a>
-                <a href="/partner/manage">资产商管理</a>
+                <a href="{{ app_root }}/dashboard">概览</a>
+                <a href="{{ app_root }}/partner/manage">资产商管理</a>
+                <a href="{{ app_root }}/help">Help</a>
                 <a class="active">{{ partner.name }}</a>
             </nav>
         </div>
         <div class="user-info">
             <span>{{ user.display_name }}</span>
             <span class="role-badge">{{ user.role_label }}</span>
-            <a href="/logout" class="btn-link">退出</a>
+            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
         </div>
     </div>
 
@@ -183,7 +244,7 @@
         <div class="page-header">
             <div>
                 <div class="left-group">
-                    <a href="/partner/manage" class="btn-back">
+                    <a href="{{ app_root }}/partner/manage" class="btn-back">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                         返回列表
                     </a>
@@ -192,16 +253,36 @@
                 <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · 联系人：{{ partner.contact }}</div>
             </div>
             <div class="header-right">
+                {% if use_risk_cache %}
+                <div class="cache-status">
+                    {% if cache_last_updated %}
+                    <span class="cache-time" title="数据缓存时间">缓存于 {{ cache_last_updated or '-' }}</span>
+                    {% else %}
+                    <span class="cache-empty">暂无缓存，请点击刷新加载</span>
+                    {% endif %}
+                </div>
+                <button class="btn-refresh-risk" onclick="refreshRisk()" title="从数据库重新拉取并缓存全部数据">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    刷新
+                </button>
+                {% endif %}
+                <button class="btn-pdf" onclick="downloadPDF()" title="下载当前页面为 PDF">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    下载 PDF
+                </button>
                 <div class="date-selector">
                     <label>数据日期：</label>
                     <select id="dateSelect"></select>
                 </div>
                 <div class="currency-selector">
-                    <label>货币：</label>
-                    <div class="currency-toggle currency-toggle-header">
-                        <button class="active" onclick="switchHeaderCurrency('usd',this)">USD</button>
-                        <button onclick="switchHeaderCurrency('local',this)">{{ local_currency }}</button>
+                    <div class="currency-selector-row">
+                        <label>货币：</label>
+                        <div class="currency-toggle currency-toggle-header">
+                            <button class="active" onclick="switchHeaderCurrency('usd',this)">USD</button>
+                            <button onclick="switchHeaderCurrency('local',this)">{{ local_currency }}</button>
+                        </div>
                     </div>
+                    {% if local_currency != 'USD' %}<span class="exchange-rate-hint">1 USD = {% if exchange_rate >= 1000 %}{{ "{:,.0f}".format(exchange_rate) }}{% else %}{{ "{:.2f}".format(exchange_rate) }}{% endif %} {{ local_currency }}</span>{% endif %}
                 </div>
             </div>
         </div>
@@ -217,57 +298,54 @@
         const localCurrency = '{{ local_currency }}';
         const exchangeRate = {{ exchange_rate }};
 
-        function fmtLocal(nUsd) {
-            if (nUsd === null || nUsd === undefined || nUsd === '') return '-';
-            const x = parseFloat(nUsd);
-            if (isNaN(x)) return '-';
-            const local = x * exchangeRate;
-            if (localCurrency === 'IDR') {
-                if (local >= 1e12) return localCurrency + ' ' + (local / 1e12).toFixed(1) + 'T';
-                if (local >= 1e9) return localCurrency + ' ' + (local / 1e9).toFixed(1) + 'B';
-                if (local >= 1e6) return localCurrency + ' ' + (local / 1e6).toFixed(1) + 'M';
-                return localCurrency + ' ' + local.toLocaleString(undefined, {maximumFractionDigits: 0});
-            }
-            if (local >= 1e9) return localCurrency + ' ' + (local / 1e9).toFixed(2) + 'B';
-            if (local >= 1e6) return localCurrency + ' ' + (local / 1e6).toFixed(1) + 'M';
-            if (local >= 1e3) return localCurrency + ' ' + (local / 1e3).toFixed(0) + 'K';
-            return localCurrency + ' ' + local.toLocaleString(undefined, {maximumFractionDigits: 0});
+        // 缓存含 localCurrency（如 MXN）和 USD 两部分，从 row 或 row._usd 取
+        function _fmtNum(x) {
+            if (x === null || x === undefined || x === '') return null;
+            const n = parseFloat(x);
+            return isNaN(n) ? null : n;
         }
-
-        function fmtUSD(n) {
-            if (n === null || n === undefined || n === '') return '-';
-            const x = parseFloat(n);
-            if (isNaN(x)) return '-';
-            if (x >= 1e6) return '$' + (x / 1e6).toFixed(1) + 'M';
-            if (x >= 1e3) return '$' + (x / 1e3).toFixed(0) + 'K';
-            return '$' + x.toLocaleString();
-        }
-        function fmtValUSD(n) {
-            if (n === null || n === undefined || n === '') return '-';
-            const x = parseFloat(n);
-            if (isNaN(x)) return '-';
+        function fmtFormat(n) {
+            const x = _fmtNum(n);
+            if (x === null) return '-';
+            if (x >= 1e12) return (x / 1e12).toFixed(1) + 'T';
+            if (x >= 1e9) return (x / 1e9).toFixed(2) + 'B';
             if (x >= 1e6) return (x / 1e6).toFixed(1) + 'M';
             if (x >= 1e3) return (x / 1e3).toFixed(0) + 'K';
-            return x.toLocaleString();
+            return x.toLocaleString(undefined, {maximumFractionDigits: 0});
         }
-        function fmtValLocal(n) {
-            if (n === null || n === undefined || n === '') return '-';
-            const x = parseFloat(n);
-            if (isNaN(x)) return '-';
-            const local = x * exchangeRate;
-            if (localCurrency === 'IDR') {
-                if (local >= 1e12) return (local / 1e12).toFixed(1) + 'T';
-                if (local >= 1e9) return (local / 1e9).toFixed(1) + 'B';
-                if (local >= 1e6) return (local / 1e6).toFixed(1) + 'M';
-                return local.toLocaleString(undefined, {maximumFractionDigits: 0});
-            }
-            if (local >= 1e9) return (local / 1e9).toFixed(2) + 'B';
-            if (local >= 1e6) return (local / 1e6).toFixed(1) + 'M';
-            if (local >= 1e3) return (local / 1e3).toFixed(0) + 'K';
-            return local.toLocaleString(undefined, {maximumFractionDigits: 0});
+        // USD = local / exchange_rate（始终用页面汇率计算，不依赖缓存中的 _usd）
+        function getUsdVal(row, key) {
+            const local = _fmtNum(row[key]);
+            return local != null && exchangeRate > 0 ? local / exchangeRate : local;
+        }
+        function getLocalVal(row, key) { return _fmtNum(row[key]); }
+        function getUsdValFromDpd(row, i, key) {
+            const local = _fmtNum((row.dpd_distribution || [])[i]?.[key]);
+            return local != null && exchangeRate > 0 ? local / exchangeRate : local;
+        }
+        function getLocalValFromDpd(row, i, key) { return _fmtNum((row.dpd_distribution || [])[i]?.[key]); }
+        function getUsdValFromVintage(row, i, key) {
+            const local = _fmtNum((row.vintage_data || [])[i]?.[key]);
+            return local != null && exchangeRate > 0 ? local / exchangeRate : local;
+        }
+        function getLocalValFromVintage(row, i, key) { return _fmtNum((row.vintage_data || [])[i]?.[key]); }
+        function getUsdValFromCollection(row, i, key) {
+            const local = _fmtNum((row.collection_report || [])[i]?.[key]);
+            return local != null && exchangeRate > 0 ? local / exchangeRate : local;
+        }
+        function getLocalValFromCollection(row, i, key) { return _fmtNum((row.collection_report || [])[i]?.[key]); }
+        function fmtDisplayUSD(n) { const v = fmtFormat(n); return v === '-' ? v : '$' + v; }
+        function fmtDisplayLocal(n) { return fmtFormat(n); }
+        // 本币（equivalent USD）格式：本币为主，括号内为 USD 等值
+        function fmtAmountLocalWithUsd(localVal, usdVal) {
+            const localStr = fmtDisplayLocal(localVal);
+            const usdStr = fmtDisplayUSD(usdVal);
+            if (localCurrency === 'USD') return usdStr;
+            if (localStr === '-') return usdStr;
+            return localStr + ' ' + localCurrency + ' (' + usdStr + ')';
         }
         function fmtAmount(n) {
-            return (window.currencyMode || 'usd') === 'usd' ? fmtValUSD(n) : fmtValLocal(n);
+            return (window.currencyMode || 'usd') === 'usd' ? fmtDisplayUSD(n) : fmtDisplayLocal(n);
         }
 
         function fmtNum(n) {
@@ -324,36 +402,79 @@
             `;
         }
 
+        function formatBreakdownNum(n) {
+            if (n === null || n === undefined || isNaN(parseFloat(n))) return '-';
+            const x = parseFloat(n);
+            return x.toLocaleString(undefined, {maximumFractionDigits: 2, minimumFractionDigits: 0});
+        }
+
         function renderPriority() {
             const pi = priorityIndicators;
-            if (!pi) return '';
+            if (!pi || !pi.leverage_ratio || !pi.coverage_ratio) return '';
 
             const lev = pi.leverage_ratio;
+            const mg = pi.margin_deposit;
+            const gt = pi.guarantee_deposit;
             const levPct = Math.min((lev.current / lev.limit) * 100, 100);
             const levClass = levPct >= 90 ? 'danger' : levPct >= 70 ? 'warn' : 'safe';
 
             const py = pi.priority_yield;
-            const pyVal = (py.current * 100).toFixed(2);
-            const pyTarget = (py.target * 100).toFixed(2);
-            const pyClass = py.current >= py.target ? 'safe' : 'warn';
+            const pyMissing = !py || !py.target;
 
             const cov = pi.coverage_ratio;
             const covClass = cov.current <= cov.liquidation ? 'danger' : cov.current <= cov.margin_call ? 'danger' : cov.current <= cov.baseline ? 'warn' : 'safe';
             const gaugeMax = Math.max(cov.baseline * 1.5, cov.current * 1.2);
             const toPercent = v => Math.min((v / gaugeMax) * 100, 100);
 
-            const mg = pi.margin_deposit;
-            const mgPct = Math.min((mg.current / mg.required) * 100, 100);
+            const mgPct = mg && mg.required ? Math.min((mg.current / mg.required) * 100, 100) : 0;
             const mgClass = mgPct >= 100 ? 'safe' : mgPct >= 90 ? 'warn' : 'danger';
 
-            const gt = pi.guarantee_deposit;
-            const gtPct = Math.min((gt.current / gt.required) * 100, 100);
+            const gtPct = gt && gt.required ? Math.min((gt.current / gt.required) * 100, 100) : 0;
             const gtClass = gtPct >= 100 ? 'safe' : gtPct >= 90 ? 'warn' : 'danger';
 
+            const mgCard = mg ? `
+                        <div class="pri-card ${mgClass}">
+                            <div class="pri-label">保证金</div>
+                            <div class="pri-value ${mgClass}">$${(mg.current / 1e6).toFixed(2)}M</div>
+                            <div class="pri-bar-bg"><div class="pri-bar ${mgClass}" style="width:${mgPct}%"></div></div>
+                            <div class="pri-sub">最低要求 <strong>$${(mg.required / 1e6).toFixed(2)}M</strong>　${mgPct >= 100 ? '✓ 充足' : '⚠ 不足'}</div>
+                        </div>` : `
+                        <div class="pri-card pri-card-empty">
+                            <div class="pri-label">保证金</div>
+                            <div class="pri-value pri-value-empty">-</div>
+                            <div class="pri-sub"></div>
+                        </div>`;
+            const gtCard = gt ? `
+                        <div class="pri-card ${gtClass}">
+                            <div class="pri-label">担保金</div>
+                            <div class="pri-value ${gtClass}">$${(gt.current / 1e6).toFixed(2)}M</div>
+                            <div class="pri-bar-bg"><div class="pri-bar ${gtClass}" style="width:${gtPct}%"></div></div>
+                            <div class="pri-sub">最低要求 <strong>$${(gt.required / 1e6).toFixed(2)}M</strong>　${gtPct >= 100 ? '✓ 充足' : '⚠ 不足'}</div>
+                        </div>` : `
+                        <div class="pri-card pri-card-empty">
+                            <div class="pri-label">担保金</div>
+                            <div class="pri-value pri-value-empty">-</div>
+                            <div class="pri-sub"></div>
+                        </div>`;
+
+            const pp = pi.priority_principal;  // 优先本金=合作本金=principal_amount（spv_initial_params 中已是 USD）
+            const ppCard = pp != null && pp > 0 ? `
+                        <div class="pri-card">
+                            <div class="pri-label">优先本金</div>
+                            <div class="pri-value">$${(pp / 1e6).toFixed(2)}M</div>
+                            <div class="pri-sub">= 合作本金</div>
+                        </div>` : `
+                        <div class="pri-card pri-card-empty">
+                            <div class="pri-label">优先本金</div>
+                            <div class="pri-value pri-value-empty">缺失</div>
+                            <div class="pri-sub">仅从 spv_initial_params 获取</div>
+                        </div>`;
             return `
                 <div class="section-title">优先级指标</div>
                 <div class="priority-section">
+                    <div class="priority-grid-wrap">
                     <div class="priority-grid">
+                        ${ppCard}
                         <div class="pri-card ${levClass}">
                             <div class="pri-label">杠杆比例</div>
                             <div class="pri-value ${levClass}">${lev.current.toFixed(1)}x</div>
@@ -361,12 +482,18 @@
                             <div class="pri-sub">上限 <strong>${lev.limit.toFixed(1)}x</strong>　使用率 <strong>${levPct.toFixed(0)}%</strong></div>
                         </div>
 
-                        <div class="pri-card ${pyClass}">
+                        ${pyMissing ? `
+                        <div class="pri-card pri-card-empty">
                             <div class="pri-label">优先收益率</div>
-                            <div class="pri-value ${pyClass}">${pyVal}%</div>
-                            <div class="pri-bar-bg"><div class="pri-bar ${pyClass}" style="width:${Math.min((py.current / py.target) * 100, 100)}%"></div></div>
-                            <div class="pri-sub">目标 <strong>${pyTarget}%</strong>　${py.current >= py.target ? '✓ 达标' : '⚠ 未达标'}</div>
-                        </div>
+                            <div class="pri-value pri-value-empty">缺失</div>
+                            <div class="pri-sub">仅从 spv_initial_params 获取</div>
+                        </div>` : `
+                        <div class="pri-card ${py.current >= py.target ? 'safe' : 'warn'}">
+                            <div class="pri-label">优先收益率</div>
+                            <div class="pri-value ${py.current >= py.target ? 'safe' : 'warn'}">${(py.current * 100).toFixed(2)}%</div>
+                            <div class="pri-bar-bg"><div class="pri-bar ${py.current >= py.target ? 'safe' : 'warn'}" style="width:${Math.min((py.current / py.target) * 100, 100)}%"></div></div>
+                            <div class="pri-sub">目标 <strong>${(py.target * 100).toFixed(2)}%</strong>　${py.current >= py.target ? '✓ 达标' : '⚠ 未达标'}</div>
+                        </div>`}
 
                         <div class="pri-card ${covClass}">
                             <div class="pri-label">覆盖倍数</div>
@@ -389,21 +516,36 @@
                                 <span style="color:var(--accent-teal)">■</span> 基准 <strong>${cov.baseline.toFixed(2)}x</strong>
                             </div>
                         </div>
-
-                        <div class="pri-card ${mgClass}">
-                            <div class="pri-label">保证金</div>
-                            <div class="pri-value ${mgClass}">$${(mg.current / 1e6).toFixed(2)}M</div>
-                            <div class="pri-bar-bg"><div class="pri-bar ${mgClass}" style="width:${mgPct}%"></div></div>
-                            <div class="pri-sub">最低要求 <strong>$${(mg.required / 1e6).toFixed(2)}M</strong>　${mgPct >= 100 ? '✓ 充足' : '⚠ 不足'}</div>
-                        </div>
-
-                        <div class="pri-card ${gtClass}">
-                            <div class="pri-label">担保金</div>
-                            <div class="pri-value ${gtClass}">$${(gt.current / 1e6).toFixed(2)}M</div>
-                            <div class="pri-bar-bg"><div class="pri-bar ${gtClass}" style="width:${gtPct}%"></div></div>
-                            <div class="pri-sub">最低要求 <strong>$${(gt.required / 1e6).toFixed(2)}M</strong>　${gtPct >= 100 ? '✓ 充足' : '⚠ 不足'}</div>
-                        </div>
+                        ${mgCard}
+                        ${gtCard}
                     </div>
+                    </div>
+                    ${cov.breakdown ? `
+                    <details class="coverage-breakdown">
+                        <summary>覆盖倍数公式拆解</summary>
+                        <div class="coverage-breakdown-content">
+                            <p class="breakdown-sub">数据日期: ${cov.breakdown.stat_date || '-'} | 汇率: 1 USD = ${cov.breakdown.exchange_rate} ${localCurrency || '本币'}</p>
+                            <table class="breakdown-table">
+                                <thead><tr><th>项</th><th>值</th><th>说明</th></tr></thead>
+                                <tbody>
+                                    <tr><td>M0 本金</td><td>${formatBreakdownNum(cov.breakdown.m0_balance)}</td><td>本币，来自 risk_data 最新行</td></tr>
+                                    <tr><td>M0 应收利息</td><td>${formatBreakdownNum(cov.breakdown.m0_accrued_interest)}</td><td>本币，每笔 M0 loan 的（应还利息 - 已还利息）之和</td></tr>
+                                    <tr><td>早偿逾期折损</td><td>${cov.breakdown.early_repayment_overdue_discount}</td><td>spv_initial_params.early_repayment_loss_rate</td></tr>
+                                    <tr><td>M0 应收利息 × 折损</td><td>${formatBreakdownNum(cov.breakdown.m0_interest_discounted)}</td><td>本币</td></tr>
+                                    <tr><td>Vtg30 预估 default rate</td><td>${cov.breakdown.vtg30_predicted_default_rate}%</td><td>spv_initial_params.vtg_30_plus_predicted</td></tr>
+                                    <tr><td>核心价值 (1 - default)</td><td>${formatBreakdownNum(cov.breakdown.after_default_local)}</td><td>本币 = (M0本金 + M0利息×折损) × (1 - default)</td></tr>
+                                    <tr><td>现金余额</td><td>${formatBreakdownNum(cov.breakdown.cash)}</td><td>本币，来自 risk_data</td></tr>
+                                    <tr><td class="breakdown-row-value"><strong>Value (本币)</strong></td><td><strong>${formatBreakdownNum(cov.breakdown.value_local)}</strong></td><td><strong>核心价值 + 现金</strong></td></tr>
+                                    <tr><td>Value (USD)</td><td>${formatBreakdownNum(cov.breakdown.value_usd)}</td><td>value_local / 汇率</td></tr>
+                                    <tr><td>合作本金</td><td>${formatBreakdownNum(cov.breakdown.coop_principal)} USD</td><td>spv_initial_params.principal_amount</td></tr>
+                                    <tr><td>未分配收益</td><td>${formatBreakdownNum(cov.breakdown.unallocated)} USD</td><td>principal × product_term / 12</td></tr>
+                                    <tr><td class="breakdown-row-loan"><strong>Loan (USD)</strong></td><td><strong>${formatBreakdownNum(cov.breakdown.loan_usd)} USD</strong></td><td><strong>合作本金 + 未分配收益</strong></td></tr>
+                                    <tr><td class="breakdown-row-result"><strong>覆盖倍数 V/L</strong></td><td><strong>${cov.breakdown.coverage_ratio}x</strong></td><td><strong>Value / Loan</strong></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                    ` : ''}
                 </div>
             `;
         }
@@ -417,8 +559,9 @@
 
                 <div class="section-title">核心指标 · ${row.stat_date}</div>
                 <div class="kpi-grid">
-                    <div class="kpi-card highlight"><div class="kpi-label">累计放款</div><div class="kpi-value amount-cell" data-usd="${fmtValUSD(row.cumulative_disbursement)}" data-local="${fmtValLocal(row.cumulative_disbursement)}">${fmtAmount(row.cumulative_disbursement)}</div></div>
-                    <div class="kpi-card highlight"><div class="kpi-label">当前余额</div><div class="kpi-value amount-cell" data-usd="${fmtValUSD(row.current_balance)}" data-local="${fmtValLocal(row.current_balance)}">${fmtAmount(row.current_balance)}</div></div>
+                    <div class="kpi-card highlight"><div class="kpi-label">累计放款</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal(row, 'cumulative_disbursement'))}" data-local="${fmtDisplayLocal(getLocalVal(row, 'cumulative_disbursement'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal(row, 'cumulative_disbursement') : getLocalVal(row, 'cumulative_disbursement'))}</div></div>
+                    <div class="kpi-card highlight"><div class="kpi-label">当前余额</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal(row, 'current_balance'))}" data-local="${fmtDisplayLocal(getLocalVal(row, 'current_balance'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal(row, 'current_balance') : getLocalVal(row, 'current_balance'))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">现金</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal({...row, cash: row.cash ?? '0'}, 'cash'))}" data-local="${fmtDisplayLocal(getLocalVal({...row, cash: row.cash ?? '0'}, 'cash'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal({...row, cash: row.cash ?? '0'}, 'cash') : getLocalVal({...row, cash: row.cash ?? '0'}, 'cash'))}</div></div>
                     <div class="kpi-card"><div class="kpi-label">平均久期</div><div class="kpi-value">${(row.avg_duration != null && row.avg_duration !== undefined && row.avg_duration !== '') ? parseFloat(row.avg_duration).toFixed(1) + ' 月' : '-'}</div></div>
                     <div class="kpi-card"><div class="kpi-label">M0 占比</div><div class="kpi-value rate">${fmtPct(row.m0_ratio)}</div></div>
                     <div class="kpi-card"><div class="kpi-label">日均利率</div><div class="kpi-value rate">${fmtPct(row.avg_daily_rate)}</div></div>
@@ -475,7 +618,7 @@
                         <div class="dpd-table-wrap">
                             <table class="dpd-table">
                                 <thead><tr><th>账龄</th><th class="dpd-col-amount">余额</th><th>余额占比</th><th>借款笔数</th><th>借款人数</th></tr></thead>
-                                <tbody>${dpd.map(d => `<tr><td><a href="/partner/${partnerId}/dpd/${d.bucket}" class="vintage-month-link"><strong>${d.bucket}</strong></a></td><td class="dpd-col-amount amount-cell" data-usd="${fmtValUSD(d.balance)}" data-local="${fmtValLocal(d.balance)}">${fmtAmount(d.balance)}</td><td>${fmtPct(d.balance_ratio)}</td><td>${fmtNum(d.loan_count)}</td><td>${fmtNum(d.borrower_count)}</td></tr>`).join('')}</tbody>
+                                <tbody>${dpd.map((d, i) => `<tr><td><a href="${(window.APP_ROOT||'')}/partner/${partnerId}/dpd/${d.bucket}?stat_date=${encodeURIComponent(row.stat_date || '')}" class="vintage-month-link"><strong>${d.bucket}</strong></a></td><td class="dpd-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromDpd(row, i, 'balance'))}" data-local="${fmtDisplayLocal(getLocalValFromDpd(row, i, 'balance'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromDpd(row, i, 'balance') : getLocalValFromDpd(row, i, 'balance'))}</td><td>${fmtPct(d.balance_ratio)}</td><td>${fmtNum(d.loan_count)}</td><td>${fmtNum(d.borrower_count)}</td></tr>`).join('')}</tbody>
                             </table>
                         </div>
                     </div>
@@ -495,20 +638,20 @@
                             : '<th class="text-left">放款月</th><th class="vnt-col-amount">放款金额</th><th class="vnt-col-amount">当前余额</th><th>MOB1</th><th>MOB2</th><th>MOB3</th><th>MOB4</th><th>MOB5</th><th>MOB6</th><th>MOB7</th><th>MOB8</th><th>MOB9</th><th>MOB10</th><th>MOB11</th><th>MOB12</th>'
                         }</tr></thead>
                         <tbody>${(window.vintageMode || 'dpd') === 'dpd'
-                            ? vintage.map(v => `<tr>
-                                <td class="text-left"><a href="/partner/${partnerId}/vintage/${v.disbursement_month}" class="vintage-month-link">${v.disbursement_month}</a></td>
-                                <td class="vnt-col-amount amount-cell" data-usd="${fmtValUSD(v.disbursement_amount)}" data-local="${fmtValLocal(v.disbursement_amount)}">${fmtAmount(v.disbursement_amount)}</td>
-                                <td class="vnt-col-amount amount-cell" data-usd="${fmtValUSD(v.current_balance)}" data-local="${fmtValLocal(v.current_balance)}">${fmtAmount(v.current_balance)}</td>
+                            ? vintage.map((v, i) => `<tr>
+                                <td class="text-left"><a href="${(window.APP_ROOT||'')}/partner/${partnerId}/vintage/${v.disbursement_month}?stat_date=${encodeURIComponent(row.stat_date || '')}" class="vintage-month-link">${v.disbursement_month}</a></td>
+                                <td class="vnt-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromVintage(row, i, 'disbursement_amount'))}" data-local="${fmtDisplayLocal(getLocalValFromVintage(row, i, 'disbursement_amount'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromVintage(row, i, 'disbursement_amount') : getLocalValFromVintage(row, i, 'disbursement_amount'))}</td>
+                                <td class="vnt-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromVintage(row, i, 'current_balance'))}" data-local="${fmtDisplayLocal(getLocalValFromVintage(row, i, 'current_balance'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromVintage(row, i, 'current_balance') : getLocalValFromVintage(row, i, 'current_balance'))}</td>
                                 <td class="${rateClass(v.dpd1_rate)}">${fmtPct(v.dpd1_rate)}</td>
                                 <td class="${rateClass(v.dpd3_rate)}">${fmtPct(v.dpd3_rate)}</td>
                                 <td class="${rateClass(v.dpd7_rate)}">${fmtPct(v.dpd7_rate)}</td>
                                 <td class="${rateClass(v.dpd15_rate)}">${fmtPct(v.dpd15_rate)}</td>
                                 <td class="${rateClass(v.dpd30_rate)}">${fmtPct(v.dpd30_rate)}</td>
                             </tr>`).join('')
-                            : vintage.map(v => `<tr>
-                                <td class="text-left"><a href="/partner/${partnerId}/vintage/${v.disbursement_month}" class="vintage-month-link">${v.disbursement_month}</a></td>
-                                <td class="vnt-col-amount amount-cell" data-usd="${fmtValUSD(v.disbursement_amount)}" data-local="${fmtValLocal(v.disbursement_amount)}">${fmtAmount(v.disbursement_amount)}</td>
-                                <td class="vnt-col-amount amount-cell" data-usd="${fmtValUSD(v.current_balance)}" data-local="${fmtValLocal(v.current_balance)}">${fmtAmount(v.current_balance)}</td>
+                            : vintage.map((v, i) => `<tr>
+                                <td class="text-left"><a href="${(window.APP_ROOT||'')}/partner/${partnerId}/vintage/${v.disbursement_month}?stat_date=${encodeURIComponent(row.stat_date || '')}" class="vintage-month-link">${v.disbursement_month}</a></td>
+                                <td class="vnt-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromVintage(row, i, 'disbursement_amount'))}" data-local="${fmtDisplayLocal(getLocalValFromVintage(row, i, 'disbursement_amount'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromVintage(row, i, 'disbursement_amount') : getLocalValFromVintage(row, i, 'disbursement_amount'))}</td>
+                                <td class="vnt-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromVintage(row, i, 'current_balance'))}" data-local="${fmtDisplayLocal(getLocalValFromVintage(row, i, 'current_balance'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromVintage(row, i, 'current_balance') : getLocalValFromVintage(row, i, 'current_balance'))}</td>
                                 ${[1,2,3,4,5,6,7,8,9,10,11,12].map(i => {
                                     const r = v['mob'+i+'_rate'];
                                     return `<td class="${r != null ? rateClass(r) : ''}">${r != null ? fmtPct(r) : '-'}</td>`;
@@ -529,22 +672,22 @@
                             <th class="collection-col-amount">d0入催</th><th class="collection-col-amount">d1入催</th><th class="collection-col-amount">d3入催</th><th class="collection-col-amount">d7入催</th><th class="collection-col-amount">d30入催</th><th class="collection-col-amount">d60入催</th><th class="collection-col-amount">d90入催</th>
                             <th class="collection-col-amount">d1回收</th><th class="collection-col-amount">d3回收</th><th class="collection-col-amount">d7回收</th><th class="collection-col-amount">d30回收</th><th class="collection-col-amount">d60回收</th><th class="collection-col-amount">d90回收</th>
                         </tr></thead>
-                        <tbody>${(row.collection_report || []).map(r => `<tr>
-                            <td class="text-left"><a href="/partner/${partnerId}/maturity/${r.maturity_month}" class="vintage-month-link"><strong>${r.maturity_month}</strong></a></td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.due_amount)}" data-local="${fmtValLocal(r.due_amount)}">${fmtAmount(r.due_amount)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d0_into_collection)}" data-local="${fmtValLocal(r.d0_into_collection)}">${fmtAmount(r.d0_into_collection)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d1_into_collection)}" data-local="${fmtValLocal(r.d1_into_collection)}">${fmtAmount(r.d1_into_collection)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d3_into_collection)}" data-local="${fmtValLocal(r.d3_into_collection)}">${fmtAmount(r.d3_into_collection)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d7_into_collection)}" data-local="${fmtValLocal(r.d7_into_collection)}">${fmtAmount(r.d7_into_collection)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d30_into_collection)}" data-local="${fmtValLocal(r.d30_into_collection)}">${fmtAmount(r.d30_into_collection)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d60_into_collection)}" data-local="${fmtValLocal(r.d60_into_collection)}">${fmtAmount(r.d60_into_collection)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d90_into_collection)}" data-local="${fmtValLocal(r.d90_into_collection)}">${fmtAmount(r.d90_into_collection)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d1_recovery)}" data-local="${fmtValLocal(r.d1_recovery)}">${fmtAmount(r.d1_recovery)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d3_recovery)}" data-local="${fmtValLocal(r.d3_recovery)}">${fmtAmount(r.d3_recovery)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d7_recovery)}" data-local="${fmtValLocal(r.d7_recovery)}">${fmtAmount(r.d7_recovery)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d30_recovery)}" data-local="${fmtValLocal(r.d30_recovery)}">${fmtAmount(r.d30_recovery)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d60_recovery)}" data-local="${fmtValLocal(r.d60_recovery)}">${fmtAmount(r.d60_recovery)}</td>
-                            <td class="collection-col-amount amount-cell" data-usd="${fmtValUSD(r.d90_recovery)}" data-local="${fmtValLocal(r.d90_recovery)}">${fmtAmount(r.d90_recovery)}</td>
+                        <tbody>${(row.collection_report || []).map((r, i) => `<tr>
+                            <td class="text-left"><a href="${(window.APP_ROOT||'')}/partner/${partnerId}/maturity/${r.maturity_month}?stat_date=${encodeURIComponent(row.stat_date || '')}" class="vintage-month-link"><strong>${r.maturity_month}</strong></a></td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'due_amount'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'due_amount'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'due_amount') : getLocalValFromCollection(row, i, 'due_amount'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd0_into_collection'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd0_into_collection'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd0_into_collection') : getLocalValFromCollection(row, i, 'd0_into_collection'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd1_into_collection'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd1_into_collection'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd1_into_collection') : getLocalValFromCollection(row, i, 'd1_into_collection'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd3_into_collection'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd3_into_collection'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd3_into_collection') : getLocalValFromCollection(row, i, 'd3_into_collection'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd7_into_collection'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd7_into_collection'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd7_into_collection') : getLocalValFromCollection(row, i, 'd7_into_collection'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd30_into_collection'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd30_into_collection'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd30_into_collection') : getLocalValFromCollection(row, i, 'd30_into_collection'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd60_into_collection'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd60_into_collection'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd60_into_collection') : getLocalValFromCollection(row, i, 'd60_into_collection'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd90_into_collection'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd90_into_collection'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd90_into_collection') : getLocalValFromCollection(row, i, 'd90_into_collection'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd1_recovery'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd1_recovery'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd1_recovery') : getLocalValFromCollection(row, i, 'd1_recovery'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd3_recovery'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd3_recovery'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd3_recovery') : getLocalValFromCollection(row, i, 'd3_recovery'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd7_recovery'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd7_recovery'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd7_recovery') : getLocalValFromCollection(row, i, 'd7_recovery'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd30_recovery'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd30_recovery'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd30_recovery') : getLocalValFromCollection(row, i, 'd30_recovery'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd60_recovery'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd60_recovery'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd60_recovery') : getLocalValFromCollection(row, i, 'd60_recovery'))}</td>
+                            <td class="collection-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromCollection(row, i, 'd90_recovery'))}" data-local="${fmtDisplayLocal(getLocalValFromCollection(row, i, 'd90_recovery'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromCollection(row, i, 'd90_recovery') : getLocalValFromCollection(row, i, 'd90_recovery'))}</td>
                         </tr>`).join('')}</tbody>
                     </table>
                 </div>
@@ -564,6 +707,28 @@
             });
         }
 
+        async function refreshRisk() {
+            const btn = document.querySelector('.btn-refresh-risk');
+            if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+            try {
+                const res = await fetch((window.APP_ROOT || '') + '/api/partner/' + partnerId + '/refresh-risk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    location.reload();
+                } else {
+                    alert('刷新失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('刷新失败: ' + e.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+            }
+        }
+
         function switchVintageMode(mode, btn) {
             window.vintageMode = mode;
             const toggle = btn.parentElement;
@@ -571,6 +736,30 @@
             btn.classList.add('active');
             if (typeof window._updateVintageContent === 'function') {
                 window._updateVintageContent();
+            }
+        }
+
+        async function downloadPDF() {
+            const btn = document.querySelector('.btn-pdf');
+            if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+            try {
+                document.body.classList.add('pdf-export');
+                const el = document.querySelector('.page');
+                const name = ({{ partner.name|tojson }} || 'report').replace(/[\/\\:*?"<>|]/g, '_');
+                const opt = {
+                    margin: [12, 12, 12, 12],
+                    filename: name + '_风控监控.pdf',
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css'], avoid: ['tr', '.kpi-card', '.dpd-section', '.vintage-section', '.collection-section', '.alert-panel', '.priority-section'] }
+                };
+                await html2pdf().set(opt).from(el).save();
+            } catch (e) {
+                alert('下载失败: ' + (e.message || '未知错误'));
+            } finally {
+                document.body.classList.remove('pdf-export');
+                if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
             }
         }
 
@@ -593,5 +782,6 @@
             update();
         })();
     </script>
+    {% include '_data_source_status.html' %}
 </body>
 </html>

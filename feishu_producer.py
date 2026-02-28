@@ -4,13 +4,18 @@
 Wiki 表格：wiki_node=Py0TwI8uRiyW9Qkj8W3cVIAJnzp, table_id=tbl7nNDG29dEYFva
 """
 import os
-import json
 import requests
-from pathlib import Path
 from typing import Optional
 
-BASE_DIR = Path(__file__).resolve().parent
-MOCK_PATH = BASE_DIR / "config" / "producer_expansion_mock.json"
+# 飞书字段 -> 展示用统一字段映射（便于聚合与表格展示）
+FEISHU_FIELD_MAP = {
+    "项目": "name",
+    "资产地域": "region",
+    "类型": "type",
+    "场景": "scenario",
+    "负责人": "owner",
+    "编号": "number",
+}
 
 
 def _get_access_token():
@@ -108,6 +113,16 @@ def fetch_from_feishu() -> Optional[dict]:
                         rec[k] = _normalize_field(v[0])
                     else:
                         rec[k] = _normalize_field(v)
+                # 添加统一字段用于聚合与展示（兼容前端）
+                rec.setdefault("name", rec.get("项目", "-"))
+                rec.setdefault("region", rec.get("资产地域", "未分类"))
+                rec.setdefault("region_detail", rec.get("资产地域", "未分类"))
+                rec.setdefault("type", rec.get("类型", "未分类"))
+                rec.setdefault("scenario", rec.get("场景", "未分类"))
+                rec.setdefault("industry", "未分类")
+                rec.setdefault("maturity", rec.get("优先级（1-5）", "") or "未分类")
+                rec.setdefault("owner", rec.get("负责人", ""))
+                rec.setdefault("number", rec.get("编号", ""))
                 all_records.append(rec)
             page_token = data.get("data", {}).get("page_token")
             if not page_token or not items:
@@ -123,11 +138,8 @@ def fetch_from_feishu() -> Optional[dict]:
 
 
 def load_producer_data() -> dict:
-    """加载生产商拓展数据：优先飞书，否则 mock"""
+    """加载生产商拓展数据：仅从飞书多维表格读取，无 mock"""
     feishu_data = fetch_from_feishu()
     if feishu_data and feishu_data.get("records"):
         return feishu_data
-    if MOCK_PATH.exists():
-        with open(MOCK_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
     return {"records": [], "source": "empty", "updated_at": ""}

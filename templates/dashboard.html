@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | Dashboard</title>
@@ -76,11 +77,18 @@
 </head>
 <body>
     <div class="top-bar">
-        <div class="logo">CHUAN</div>
+        <div class="left" style="display:flex;align-items:center;gap:24px;">
+            <div class="logo">CHUAN</div>
+            <nav style="display:flex;gap:4px;">
+                <a href="{{ app_root }}/dashboard" style="color:rgba(255,255,255,0.9);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;background:rgba(255,241,238,0.15);font-weight:600;">概览</a>
+                <a href="{{ app_root }}/partner/manage" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;">资产商管理</a>
+                <a href="{{ app_root }}/help" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;">Help</a>
+            </nav>
+        </div>
         <div class="user-info">
             <span>{{ user.display_name }}</span>
             <span class="role-badge role-{{ user.role }}">{{ user.role_label }}</span>
-            <a href="/logout" class="btn-logout">退出登录</a>
+            <a href="{{ app_root }}/logout" class="btn-logout">退出登录</a>
         </div>
     </div>
 
@@ -102,16 +110,16 @@
             { icon: '🔧', title: '系统设置', desc: '系统参数与全局配置', perm: 'manage_system', href: '#' },
             { icon: '📋', title: '操作日志', desc: '查看所有操作记录', perm: 'view_logs', href: '#' },
             { icon: '🛡️', title: '风控面板', desc: '风险指标监控与预警', perm: 'manage_risk', href: '#' },
-            { icon: '✅', title: '交易审批', desc: '审批待处理交易请求', perm: 'approve_transactions', href: '/transaction/review' },
+            { icon: '✅', title: '交易审批', desc: '审批待处理交易请求', perm: 'approve_transactions', href: (window.APP_ROOT||'')+'/transaction/review' },
             { icon: '🏢', title: '资产商准入', desc: '审核与管理资产商准入', perm: 'manage_partner_admission', href: '#' },
             { icon: '📄', title: '报告中心', desc: '月报、季报与年报下载', perm: 'view_reports', href: '#' },
-            { icon: '📊', title: '投资组合', desc: '查看资产配置与持仓详情', perm: 'view_portfolio', href: '/portfolio' },
+            { icon: '📊', title: '投资组合', desc: '查看资产配置与持仓详情', perm: 'view_portfolio', href: (window.APP_ROOT||'')+'/portfolio' },
             { icon: '📈', title: '净值走势', desc: '基金净值与收益率分析', perm: 'view_nav', href: '#' },
-            { icon: '📝', title: '资产商申请', desc: '提交新资产商合作申请', perm: 'apply_partner', href: '/partner/apply' },
-            { icon: '💰', title: '交易申请', desc: '提交新交易与放款申请', perm: 'apply_transactions', href: '/transaction/apply' },
-            { icon: '🏦', title: '资产商管理', desc: '管理已合作资产商信息', perm: 'manage_partners', href: '/partner/manage' },
-            { icon: '🚨', title: '告警面板', desc: '对账预警与风控告警汇总', perm: 'alert_panel', href: '/alert/panel' },
-            { icon: '🔍', title: '数据查询', desc: '多维度数据检索与导出', perm: 'data_query', href: '/risk/query' },
+            { icon: '📝', title: '资产商申请', desc: '提交新资产商合作申请', perm: 'apply_partner', href: (window.APP_ROOT||'')+'/partner/apply' },
+            { icon: '💰', title: '交易申请', desc: '提交新交易与放款申请', perm: 'apply_transactions', href: (window.APP_ROOT||'')+'/transaction/apply' },
+            { icon: '🏦', title: '资产商管理', desc: '管理已合作资产商信息', perm: 'manage_partners', href: (window.APP_ROOT||'')+'/partner/manage' },
+            { icon: '🚨', title: '告警面板', desc: '对账预警与风控告警汇总', perm: 'alert_panel', href: (window.APP_ROOT||'')+'/alert/panel' },
+            { icon: '🔍', title: '数据查询', desc: '多维度数据检索与导出', perm: 'data_query', href: (window.APP_ROOT||'')+'/risk/query' },
         ];
 
         const modules = allModules.filter(m => user.permissions.includes(m.perm));

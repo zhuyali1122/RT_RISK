@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | {{ partner.name }} - {{ page_title }} 底层资产</title>
@@ -56,6 +57,13 @@
         .portfolio-table .loan-id-link { color: var(--dark-blue); font-weight: 600; text-decoration: none; }
         .portfolio-table .loan-id-link:hover { text-decoration: underline; color: var(--accent-teal); }
         .empty-state { padding: 48px 24px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+        .pagination-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 0; margin-top: 16px; border-top: 1px solid var(--border); }
+        .pagination-info { font-size: 0.8rem; color: var(--text-muted); }
+        .pagination-btns { display: flex; align-items: center; gap: 6px; }
+        .pagination-btns button, .pagination-btns a.pagination-link { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); color: var(--dark-blue); cursor: pointer; font-size: 0.8rem; text-decoration: none; display: inline-block; }
+        .pagination-btns button:hover:not(:disabled), .pagination-btns a.pagination-link:hover { background: var(--dark-blue); color: var(--white); border-color: var(--dark-blue); }
+        .pagination-btns button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination-btns button.active, .pagination-btns a.pagination-link.active { background: var(--accent-teal); color: var(--white); border-color: var(--accent-teal); }
     </style>
 </head>
 <body>
@@ -63,27 +71,28 @@
         <div class="left">
             <div class="logo">CHUAN</div>
             <nav>
-                <a href="/dashboard">概览</a>
-                <a href="/partner/manage">资产商管理</a>
-                <a href="/partner/{{ partner.id }}/risk">{{ partner.name }}</a>
+                <a href="{{ app_root }}/dashboard">概览</a>
+                <a href="{{ app_root }}/partner/manage">资产商管理</a>
+                <a href="{{ app_root }}/help">Help</a>
+                <a href="{{ app_root }}/partner/{{ partner.id }}/risk">{{ partner.name }}</a>
             </nav>
         </div>
         <div class="user-info">
             <span>{{ user.display_name }}</span>
             <span class="role-badge">{{ user.role_label }}</span>
-            <a href="/logout" class="btn-link">退出</a>
+            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
         </div>
     </div>
 
     <div class="page">
         <div class="page-header">
             <div>
-                <a href="/partner/{{ partner.id }}/risk" class="btn-back">
+                <a href="{{ app_root }}/partner/{{ partner.id }}/risk" class="btn-back">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                     返回风控
                 </a>
                 <h1 style="margin-top:12px;">{{ partner.name }} · {{ page_title }} 底层资产组合</h1>
-                <div class="sub">共 <span id="loanCount">{{ loans|length }}</span> 笔</div>
+                <div class="sub">共 <span id="loanCount">{% if server_pagination %}{{ server_pagination.total_count }}{% else %}{{ loans|length }}{% endif %}</span> 笔{% if stat_date and stat_date != '-' %} · 数据日期 {{ stat_date }}{% endif %}{% if server_pagination and server_pagination.total_count > server_pagination.per_page %} · 当前页 {{ loans|length }} 条{% endif %}</div>
             </div>
         </div>
 
@@ -195,7 +204,7 @@
                 <tbody id="loanBody">
                     {% for loan in loans %}
                     <tr data-customer="{{ loan.customer_type|default('returning') }}" data-product="{{ loan.product_type|default('-') }}" data-credit="{{ loan.credit_rating|default('-') }}">
-                        <td><a href="/partner/{{ partner.id }}/loan/{{ loan.loan_id }}" class="loan-id-link">{{ loan.loan_id }}</a></td>
+                        <td><a href="{{ app_root }}/partner/{{ partner.id }}/loan/{{ loan.loan_id }}" class="loan-id-link">{{ loan.loan_id }}</a></td>
                         <td>{{ '新客' if loan.customer_type == 'new' else '老客' }}</td>
                         <td>{{ loan.product_type|default('-') }}</td>
                         <td>{{ loan.credit_rating|default('-') }}</td>
@@ -218,27 +227,107 @@
             <div class="empty-state">暂无该期底层资产数据</div>
             {% endif %}
             <div class="empty-state" id="emptyState" style="display:none;">暂无符合筛选条件的数据</div>
+            {% if server_pagination and server_pagination.total_count > server_pagination.per_page %}
+            <div class="pagination-bar">
+                <div class="pagination-info">
+                    第 {{ (server_pagination.page - 1) * server_pagination.per_page + 1 }}-{{ [server_pagination.page * server_pagination.per_page, server_pagination.total_count]|min }} 条，共 {{ server_pagination.total_count }} 条
+                </div>
+                <div class="pagination-btns">
+                    {% set base = server_pagination.base_url %}
+                    {% set qp = server_pagination.query_params or {} %}
+                    <a href="{{ app_root }}{{ base }}?page=1{% for k, v in qp.items() %}&{{ k }}={{ v }}{% endfor %}" class="pagination-link" {% if server_pagination.page <= 1 %}style="pointer-events:none;opacity:0.5;"{% endif %}>首页</a>
+                    <a href="{{ app_root }}{{ base }}?page={{ server_pagination.page - 1 }}{% for k, v in qp.items() %}&{{ k }}={{ v }}{% endfor %}" class="pagination-link" {% if server_pagination.page <= 1 %}style="pointer-events:none;opacity:0.5;"{% endif %}>上一页</a>
+                    {% for i in range(([1, server_pagination.page - 3]|max), ([server_pagination.total_pages, server_pagination.page + 3]|min) + 1) %}
+                    <a href="{{ app_root }}{{ base }}?page={{ i }}{% for k, v in qp.items() %}&{{ k }}={{ v }}{% endfor %}" class="pagination-link {{ 'active' if i == server_pagination.page else '' }}">{{ i }}</a>
+                    {% endfor %}
+                    <a href="{{ app_root }}{{ base }}?page={{ server_pagination.page + 1 }}{% for k, v in qp.items() %}&{{ k }}={{ v }}{% endfor %}" class="pagination-link" {% if server_pagination.page >= server_pagination.total_pages %}style="pointer-events:none;opacity:0.5;"{% endif %}>下一页</a>
+                    <a href="{{ app_root }}{{ base }}?page={{ server_pagination.total_pages }}{% for k, v in qp.items() %}&{{ k }}={{ v }}{% endfor %}" class="pagination-link" {% if server_pagination.page >= server_pagination.total_pages %}style="pointer-events:none;opacity:0.5;"{% endif %}>末页</a>
+                </div>
+            </div>
+            {% elif loans %}
+            <div class="pagination-bar" id="paginationBar" style="display:none;">
+                <div class="pagination-info" id="paginationInfo"></div>
+                <div class="pagination-btns" id="paginationBtns"></div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
     <script>
+        const PER_PAGE = 200;
+        const SERVER_PAGINATION = {{ 'true' if (server_pagination|default(none)) else 'false' }};
+        let currentPage = 1;
+
         function applyFilter() {
-            const cust = document.getElementById('filterCustomer').value;
-            const prod = document.getElementById('filterProduct').value;
-            const credit = document.getElementById('filterCredit').value;
-            const rows = document.querySelectorAll('#loanBody tr');
-            let visible = 0;
-            rows.forEach(r => {
-                const matchCust = !cust || r.dataset.customer === cust;
-                const matchProd = !prod || r.dataset.product === prod;
-                const matchCredit = !credit || r.dataset.credit === credit;
-                const show = matchCust && matchProd && matchCredit;
-                r.style.display = show ? '' : 'none';
-                if (show) visible++;
-            });
-            document.getElementById('loanCount').textContent = visible;
-            document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+            currentPage = 1;
+            updateDisplay();
         }
+
+        function goToPage(p) {
+            currentPage = p;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const cust = document.getElementById('filterCustomer');
+            const prod = document.getElementById('filterProduct');
+            const credit = document.getElementById('filterCredit');
+            if (!cust || !prod || !credit) return;
+
+            const custVal = cust.value;
+            const prodVal = prod.value;
+            const creditVal = credit.value;
+            const rows = document.querySelectorAll('#loanBody tr');
+            const filtered = [];
+            rows.forEach(r => {
+                const matchCust = !custVal || r.dataset.customer === custVal;
+                const matchProd = !prodVal || r.dataset.product === prodVal;
+                const matchCredit = !creditVal || r.dataset.credit === creditVal;
+                if (matchCust && matchProd && matchCredit) filtered.push(r);
+            });
+
+            const total = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+            currentPage = Math.min(Math.max(1, currentPage), totalPages);
+            const start = (currentPage - 1) * PER_PAGE;
+            const end = Math.min(start + PER_PAGE, total);
+
+            rows.forEach(r => { r.style.display = 'none'; });
+            filtered.slice(start, end).forEach(r => { r.style.display = ''; });
+
+            if (!SERVER_PAGINATION) document.getElementById('loanCount').textContent = total;
+            const emptyEl = document.getElementById('emptyState');
+            if (emptyEl) emptyEl.style.display = total === 0 ? 'block' : 'none';
+
+            const bar = document.getElementById('paginationBar');
+            const infoEl = document.getElementById('paginationInfo');
+            const btnsEl = document.getElementById('paginationBtns');
+            if (bar && infoEl && btnsEl && !SERVER_PAGINATION) {
+                if (total > PER_PAGE) {
+                    bar.style.display = 'flex';
+                    infoEl.textContent = `第 ${start + 1}-${end} 条，共 ${total} 条`;
+                    let html = '';
+                    html += `<button onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>首页</button>`;
+                    html += `<button onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>上一页</button>`;
+                    const maxShow = 7;
+                    let from = Math.max(1, currentPage - Math.floor(maxShow / 2));
+                    let to = Math.min(totalPages, from + maxShow - 1);
+                    if (to - from + 1 < maxShow) from = Math.max(1, to - maxShow + 1);
+                    for (let i = from; i <= to; i++) {
+                        html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+                    }
+                    html += `<button onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>下一页</button>`;
+                    html += `<button onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>末页</button>`;
+                    btnsEl.innerHTML = html;
+                } else {
+                    bar.style.display = 'none';
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.getElementById('loanBody')) updateDisplay();
+        });
     </script>
 </body>
 </html>

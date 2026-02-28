@@ -111,9 +111,10 @@ def _get_records_for_loan(cur, loan_id, schema):
     return [{k: _serialize(v) for k, v in zip(rec_cols, r)} for r in cur.fetchall()]
 
 
-def query_loan_detail(loan_id: str):
+def query_loan_detail(loan_id: str, spv_id: str = None):
     """
     根据 Loan ID 查 Contract_No，再找同合同下所有 Loan，按放款时间展示每个 Loan 的还款计划和还款信息
+    spv_id: 可选，指定时仅查该 spv 的 loan
     返回: { contract_no, loans: [{ loan_id, status, schedule, records }] } 或 { error: str }
     """
     schema = load_schema()
@@ -125,6 +126,9 @@ def query_loan_detail(loan_id: str):
     if not loan_id:
         return {"error": "请输入 Loan ID"}
 
+    spv_filter = " AND spv_id = %s" if spv_id else ""
+    spv_params = (spv_id,) if spv_id else ()
+
     try:
         cur = conn.cursor()
         loan_cfg = schema.get("loan", {})
@@ -135,8 +139,8 @@ def query_loan_detail(loan_id: str):
 
         # 1. 查输入 loan_id 的 contract_no
         cur.execute(
-            f'SELECT {col_list} FROM {loan_table} WHERE {id_col} = %s',
-            (loan_id,)
+            f'SELECT {col_list} FROM {loan_table} WHERE {id_col} = %s{spv_filter}',
+            (loan_id,) + spv_params
         )
         row = cur.fetchone()
         if not row:
@@ -154,15 +158,15 @@ def query_loan_detail(loan_id: str):
             loan_ids = [loan_id]
         else:
             cur.execute(
-                f'SELECT {id_col} FROM {loan_table} WHERE contract_no = %s ORDER BY disbursement_time NULLS LAST, {id_col}',
-                (contract_no,)
+                f'SELECT {id_col} FROM {loan_table} WHERE contract_no = %s{spv_filter} ORDER BY disbursement_time NULLS LAST, {id_col}',
+                (contract_no,) + spv_params
             )
             loan_ids = [r[0] for r in cur.fetchall()]
 
         # 3. 对每个 loan 获取 status、schedule、records
         loans = []
         for lid in loan_ids:
-            cur.execute(f'SELECT {col_list} FROM {loan_table} WHERE {id_col} = %s', (lid,))
+            cur.execute(f'SELECT {col_list} FROM {loan_table} WHERE {id_col} = %s{spv_filter}', (lid,) + spv_params)
             r = cur.fetchone()
             status = {k: _serialize(v) for k, v in zip(cols, r)} if r else {}
             schedule = _get_schedule_for_loan(cur, lid, schema)

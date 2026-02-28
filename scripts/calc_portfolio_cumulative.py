@@ -5,11 +5,11 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def main():
-    from spv_initial_params import load_invested_spv_ids_for_portfolio
+    from spv_internal_params import load_invested_spv_ids_for_portfolio
     from kn_risk_query import query_portfolio_cumulative_stats
 
     spv_ids = load_invested_spv_ids_for_portfolio()
-    print(f"已投资平台 (spv_initial_params): {spv_ids}")
+    print(f"已投资平台 (spv_internal_params): {spv_ids}")
 
     if not spv_ids:
         print("无已投资平台，累计统计为 0")

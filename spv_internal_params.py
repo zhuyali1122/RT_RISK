@@ -1,5 +1,5 @@
 """
-从数据库 spv_initial_params 表读取：
+从数据库 spv_internal_params 表读取：
 - 已投资平台列表，供投资组合累计统计使用
 - 优先级指标，用于 KN 等生产商风控主页的优先级模块展示
 - 按 spv_id + 最新 effective_date 取一条
@@ -32,8 +32,8 @@ def _compute_coverage_ratio(rec, spv_cfg, risk_data, exchange_rate, base_default
     """
     覆盖倍数 V/L
     Value = (M0本金 + M0应收利息 * 早偿逾期折损) * (1 - Vtg30预估default rate) + 现金余额
-    Loan = 合作本金 + 未分配收益（spv_initial_params 中已是 USD）
-    早偿逾期折损、vtg30_predicted_default_rate、合作本金、未分配收益 从 spv_initial_params
+    Loan = 合作本金 + 未分配收益（spv_internal_params 中已是 USD）
+    早偿逾期折损、vtg30_predicted_default_rate、合作本金、未分配收益 从 spv_internal_params
     返回: (ratio, breakdown_dict)
     """
     early_discount = _num(rec, "early_repayment_loss_rate", "early_repayment_overdue_discount")
@@ -72,7 +72,7 @@ def _compute_coverage_ratio(rec, spv_cfg, risk_data, exchange_rate, base_default
     after_default_local = core_value_local * (1 - vtg30_default)
     value_part = after_default_local + cash
 
-    # Loan = 合作本金 + 未分配收益（spv_initial_params 中已是 USD，无需换算）
+    # Loan = 合作本金 + 未分配收益（spv_internal_params 中已是 USD，无需换算）
     loan_usd = coop_principal + unallocated
     if loan_usd <= 0:
         return base_default, _coverage_breakdown(
@@ -116,7 +116,7 @@ def _coverage_breakdown(m0_bal, m0_interest, early_discount, vtg30_default, coop
 
 def load_invested_spv_ids_for_portfolio():
     """
-    从 spv_initial_params 加载已投资平台的 spv_id 列表
+    从 spv_internal_params 加载已投资平台的 spv_id 列表
     返回: [ spv_id, ... ]
     """
     try:
@@ -131,14 +131,14 @@ def load_invested_spv_ids_for_portfolio():
         cur.execute("""
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
-                WHERE table_schema = 'public' AND table_name = 'spv_initial_params'
+                WHERE table_schema = 'public' AND table_name = 'spv_internal_params'
             )
         """)
         if not cur.fetchone()[0]:
             return []
 
         cur.execute("""
-            SELECT DISTINCT spv_id FROM spv_initial_params WHERE spv_id IS NOT NULL AND spv_id != ''
+            SELECT DISTINCT spv_id FROM spv_internal_params WHERE spv_id IS NOT NULL AND spv_id != ''
         """)
         for row in cur.fetchall():
             spv_id = str(row[0]).strip().lower() if row[0] else ""
@@ -158,9 +158,9 @@ def load_invested_spv_ids_for_portfolio():
     return out
 
 
-def load_all_spv_initial_params_for_portfolio():
+def load_all_spv_internal_params_for_portfolio():
     """
-    加载所有 SPV 的 spv_initial_params（按最新 effective_date 各取一条），供投资组合「平台持仓明细」使用
+    加载所有 SPV 的 spv_internal_params（按最新 effective_date 各取一条），供投资组合「平台持仓明细」使用
     返回: [ { spv_id, name, region, product_type, principal_amount, agreed_rate, effective_date }, ... ]
     """
     try:
@@ -182,7 +182,7 @@ def load_all_spv_initial_params_for_portfolio():
         cur.execute("""
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
-                WHERE table_schema = 'public' AND table_name = 'spv_initial_params'
+                WHERE table_schema = 'public' AND table_name = 'spv_internal_params'
             )
         """)
         if not cur.fetchone()[0]:
@@ -190,7 +190,7 @@ def load_all_spv_initial_params_for_portfolio():
 
         cur.execute("""
             SELECT DISTINCT ON (spv_id) spv_id, effective_date, principal_amount, agreed_rate
-            FROM spv_initial_params
+            FROM spv_internal_params
             ORDER BY spv_id, effective_date DESC NULLS LAST
         """)
         for row in cur.fetchall():
@@ -231,7 +231,7 @@ def load_all_spv_initial_params_for_portfolio():
 
 def load_priority_indicators_for_spv(spv_id, risk_data=None, exchange_rate=1):
     """
-    从 spv_initial_params 表加载优先级指标（按最新 effective_date）
+    从 spv_internal_params 表加载优先级指标（按最新 effective_date）
     risk_data、exchange_rate 用于计算覆盖倍数 V/L
     返回与 partner_risk 模板兼容的 priority_indicators 结构，若表不存在或无数据返回 None
     """
@@ -246,7 +246,7 @@ def load_priority_indicators_for_spv(spv_id, risk_data=None, exchange_rate=1):
         cur.execute("""
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
-                WHERE table_schema = 'public' AND table_name = 'spv_initial_params'
+                WHERE table_schema = 'public' AND table_name = 'spv_internal_params'
             )
         """)
         if not cur.fetchone()[0]:
@@ -255,13 +255,13 @@ def load_priority_indicators_for_spv(spv_id, risk_data=None, exchange_rate=1):
         # 按 spv_id + 最新 effective_date 取一条（若无 effective_date 列则取任意一条）
         try:
             cur.execute("""
-                SELECT * FROM spv_initial_params
+                SELECT * FROM spv_internal_params
                 WHERE spv_id = %s
                 ORDER BY effective_date DESC NULLS LAST
                 LIMIT 1
             """, (spv_id,))
         except Exception:
-            cur.execute("SELECT * FROM spv_initial_params WHERE spv_id = %s LIMIT 1", (spv_id,))
+            cur.execute("SELECT * FROM spv_internal_params WHERE spv_id = %s LIMIT 1", (spv_id,))
         row = cur.fetchone()
         if not row:
             return None
@@ -279,7 +279,7 @@ def load_priority_indicators_for_spv(spv_id, risk_data=None, exchange_rate=1):
             lev_current = lev_limit * 0.6  # 占位
         leverage_ratio = {"current": round(lev_current, 1), "limit": lev_limit, "unit": "x"}
 
-        # 优先收益率：目标固定 15%，当前值从 spv_initial_params 获取，找不到则缺失
+        # 优先收益率：目标固定 15%，当前值从 spv_internal_params 获取，找不到则缺失
         py_target = 0.15  # 目标固定写死 15%
         py_current = _num(rec, "priority_yield_current", "priority_yield_pct_current", "agreed_rate")
         py_current = py_current / 100 if py_current > 1 else py_current
@@ -431,7 +431,7 @@ def _load_spv_config_thresholds(spv_id):
 
 def compute_priority_from_risk_data(spv_id, risk_data, exchange_rate=1):
     """
-    当 spv_initial_params 无数据时，从 risk_data + spv_config 计算优先级指标
+    当 spv_internal_params 无数据时，从 risk_data + spv_config 计算优先级指标
     risk_data 中金额为 USD（已转换）
     Senior/Junior、斩仓线、平仓线从 spv_config.config 读取
     """
@@ -450,7 +450,7 @@ def compute_priority_from_risk_data(spv_id, risk_data, exchange_rate=1):
     lev_limit = _parse_ratio_to_limit(lev_str)
     lev_current = min(cov_current * 0.6, lev_limit * 0.7)  # 占位
 
-    # 优先收益率、优先本金仅从 spv_initial_params 获取，compute 时无该表数据，故缺失
+    # 优先收益率、优先本金仅从 spv_internal_params 获取，compute 时无该表数据，故缺失
     return {
         "priority_principal": None,
         "leverage_ratio": {"current": round(lev_current, 1), "limit": lev_limit, "unit": "x"},

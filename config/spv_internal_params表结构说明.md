@@ -1,4 +1,4 @@
-# spv_initial_params 表结构说明
+# spv_internal_params 表结构说明
 
 优先级指标数据表，用于 KN 等生产商风控主页的「优先级指标」模块展示，以及投资组合的已投资平台列表。
 
@@ -7,7 +7,7 @@
 ## 建表 SQL 示例
 
 ```sql
-CREATE TABLE IF NOT EXISTS spv_initial_params (
+CREATE TABLE IF NOT EXISTS spv_internal_params (
     spv_id                    VARCHAR(32) NOT NULL,
     effective_date            DATE NOT NULL,
     agreed_rate               NUMERIC(10,4),   -- 优先级收益率（target），如 15 或 0.15
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS spv_initial_params (
 );
 
 -- 按 effective_date 取最新
--- SELECT * FROM spv_initial_params WHERE spv_id = 'kn' ORDER BY effective_date DESC LIMIT 1
+-- SELECT * FROM spv_internal_params WHERE spv_id = 'kn' ORDER BY effective_date DESC LIMIT 1
 ```
 
 ## 字段说明
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS spv_initial_params (
 ## 覆盖倍数 V/L 计算公式
 
 - **Value** = (M0本金 + M0应收利息 × 早偿逾期折损) × (1 - Vtg30预估default rate) + 现金余额（本币，需 / 汇率 转 USD）
-- **Loan** = 合作本金 + 未分配收益（spv_initial_params 中已是 USD）
+- **Loan** = 合作本金 + 未分配收益（spv_internal_params 中已是 USD）
 - 合作本金 = principal_amount；未分配收益 = principal_amount × product_term / 12
 - M0本金、M0应收利息、现金来自 risk_data；早偿逾期折损、vtg30_predicted_default_rate、principal_amount、product_term 来自本表
 

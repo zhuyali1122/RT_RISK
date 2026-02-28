@@ -805,7 +805,7 @@ def get_loan_overdue_info(loan_id: str, spv_id: str, stat_date: str = None):
 def query_portfolio_cumulative_stats(spv_ids: list):
     """
     从 raw_loan 按 spv_id 汇总：累计放款总额、累计借款笔数、累计借款人数
-    spv_ids: 已投资平台列表（来自 spv_initial_params 的 spv_id）
+    spv_ids: 已投资平台列表（来自 spv_internal_params 的 spv_id）
     金额为 raw_loan 本币，需按 spv_config.exchange_rate 转为 USD 后汇总
     返回: { cumulative_disbursement_usd, cumulative_loan_count, cumulative_borrower_count }
     """

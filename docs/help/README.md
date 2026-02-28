@@ -15,7 +15,7 @@
 - `kn_cashflow.py` - 现金流预测
 - `kn_vintage.py` - Vintage 账龄分析
 - `kn_collection.py` - 回收报表
-- `spv_initial_params.py` - 优先级指标
+- `spv_internal_params.py` - 优先级指标
 
 ## 添加新文档
 

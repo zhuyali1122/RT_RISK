@@ -1,14 +1,14 @@
 """
-项目列表：从 spv_config 获取，与 spv_initial_params 交叉校验得到完整配置
+项目列表：从 spv_config 获取，与 spv_internal_params 交叉校验得到完整配置
 每个项目的 default currency 来自 spv_config.currency
 """
 from spv_config import load_producers_from_spv_config
-from spv_initial_params import load_priority_indicators_for_spv
+from spv_internal_params import load_priority_indicators_for_spv
 
 
 def load_projects_with_internal_params(skip_revenue_compute=False, skip_priority_indicators=False, json_only=False):
     """
-    加载项目列表：spv_config 为主，与 spv_initial_params 交叉校验
+    加载项目列表：spv_config 为主，与 spv_internal_params 交叉校验
     返回: { spv_id: { id, name, region, currency, exchange_rate, ..., priority_indicators?, ... }, ... }
     skip_revenue_compute=True: 跳过 compute_revenue_data（DB），用于已有全量缓存时加速
     skip_priority_indicators=True: 跳过 load_priority_indicators_for_spv（DB），用于列表页加速

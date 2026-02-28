@@ -457,7 +457,7 @@
                             <div class="pri-sub"></div>
                         </div>`;
 
-            const pp = pi.priority_principal;  // 优先本金=合作本金=principal_amount（spv_initial_params 中已是 USD）
+            const pp = pi.priority_principal;  // 优先本金=合作本金=principal_amount（spv_internal_params 中已是 USD）
             const ppCard = pp != null && pp > 0 ? `
                         <div class="pri-card">
                             <div class="pri-label">优先本金</div>
@@ -467,7 +467,7 @@
                         <div class="pri-card pri-card-empty">
                             <div class="pri-label">优先本金</div>
                             <div class="pri-value pri-value-empty">缺失</div>
-                            <div class="pri-sub">仅从 spv_initial_params 获取</div>
+                            <div class="pri-sub">仅从 spv_internal_params 获取</div>
                         </div>`;
             return `
                 <div class="section-title">优先级指标</div>
@@ -486,7 +486,7 @@
                         <div class="pri-card pri-card-empty">
                             <div class="pri-label">优先收益率</div>
                             <div class="pri-value pri-value-empty">缺失</div>
-                            <div class="pri-sub">仅从 spv_initial_params 获取</div>
+                            <div class="pri-sub">仅从 spv_internal_params 获取</div>
                         </div>` : `
                         <div class="pri-card ${py.current >= py.target ? 'safe' : 'warn'}">
                             <div class="pri-label">优先收益率</div>
@@ -530,14 +530,14 @@
                                 <tbody>
                                     <tr><td>M0 本金</td><td>${formatBreakdownNum(cov.breakdown.m0_balance)}</td><td>本币，来自 risk_data 最新行</td></tr>
                                     <tr><td>M0 应收利息</td><td>${formatBreakdownNum(cov.breakdown.m0_accrued_interest)}</td><td>本币，每笔 M0 loan 的（应还利息 - 已还利息）之和</td></tr>
-                                    <tr><td>早偿逾期折损</td><td>${cov.breakdown.early_repayment_overdue_discount}</td><td>spv_initial_params.early_repayment_loss_rate</td></tr>
+                                    <tr><td>早偿逾期折损</td><td>${cov.breakdown.early_repayment_overdue_discount}</td><td>spv_internal_params.early_repayment_loss_rate</td></tr>
                                     <tr><td>M0 应收利息 × 折损</td><td>${formatBreakdownNum(cov.breakdown.m0_interest_discounted)}</td><td>本币</td></tr>
-                                    <tr><td>Vtg30 预估 default rate</td><td>${cov.breakdown.vtg30_predicted_default_rate}%</td><td>spv_initial_params.vtg_30_plus_predicted</td></tr>
+                                    <tr><td>Vtg30 预估 default rate</td><td>${cov.breakdown.vtg30_predicted_default_rate}%</td><td>spv_internal_params.vtg_30_plus_predicted</td></tr>
                                     <tr><td>核心价值 (1 - default)</td><td>${formatBreakdownNum(cov.breakdown.after_default_local)}</td><td>本币 = (M0本金 + M0利息×折损) × (1 - default)</td></tr>
                                     <tr><td>现金余额</td><td>${formatBreakdownNum(cov.breakdown.cash)}</td><td>本币，来自 risk_data</td></tr>
                                     <tr><td class="breakdown-row-value"><strong>Value (本币)</strong></td><td><strong>${formatBreakdownNum(cov.breakdown.value_local)}</strong></td><td><strong>核心价值 + 现金</strong></td></tr>
                                     <tr><td>Value (USD)</td><td>${formatBreakdownNum(cov.breakdown.value_usd)}</td><td>value_local / 汇率</td></tr>
-                                    <tr><td>合作本金</td><td>${formatBreakdownNum(cov.breakdown.coop_principal)} USD</td><td>spv_initial_params.principal_amount</td></tr>
+                                    <tr><td>合作本金</td><td>${formatBreakdownNum(cov.breakdown.coop_principal)} USD</td><td>spv_internal_params.principal_amount</td></tr>
                                     <tr><td>未分配收益</td><td>${formatBreakdownNum(cov.breakdown.unallocated)} USD</td><td>principal × product_term / 12</td></tr>
                                     <tr><td class="breakdown-row-loan"><strong>Loan (USD)</strong></td><td><strong>${formatBreakdownNum(cov.breakdown.loan_usd)} USD</strong></td><td><strong>合作本金 + 未分配收益</strong></td></tr>
                                     <tr><td class="breakdown-row-result"><strong>覆盖倍数 V/L</strong></td><td><strong>${cov.breakdown.coverage_ratio}x</strong></td><td><strong>Value / Loan</strong></td></tr>

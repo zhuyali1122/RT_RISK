@@ -456,13 +456,13 @@ def alert_panel():
 
 def _portfolio_cumulative_stats():
     """
-    从已投资平台（spv_initial_params）的 spv_id 访问 raw_loan，计算：
+    从已投资平台（spv_internal_params）的 spv_id 访问 raw_loan，计算：
     - 累计放款总额：SUM(disbursement_amount)，按汇率转为 USD
     - 累计借款总量：COUNT(loan_id)
     - 累计借款人数：COUNT(DISTINCT customer_id)
     """
     try:
-        from spv_initial_params import load_invested_spv_ids_for_portfolio
+        from spv_internal_params import load_invested_spv_ids_for_portfolio
         from kn_risk_query import query_portfolio_cumulative_stats
         spv_ids = load_invested_spv_ids_for_portfolio()
         return query_portfolio_cumulative_stats(spv_ids)
@@ -570,10 +570,10 @@ def portfolio():
     fund["cumulative_disbursement"] = cum["cumulative_disbursement"]
     fund["cumulative_loan_count"] = cum["cumulative_loan_count"]
     fund["cumulative_borrower_count"] = cum["cumulative_borrower_count"]
-    # 平台持仓明细：从 spv_initial_params 读取（principal_amount=投资总量, agreed_rate=预期年化, effective_date=开始时间）
+    # 平台持仓明细：从 spv_internal_params 读取（principal_amount=投资总量, agreed_rate=预期年化, effective_date=开始时间）
     try:
-        from spv_initial_params import load_all_spv_initial_params_for_portfolio
-        trades = load_all_spv_initial_params_for_portfolio()
+        from spv_internal_params import load_all_spv_internal_params_for_portfolio
+        trades = load_all_spv_internal_params_for_portfolio()
         if trades:
             total_principal = sum(t.get("principal_amount") or 0 for t in trades)
             allocation = []
@@ -1028,7 +1028,7 @@ def partner_risk(partner_id):
     priority_indicators = partner.get("priority_indicators") or {}
     if spv_id:
         try:
-            from spv_initial_params import load_priority_indicators_for_spv, compute_priority_from_risk_data
+            from spv_internal_params import load_priority_indicators_for_spv, compute_priority_from_risk_data
             if cache_exists:
                 if risk_data:
                     pi = compute_priority_from_risk_data(spv_id, risk_data, exchange_rate)

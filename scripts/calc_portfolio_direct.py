@@ -9,12 +9,12 @@ def main():
     conn = get_connection()
     cur = conn.cursor()
 
-    # 从 spv_initial_params 取 spv_id
+    # 从 spv_internal_params 取 spv_id
     cur.execute("""
-        SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='spv_initial_params')
+        SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='spv_internal_params')
     """)
     if cur.fetchone()[0]:
-        cur.execute("SELECT DISTINCT spv_id FROM spv_initial_params WHERE spv_id IS NOT NULL AND spv_id != ''")
+        cur.execute("SELECT DISTINCT spv_id FROM spv_internal_params WHERE spv_id IS NOT NULL AND spv_id != ''")
         spv_ids = [str(r[0]).strip().lower() for r in cur.fetchall() if r[0]]
     else:
         spv_ids = []

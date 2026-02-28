@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""检查 spv_initial_params 表及 raw_loan 数据"""
+"""检查 spv_internal_params 表及 raw_loan 数据"""
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,26 +14,26 @@ def main():
 
     cur = conn.cursor()
     try:
-        # 检查 spv_initial_params
+        # 检查 spv_internal_params
         cur.execute("""
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
-                WHERE table_schema = 'public' AND table_name = 'spv_initial_params'
+                WHERE table_schema = 'public' AND table_name = 'spv_internal_params'
             )
         """)
-        has_initial = cur.fetchone()[0]
-        print(f"spv_initial_params 表存在: {has_initial}")
+        has_internal = cur.fetchone()[0]
+        print(f"spv_internal_params 表存在: {has_internal}")
 
-        if has_initial:
-            cur.execute("SELECT * FROM spv_initial_params LIMIT 5")
+        if has_internal:
+            cur.execute("SELECT * FROM spv_internal_params LIMIT 5")
             rows = cur.fetchall()
-            cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'spv_initial_params' ORDER BY ordinal_position")
+            cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'spv_internal_params' ORDER BY ordinal_position")
             cols = [r[0] for r in cur.fetchall()]
             print(f"  列: {cols}")
             print(f"  行数(前5): {len(rows)}")
             for r in rows:
                 print(f"    {dict(zip(cols, r))}")
-            cur.execute("SELECT DISTINCT spv_id FROM spv_initial_params")
+            cur.execute("SELECT DISTINCT spv_id FROM spv_internal_params")
             spv_ids = [r[0] for r in cur.fetchall()]
             print(f"  spv_id 列表: {spv_ids}")
 

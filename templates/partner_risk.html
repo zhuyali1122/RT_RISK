@@ -220,7 +220,6 @@
         .breakdown-row-loan td { background: rgba(59,74,106,0.06); }
         .breakdown-row-result td { background: rgba(46,125,110,0.12); font-weight: 700; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
     <div class="top-bar">
@@ -266,10 +265,10 @@
                     刷新
                 </button>
                 {% endif %}
-                <button class="btn-pdf" onclick="downloadPDF()" title="下载当前页面为 PDF">
+                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="下载风控、收益、现金流数据为 Excel" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    下载 PDF
-                </button>
+                    下载 Excel
+                </a>
                 <div class="date-selector">
                     <label>数据日期：</label>
                     <select id="dateSelect"></select>
@@ -707,6 +706,31 @@
             });
         }
 
+        async function handleDownloadExcel(ev, pid) {
+            ev.preventDefault();
+            const url = (window.APP_ROOT || '') + '/api/partner/' + (pid || partnerId) + '/download-excel';
+            try {
+                const res = await fetch(url, { credentials: 'same-origin' });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    alert('下载失败: ' + (data.error || res.statusText || '请先登录'));
+                    return false;
+                }
+                const blob = await res.blob();
+                const disposition = res.headers.get('Content-Disposition') || '';
+                const m = disposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i) || disposition.match(/filename="?([^";]+)/);
+                const filename = (m ? decodeURIComponent((m[1] || '').replace(/^"/, '').replace(/"$/, '')) : '').trim() || '数据导出.xlsx';
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename || '数据导出.xlsx';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) {
+                alert('下载失败: ' + (e.message || '网络错误'));
+            }
+            return false;
+        }
+
         async function refreshRisk() {
             const btn = document.querySelector('.btn-refresh-risk');
             if (btn) { btn.disabled = true; btn.classList.add('loading'); }
@@ -736,30 +760,6 @@
             btn.classList.add('active');
             if (typeof window._updateVintageContent === 'function') {
                 window._updateVintageContent();
-            }
-        }
-
-        async function downloadPDF() {
-            const btn = document.querySelector('.btn-pdf');
-            if (btn) { btn.disabled = true; btn.classList.add('loading'); }
-            try {
-                document.body.classList.add('pdf-export');
-                const el = document.querySelector('.page');
-                const name = ({{ partner.name|tojson }} || 'report').replace(/[\/\\:*?"<>|]/g, '_');
-                const opt = {
-                    margin: [12, 12, 12, 12],
-                    filename: name + '_风控监控.pdf',
-                    image: { type: 'jpeg', quality: 0.95 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['avoid-all', 'css'], avoid: ['tr', '.kpi-card', '.dpd-section', '.vintage-section', '.collection-section', '.alert-panel', '.priority-section'] }
-                };
-                await html2pdf().set(opt).from(el).save();
-            } catch (e) {
-                alert('下载失败: ' + (e.message || '未知错误'));
-            } finally {
-                document.body.classList.remove('pdf-export');
-                if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
             }
         }
 

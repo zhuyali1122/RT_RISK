@@ -76,33 +76,46 @@ def refresh_risk_cache(spv_id: str, exchange_rate: float = 1, currency: str = "U
         from kn_vintage import compute_vintage_data
         from copy import deepcopy
     except ImportError as e:
-        return {"error": str(e)}
+        return {"error": f"模块导入失败: {e}"}
 
-    dates = get_available_stat_dates(spv_id=spv_id, limit=14)
+    try:
+        dates = get_available_stat_dates(spv_id=spv_id, limit=14)
+    except Exception as e:
+        return {"error": f"获取可用日期失败 ({spv_id}): {e}"}
     if not dates:
         dates = ["2026-02-25"]
 
     risk_data_local = []
-    for d in dates:
-        row = query_kn_core_metrics(stat_date=d, spv_id=spv_id)
-        if "error" in row:
-            continue
-        vintage = compute_vintage_data(spv_id, d)
-        if isinstance(vintage, list):
-            row["vintage_data"] = vintage
-        else:
-            row["vintage_data"] = []
-        risk_data_local.append(row)
+    last_error = None
+    try:
+        for d in dates:
+            row = query_kn_core_metrics(stat_date=d, spv_id=spv_id)
+            if "error" in row:
+                last_error = row.get("error", "未知错误")
+                continue
+            try:
+                vintage = compute_vintage_data(spv_id, d)
+                row["vintage_data"] = vintage if isinstance(vintage, list) else []
+            except Exception as e:
+                row["vintage_data"] = []
+            risk_data_local.append(row)
+
+        if not risk_data_local:
+            row = query_kn_core_metrics(stat_date=dates[0], spv_id=spv_id)
+            if "error" not in row:
+                try:
+                    vintage = compute_vintage_data(spv_id, dates[0])
+                    row["vintage_data"] = vintage if isinstance(vintage, list) else []
+                except Exception:
+                    row["vintage_data"] = []
+                risk_data_local = [row]
+            else:
+                last_error = row.get("error", "未知错误")
+    except Exception as e:
+        return {"error": f"风控数据计算异常 ({spv_id}): {e}"}
 
     if not risk_data_local:
-        row = query_kn_core_metrics(stat_date=dates[0], spv_id=spv_id)
-        if "error" not in row:
-            vintage = compute_vintage_data(spv_id, dates[0])
-            row["vintage_data"] = vintage if isinstance(vintage, list) else []
-            risk_data_local = [row]
-
-    if not risk_data_local:
-        return {"error": "无可用数据"}
+        return {"error": last_error or f"无可用数据 (spv_id={spv_id})"}
 
     rate = exchange_rate or 1
     risk_data_usd = []

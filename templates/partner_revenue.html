@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | {{ partner.name }} - 收益规模</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -218,10 +217,10 @@
                     刷新
                 </button>
                 {% endif %}
-                <button class="btn-pdf" onclick="downloadPDF()" title="下载当前页面为 PDF">
+                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="下载风控、收益、现金流数据为 Excel" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    下载 PDF
-                </button>
+                    下载 Excel
+                </a>
                 {% if local_currency != 'USD' %}
                 <div class="currency-selector">
                     <div class="currency-selector-row">
@@ -246,6 +245,31 @@
         const localCurrency = '{{ local_currency }}';
         const exchangeRate = {{ exchange_rate }};
 
+        async function handleDownloadExcel(ev, pid) {
+            ev.preventDefault();
+            const url = (window.APP_ROOT || '') + '/api/partner/' + (pid || partnerId) + '/download-excel';
+            try {
+                const res = await fetch(url, { credentials: 'same-origin' });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    alert('下载失败: ' + (data.error || res.statusText || '请先登录'));
+                    return false;
+                }
+                const blob = await res.blob();
+                const disposition = res.headers.get('Content-Disposition') || '';
+                const m = disposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i) || disposition.match(/filename="?([^";]+)/);
+                const filename = (m ? decodeURIComponent((m[1] || '').replace(/^"/, '').replace(/"$/, '')) : '').trim() || '数据导出.xlsx';
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename || '数据导出.xlsx';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) {
+                alert('下载失败: ' + (e.message || '网络错误'));
+            }
+            return false;
+        }
+
         async function refreshRevenue() {
             const btn = document.querySelector('.btn-refresh');
             if (btn) { btn.disabled = true; btn.classList.add('loading'); }
@@ -264,30 +288,6 @@
             } catch (e) {
                 alert('刷新失败: ' + e.message);
             } finally {
-                if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
-            }
-        }
-
-        async function downloadPDF() {
-            const btn = document.querySelector('.btn-pdf');
-            if (btn) { btn.disabled = true; btn.classList.add('loading'); }
-            try {
-                document.body.classList.add('pdf-export');
-                const el = document.querySelector('.page');
-                const name = ({{ partner.name|tojson }} || 'report').replace(/[\/\\:*?"<>|]/g, '_');
-                const opt = {
-                    margin: [12, 12, 12, 12],
-                    filename: name + '_收益规模.pdf',
-                    image: { type: 'jpeg', quality: 0.95 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['avoid-all', 'css'], avoid: ['tr', '.kpi-card', '.chart-panel', '.table-panel'] }
-                };
-                await html2pdf().set(opt).from(el).save();
-            } catch (e) {
-                alert('下载失败: ' + (e.message || '未知错误'));
-            } finally {
-                document.body.classList.remove('pdf-export');
                 if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
             }
         }
@@ -383,10 +383,10 @@
                             <span class="help-icon" title="点击查看计算公式" onclick="this.nextElementSibling.classList.toggle('show'); event.stopPropagation();">?</span>
                             <div class="collection-breakdown" onclick="event.stopPropagation();">
                                 <div class="yield-breakdown-title">回收率计算公式</div>
-                                <div class="yield-breakdown-formula">回收率 = 实际回收 ÷ 应回收</div>
+                                <div class="yield-breakdown-formula">回收率 = 回收金额 ÷ 应收金额</div>
                                 <table class="yield-breakdown-table">
-                                    <tr><td>实际回收（${latest.month}）</td><td>${fmtK(latest.collection)}</td></tr>
-                                    <tr><td>应回收（${latest.month}）</td><td>${fmtK(latest.collection_rate > 0 ? Math.round(latest.collection / latest.collection_rate) : 0)}</td></tr>
+                                    <tr><td>回收金额（${latest.month}）</td><td>${fmtK(latest.collection)}</td></tr>
+                                    <tr><td>应收金额（${latest.month}）</td><td>${fmtK(latest.expected_due != null ? latest.expected_due : (latest.collection_rate > 0 ? Math.round(latest.collection / latest.collection_rate) : 0))}</td></tr>
                                     <tr><td>回收率</td><td style="color:var(--gold)">${(latest.collection_rate * 100).toFixed(1)}%</td></tr>
                                 </table>
                             </div>
@@ -511,12 +511,15 @@
                 <div class="table-panel">
                     <div class="chart-title">月度明细</div>
                     <table class="rev-table">
-                        <thead><tr><th>月份</th><th>放款金额</th><th>在贷余额</th><th>回收金额</th><th>利息收入</th><th>手续费</th><th>净收益</th><th>年化收益</th><th>回收率</th></tr></thead>
+                        <thead><tr><th>月份</th><th>放款金额</th><th>在贷余额</th><th>应收金额</th><th>回收金额</th><th>回收率</th><th>利息收入</th><th>手续费</th><th>净收益</th><th>年化收益</th></tr></thead>
                         <tbody>
                             ${[...data].reverse().map((r, i, arr) => {
                                 const p = i < arr.length - 1 ? arr[i + 1] : null;
                                 const rt = p ? (r.net_revenue >= p.net_revenue ? 'up' : 'down') : '';
-                                return `<tr><td>${r.month}</td><td>${fmtK(r.disbursement)}</td><td>${fmtK(r.outstanding_balance)}</td><td>${fmtK(r.collection)}</td><td>${fmtK(r.interest_income)}</td><td>${fmtK(r.fee_income)}</td><td class="${rt}">${fmtK(r.net_revenue)}</td><td>${(r.avg_yield_annualized * 100).toFixed(1)}%</td><td>${(r.collection_rate * 100).toFixed(1)}%</td></tr>`;
+                                const expDue = r.expected_due != null ? r.expected_due : 0;
+                                const collRate = expDue > 0 ? (r.collection / expDue) : r.collection_rate;
+                                const collRatePct = (collRate * 100).toFixed(1);
+                                return `<tr><td>${r.month}</td><td>${fmtK(r.disbursement)}</td><td>${fmtK(r.outstanding_balance)}</td><td>${fmtK(expDue)}</td><td>${fmtK(r.collection)}</td><td>${collRatePct}%</td><td>${fmtK(r.interest_income)}</td><td>${fmtK(r.fee_income)}</td><td class="${rt}">${fmtK(r.net_revenue)}</td><td>${(r.avg_yield_annualized * 100).toFixed(1)}%</td></tr>`;
                             }).join('')}
                         </tbody>
                     </table>

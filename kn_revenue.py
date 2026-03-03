@@ -1,6 +1,7 @@
 """
 收益规模数据 - 从 raw_loan、raw_repayment、calc_overdue 计算
 用于资产商管理-收益规模页面，支持 KN、Docking 等 spv_id
+计算基准：使用数据库最新数据日（get_latest_data_date），仅包含该日期及之前的月份
 返回结构与 producers.json 中 revenue_data 一致
 """
 from datetime import datetime
@@ -93,6 +94,20 @@ def compute_revenue_data(spv_id: str = "kn"):
         return []
 
     months = _get_months_with_data(spv_id)
+    if not months:
+        cur.close()
+        conn.close()
+        return []
+
+    try:
+        from kn_data_utils import get_latest_data_date
+        latest_dt = get_latest_data_date()
+        if latest_dt:
+            latest_month = latest_dt.strftime("%Y-%m")
+            months = [m for m in months if m <= latest_month]
+    except Exception:
+        pass
+
     if not months:
         cur.close()
         conn.close()
@@ -207,6 +222,7 @@ def compute_revenue_data(spv_id: str = "kn"):
             "month": month_str,
             "disbursement": int(round(disbursement)),
             "outstanding_balance": int(round(outstanding_balance)),
+            "expected_due": int(round(expected_due)),  # 应收金额（应还本金+利息，用于计算回收率）
             "collection": int(round(collection)),
             "interest_income": int(round(interest_income)),
             "principal_repaid": int(round(principal_repaid)),

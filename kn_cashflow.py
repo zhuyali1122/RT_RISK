@@ -1,6 +1,7 @@
 """
 现金流预测 - 基于在贷 Loan 的还款计划计算未来预期回收
 用于资产商管理-现金流 Tab，支持 KN、Docking 等 spv_id
+计算基准：使用数据库最新数据日（get_latest_data_date），非系统当前日期
 """
 from datetime import datetime, date
 
@@ -14,6 +15,7 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
     从数据库计算指定 spv_id 的未来现金流预测
     基于 raw_loan.repayment_schedule 中未到期应还金额，按月份汇总
     仅考虑 calc_overdue 中 loan_status IN (1,2) 的活跃贷款
+    基准日期：数据库最新数据日（calc_overdue 中最大 stat_date）
 
     返回: dict {
         "forecast": [ { month, expected_inflow, principal, interest, loan_count }, ... ],
@@ -29,9 +31,15 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
         return {"forecast": [], "total_expected": 0, "as_of_date": datetime.now().strftime("%Y-%m-%d")}
 
     today = date.today()
-    today_str = today.strftime("%Y-%m-%d")
+    try:
+        from kn_data_utils import get_latest_data_date
+        latest_dt = get_latest_data_date()
+        as_of_date = latest_dt if latest_dt else today
+    except Exception:
+        as_of_date = today
+    as_of_str = as_of_date.strftime("%Y-%m-%d")
 
-    # 1. 获取活跃 loan_id 列表（最新 calc_overdue 快照中 loan_status 1,2）
+    # 1. 获取活跃 loan_id 列表（最新 calc_overdue 快照中 loan_status 1,2，基准日期为 as_of_date）
     active_loan_ids = set()
     latest_tbl = None
     latest_dt = None
@@ -47,7 +55,7 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
                     continue
                 cur.execute(
                     f"SELECT MAX(stat_date)::date FROM {tbl} WHERE spv_id = %s AND stat_date::date <= %s::date",
-                    (spv_id, today_str)
+                    (spv_id, as_of_str)
                 )
                 row = cur.fetchone()
                 if row and row[0] and (not latest_dt or row[0] > latest_dt):
@@ -71,7 +79,7 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
     if not active_loan_ids:
         cur.close()
         conn.close()
-        return {"forecast": [], "total_expected": 0, "as_of_date": today_str}
+        return {"forecast": [], "total_expected": 0, "as_of_date": as_of_str}
 
     # 2. 从 raw_loan 获取还款计划，汇总未来各月应还金额（仅活跃贷款）
     loan_ids_list = list(active_loan_ids)
@@ -97,7 +105,7 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
             FROM future_due
             ORDER BY month
             LIMIT %s
-        """, (spv_id, loan_ids_list, today_str, months_ahead))
+        """, (spv_id, loan_ids_list, as_of_str, months_ahead))
         for row in cur.fetchall():
             m, principal, interest, lc = row[0], float(row[1] or 0), float(row[2] or 0), int(row[3] or 0)
             expected = (principal + interest) * collection_rate
@@ -117,5 +125,5 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
     return {
         "forecast": forecast,
         "total_expected": int(round(total_expected)),
-        "as_of_date": today_str,
+        "as_of_date": as_of_str,
     }

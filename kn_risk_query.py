@@ -85,11 +85,11 @@ def _compute_m0_accrued_interest(calc_table: str, stat_date: str, spv_id: str) -
             interest_paid_total AS (
                 SELECT COALESCE(SUM(rp.interest_repayment), 0) AS total
                 FROM raw_repayment rp
-                WHERE rp.loan_id IN (SELECT loan_id FROM m0_loans)
-                AND rp.repayment_term IN (SELECT period_no FROM schedule_past)
+                INNER JOIN schedule_past sp ON rp.loan_id = sp.loan_id AND rp.repayment_term = sp.period_no
+                WHERE rp.spv_id = %s
             )
             SELECT (SELECT total FROM interest_due_total) - (SELECT total FROM interest_paid_total) AS m0_accrued
-        """, (stat_date, spv_id, spv_id, stat_date))
+        """, (stat_date, spv_id, spv_id, stat_date, spv_id))
         row = cur.fetchone()
         if row and row[0] is not None:
             val = max(0, float(row[0]))
@@ -116,6 +116,7 @@ def _compute_m0_accrued_interest(calc_table: str, stat_date: str, spv_id: str) -
 def get_available_stat_dates(spv_id: str = "kn", limit: int = 30):
     """
     获取可用的 stat_date 列表（用于日期选择器）
+    动态扫描所有 calc_overdue 表，支持 KN、Docking 等不同 spv_id
     返回: [ "2026-02-25", "2026-02-24", ... ] 或 []
     """
     try:
@@ -124,18 +125,26 @@ def get_available_stat_dates(spv_id: str = "kn", limit: int = 30):
     except Exception:
         return []
     cur = conn.cursor()
-    tables = ["calc_overdue_y2026m02", "calc_overdue_y2026m03", "calc_overdue_y2026m04", "calc_overdue_y2026m05"]
     dates = []
-    for table in tables:
-        try:
-            cur.execute(
-                f"SELECT DISTINCT stat_date::text FROM {table} WHERE spv_id = %s ORDER BY stat_date DESC LIMIT %s",
-                (spv_id, limit)
-            )
-            for r in cur.fetchall():
-                dates.append(r[0][:10] if r[0] else "")
-        except Exception:
-            continue
+    for year in [2024, 2025, 2026, 2027]:
+        for month in range(1, 13):
+            table = f"calc_overdue_y{year}m{month:02d}"
+            try:
+                cur.execute(
+                    "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name = %s",
+                    (table,)
+                )
+                if not cur.fetchone():
+                    continue
+                cur.execute(
+                    f"SELECT DISTINCT stat_date::text FROM {table} WHERE spv_id = %s ORDER BY stat_date DESC LIMIT %s",
+                    (spv_id, limit)
+                )
+                for r in cur.fetchall():
+                    if r and r[0]:
+                        dates.append(r[0][:10])
+            except Exception:
+                continue
     cur.close()
     conn.close()
     # 去重并排序
@@ -146,7 +155,19 @@ def get_available_stat_dates(spv_id: str = "kn", limit: int = 30):
             seen.add(d)
             out.append(d)
     out.sort(reverse=True)
-    return out[:limit]
+    out = out[:limit]
+    # 若无该 spv 的日期，尝试用全局最新数据日作为 fallback
+    if not out:
+        try:
+            from kn_data_utils import get_latest_data_date
+            latest = get_latest_data_date()
+            if latest:
+                out = [latest.strftime("%Y-%m-%d")]
+        except Exception:
+            pass
+    if not out:
+        out = ["2026-02-25"]  # 最终 fallback
+    return out
 
 
 def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):

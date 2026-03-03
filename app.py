@@ -6,7 +6,7 @@ import os
 from functools import wraps
 from flask import (
     Flask, render_template, jsonify, request,
-    session, redirect, url_for, send_from_directory
+    session, redirect, url_for, send_from_directory, send_file
 )
 from werkzeug.utils import secure_filename
 
@@ -610,8 +610,6 @@ def partner_apply():
 @app.route("/partner/manage")
 @login_required
 def partner_manage():
-    import time
-    t0 = time.perf_counter()
     user = session["user"]
     if "manage_partners" not in user.get("permissions", []):
         return redirect(url_for("dashboard"))
@@ -621,10 +619,9 @@ def partner_manage():
     try:
         from kn_producer_cache import load_producer_full_cache
         full_cache, _ = load_producer_full_cache()
-    except Exception as e:
-        print(f"[partner_manage] load_producer_full_cache 异常: {e}")
+    except Exception:
+        pass
     cache_exists = bool(full_cache)
-    t1 = time.perf_counter()
 
     # 缓存存在时：仅从 producers.json 读取列表，不访问 DB
     # 缓存不存在时：从 spv_config + compute_revenue_data 等（会访问 DB）
@@ -636,13 +633,10 @@ def partner_manage():
             projects = load_projects_with_internal_params()
     except Exception:
         projects = {}
-    t2 = time.perf_counter()
     producers_active = [p for p in projects.values() if str(p.get("status", "active")).lower() in ("active", "")]
     if not producers_active:
         producers = load_producers()
         producers_active = [p for p in producers.values() if p.get("status") == "active"]
-
-    print(f"[partner_manage] 耗时: cache_load={t1-t0:.2f}s, projects={t2-t1:.2f}s, cache_exists={cache_exists}")
 
     partners = []
     partners_revenue = []
@@ -777,7 +771,7 @@ def partner_manage():
             cashflow_data = []
             try:
                 from kn_cashflow_cache import load_cashflow_cache
-                cached_cf, _ = load_cashflow_cache(pid)
+                cached_cf, _, _ = load_cashflow_cache(pid)
                 if cached_cf:
                     cashflow_data = cached_cf
                 else:
@@ -986,7 +980,6 @@ def partner_risk(partner_id):
         spv_map = _get_partner_spv_map()
     spv_id = spv_map.get(partner_id) or partner_id
     pc, full_cache_updated, cache_exists = _get_producer_data_from_full_cache(spv_id)
-    print(f"[partner_risk] partner_id={partner_id} spv_id={spv_id} cache_exists={cache_exists} pc={'ok' if pc else 'None'}")
     partner = _get_partner_or_producer(partner_id, json_only=cache_exists)
     if not partner:
         return redirect(url_for("partner_manage"))
@@ -1024,24 +1017,21 @@ def partner_risk(partner_id):
         local_currency = partner.get("local_currency", "USD")
         exchange_rate = partner.get("exchange_rate", 1)
 
-    # 优先级指标：缓存存在时跳过 DB，仅用 risk_data 计算
-    priority_indicators = partner.get("priority_indicators") or {}
-    if spv_id:
+    # 优先级指标：有缓存时优先用 pc.priority_indicators（含优先本金、优先收益率）；无缓存时从 spv_internal_params 读取
+    priority_indicators = (pc or {}).get("priority_indicators") if cache_exists else None
+    if not priority_indicators:
+        priority_indicators = partner.get("priority_indicators") or {}
+    need_load = not (priority_indicators.get("priority_principal") and priority_indicators.get("priority_yield"))
+    if spv_id and need_load:
         try:
             from spv_internal_params import load_priority_indicators_for_spv, compute_priority_from_risk_data
-            if cache_exists:
-                if risk_data:
-                    pi = compute_priority_from_risk_data(spv_id, risk_data, exchange_rate)
-                    if pi:
-                        priority_indicators = pi
-            else:
-                pi = load_priority_indicators_for_spv(spv_id, risk_data=risk_data, exchange_rate=exchange_rate)
+            pi = load_priority_indicators_for_spv(spv_id, risk_data=risk_data, exchange_rate=exchange_rate)
+            if pi:
+                priority_indicators = pi
+            elif risk_data:
+                pi = compute_priority_from_risk_data(spv_id, risk_data, exchange_rate)
                 if pi:
                     priority_indicators = pi
-                elif risk_data:
-                    pi = compute_priority_from_risk_data(spv_id, risk_data, exchange_rate)
-                    if pi:
-                        priority_indicators = pi
         except Exception:
             pass
 
@@ -1402,8 +1392,8 @@ def partner_cashflow(partner_id):
     if not partner:
         return redirect(url_for("partner_manage"))
     if cache_exists:
-        local_currency = partner.get("local_currency", "USD") or "USD"
-        exchange_rate = float(partner.get("exchange_rate", 1) or 1)
+        local_currency = (pc or {}).get("currency") or partner.get("local_currency", "USD") or "USD"
+        exchange_rate = float((pc or {}).get("exchange_rate", 1) or partner.get("exchange_rate", 1) or 1)
         env_key = f"{spv_id.upper()}_EXCHANGE_RATE"
         if os.getenv(env_key):
             try:
@@ -1417,26 +1407,45 @@ def partner_cashflow(partner_id):
     cashflow_data = []
     cache_last_updated = None
     use_cashflow_cache = bool(spv_id)
+    collection_rate = 0.98
     if cache_exists:
         cashflow_data = (pc or {}).get("cashflow_data", [])
         if full_cache_updated:
             cache_last_updated = full_cache_updated[:19].replace("T", " ")
+        rev_list = (pc or {}).get("revenue_data", [])
+        if rev_list:
+            cr = rev_list[-1].get("collection_rate", 0.98) or 0.98
+            if cr >= 0.5:
+                collection_rate = cr
+            elif len(rev_list) >= 2:
+                collection_rate = rev_list[-2].get("collection_rate", 0.98) or 0.98
     else:
         try:
             from kn_cashflow_cache import load_cashflow_cache
-            cached_cf, cache_last_updated = load_cashflow_cache(spv_id)
+            cached_cf, cache_last_updated, cr = load_cashflow_cache(spv_id)
             if cached_cf:
                 cashflow_data = cached_cf
+                rev_data = partner.get("revenue_data", [])
+                if rev_data:
+                    cr = rev_data[-1].get("collection_rate", 0.98) or 0.98
+                    collection_rate = cr if cr >= 0.5 else (rev_data[-2].get("collection_rate", 0.98) or 0.98 if len(rev_data) >= 2 else 0.98)
+                else:
+                    collection_rate = cr if cr >= 0.5 else 0.98
             else:
                 from kn_cashflow import compute_cashflow_forecast
                 rev_data = partner.get("revenue_data", [])
-                coll_rate = 0.98
                 if rev_data:
-                    coll_rate = rev_data[-1].get("collection_rate", 0.98) or 0.98
-                cf = compute_cashflow_forecast(spv_id=spv_id, months_ahead=12, collection_rate=coll_rate)
+                    cr = rev_data[-1].get("collection_rate", 0.98) or 0.98
+                    collection_rate = cr if cr >= 0.5 else (rev_data[-2].get("collection_rate", 0.98) or 0.98 if len(rev_data) >= 2 else 0.98)
+                cf = compute_cashflow_forecast(spv_id=spv_id, months_ahead=12, collection_rate=collection_rate)
                 cashflow_data = cf.get("forecast", [])
         except Exception:
             pass
+    # 使用正确的回收率重新计算预期回收（避免缓存中使用了错误回收率的历史数据）
+    for row in cashflow_data:
+        p = float(row.get("principal") or 0)
+        i = float(row.get("interest") or 0)
+        row["expected_inflow"] = int(round((p + i) * collection_rate))
     if cache_last_updated:
         cache_last_updated = cache_last_updated[:19].replace("T", " ")
     return render_template(
@@ -1444,6 +1453,7 @@ def partner_cashflow(partner_id):
         user=user,
         partner=partner,
         cashflow_data=cashflow_data,
+        collection_rate=collection_rate,
         local_currency=local_currency,
         exchange_rate=exchange_rate,
         use_cashflow_cache=use_cashflow_cache,
@@ -1623,18 +1633,23 @@ def api_refresh_risk(partner_id):
     """刷新生产商风控数据缓存：从数据库重新计算核心指标、DPD、Vintage 等并保存"""
     if "manage_partners" not in session["user"].get("permissions", []) and session["user"].get("role") not in ("admin", "risk"):
         return jsonify({"error": "权限不足"}), 403
-    spv_id = _get_partner_spv_map().get(partner_id) or partner_id
-    valid_spv = set(_get_partner_spv_map().values()) or set(load_producers().keys())
-    if spv_id not in valid_spv:
-        return jsonify({"error": "未知生产商"}), 400
-    cfg = _get_producer_config(spv_id)
+    spv_map = _get_partner_spv_map()
+    spv_id = spv_map.get(partner_id) or spv_map.get(str(partner_id).lower()) or partner_id
+    spv_id_lower = str(spv_id).strip().lower()
+    valid_spv = set(spv_map.values() or []) | set(load_producers().keys() or [])
+    valid_spv_lower = {str(v).strip().lower() for v in valid_spv}
+    if spv_id_lower not in valid_spv_lower:
+        return jsonify({"error": f"未知生产商: {partner_id}"}), 400
+    cfg = _get_producer_config(spv_id_lower)
     exchange_rate = (cfg.get("exchange_rate") if cfg else 1) or 1
     currency = (cfg.get("currency") if cfg else "USD") or "USD"
     try:
         from kn_risk_cache import refresh_risk_cache
-        result = refresh_risk_cache(spv_id, exchange_rate, currency)
+        from kn_producer_cache import update_producer_risk_in_full_cache
+        result = refresh_risk_cache(spv_id_lower, exchange_rate, currency)
         if "error" in result:
             return jsonify(result), 500
+        update_producer_risk_in_full_cache(spv_id_lower, exchange_rate, currency)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1647,17 +1662,19 @@ def api_refresh_revenue(partner_id):
     if "manage_partners" not in session["user"].get("permissions", []) and session["user"].get("role") not in ("admin", "risk"):
         return jsonify({"error": "权限不足"}), 403
     spv_id = _get_partner_spv_map().get(partner_id) or partner_id
-    valid_spv = set(_get_partner_spv_map().values()) or set(load_producers().keys())
+    valid_spv = set(_get_partner_spv_map().values() or []) | set(load_producers().keys() or [])
     if spv_id not in valid_spv:
-        return jsonify({"error": "未知生产商"}), 400
+        return jsonify({"error": f"未知生产商: {partner_id}"}), 400
     cfg = _get_producer_config(spv_id)
     exchange_rate = float((cfg.get("exchange_rate") if cfg else 1) or 1)
     currency = (cfg.get("currency") if cfg else "USD") or "USD"
     try:
         from kn_revenue_cache import refresh_revenue_cache
+        from kn_producer_cache import update_producer_revenue_in_full_cache
         result = refresh_revenue_cache(spv_id, exchange_rate, currency)
         if "error" in result:
             return jsonify(result), 500
+        update_producer_revenue_in_full_cache(spv_id)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1670,9 +1687,9 @@ def api_refresh_cashflow(partner_id):
     if "manage_partners" not in session["user"].get("permissions", []) and session["user"].get("role") not in ("admin", "risk"):
         return jsonify({"error": "权限不足"}), 403
     spv_id = _get_partner_spv_map().get(partner_id) or partner_id
-    valid_spv = set(_get_partner_spv_map().values()) or set(load_producers().keys())
+    valid_spv = set(_get_partner_spv_map().values() or []) | set(load_producers().keys() or [])
     if spv_id not in valid_spv:
-        return jsonify({"error": "未知生产商"}), 400
+        return jsonify({"error": f"未知生产商: {partner_id}"}), 400
     cfg = _get_producer_config(spv_id)
     exchange_rate = float((cfg.get("exchange_rate") if cfg else 1) or 1)
     currency = (cfg.get("currency") if cfg else "USD") or "USD"
@@ -1681,14 +1698,17 @@ def api_refresh_cashflow(partner_id):
         from kn_revenue_cache import load_revenue_cache
         cached_rev, _ = load_revenue_cache(spv_id)
         if cached_rev:
-            coll_rate = cached_rev[-1].get("collection_rate", 0.98) or 0.98
+            cr = cached_rev[-1].get("collection_rate", 0.98) or 0.98
+            coll_rate = cr if cr >= 0.5 else (cached_rev[-2].get("collection_rate", 0.98) or 0.98 if len(cached_rev) >= 2 else 0.98)
     except Exception:
         pass
     try:
         from kn_cashflow_cache import refresh_cashflow_cache
+        from kn_producer_cache import update_producer_cashflow_in_full_cache
         result = refresh_cashflow_cache(spv_id, exchange_rate, currency, coll_rate)
         if "error" in result:
             return jsonify(result), 500
+        update_producer_cashflow_in_full_cache(spv_id)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1757,6 +1777,190 @@ def dd_template_download(module_id):
         mimetype="text/plain; charset=utf-8",
         headers={"Content-Disposition": f"attachment; filename={module_id}_checklist.txt"}
     )
+
+
+def _json_to_excel_rows(data_list):
+    """将 JSON 列表转为 Excel 行：标量直接写入，dict/list 转为 JSON 字符串"""
+    if not data_list:
+        return [], []
+    all_keys = set()
+    for row in data_list:
+        if isinstance(row, dict):
+            all_keys.update(row.keys())
+    headers = sorted(all_keys)
+    rows = []
+    for row in data_list:
+        if not isinstance(row, dict):
+            rows.append([str(row)])
+            continue
+        r = []
+        for h in headers:
+            v = row.get(h)
+            if isinstance(v, (dict, list)):
+                r.append(json.dumps(v, ensure_ascii=False) if v is not None else "")
+            else:
+                r.append(v if v is not None else "")
+        rows.append(r)
+    return headers, rows
+
+
+def _flatten_priority_indicators(pi):
+    """将 priority_indicators 展平为单行 dict，供 Excel 导出"""
+    if not pi:
+        return {}
+    flat = {}
+    if pi.get("priority_principal") is not None:
+        flat["priority_principal"] = pi["priority_principal"]
+    if pi.get("priority_yield"):
+        py = pi["priority_yield"]
+        flat["priority_yield_current"] = py.get("current")
+        flat["priority_yield_target"] = py.get("target")
+    if pi.get("leverage_ratio"):
+        lr = pi["leverage_ratio"]
+        flat["leverage_ratio_current"] = lr.get("current")
+        flat["leverage_ratio_limit"] = lr.get("limit")
+    if pi.get("coverage_ratio"):
+        cov = pi["coverage_ratio"]
+        flat["coverage_ratio_current"] = cov.get("current")
+        flat["coverage_liquidation_line"] = cov.get("liquidation")
+        flat["coverage_margin_call_line"] = cov.get("margin_call")
+        flat["coverage_baseline"] = cov.get("baseline")
+        b = cov.get("breakdown") or {}
+        for k, v in b.items():
+            flat["breakdown_" + k] = v
+    return flat
+
+
+@app.route("/api/partner/<partner_id>/download-excel")
+@login_required
+def api_partner_download_excel(partner_id):
+    """下载生产商缓存数据为 Excel：风控、收益、现金流 三个 Tab"""
+    spv_id = _get_partner_spv_map().get(partner_id) or partner_id
+    valid_spv = set(_get_partner_spv_map().values() or []) | set(load_producers(json_only=True).keys() or [])
+    if spv_id not in valid_spv:
+        return jsonify({"error": "未知生产商"}), 404
+
+    pc, _, cache_exists = _get_producer_data_from_full_cache(spv_id)
+    risk_data = []
+    revenue_data = []
+    cashflow_data = []
+    priority_indicators = None
+
+    if cache_exists and pc:
+        risk_data = pc.get("risk_data", [])
+        revenue_data = pc.get("revenue_data", [])
+        cashflow_data = pc.get("cashflow_data", [])
+        priority_indicators = pc.get("priority_indicators")
+        if not priority_indicators and risk_data:
+            try:
+                from spv_internal_params import load_priority_indicators_for_spv, compute_priority_from_risk_data
+                rate = float((pc.get("exchange_rate") or 1) or 1)
+                pi = load_priority_indicators_for_spv(spv_id, risk_data=risk_data, exchange_rate=rate)
+                priority_indicators = pi or compute_priority_from_risk_data(spv_id, risk_data, rate)
+            except Exception:
+                pass
+    else:
+        try:
+            from kn_risk_cache import load_risk_cache
+            rd, _ = load_risk_cache(spv_id)
+            risk_data = rd or []
+        except Exception:
+            pass
+        try:
+            from kn_revenue_cache import load_revenue_cache
+            rev, _ = load_revenue_cache(spv_id)
+            revenue_data = rev or []
+        except Exception:
+            pass
+        try:
+            from kn_cashflow_cache import load_cashflow_cache
+            cf, _ = load_cashflow_cache(spv_id)
+            cashflow_data = cf or []
+        except Exception:
+            pass
+        if risk_data:
+            try:
+                from spv_internal_params import load_priority_indicators_for_spv, compute_priority_from_risk_data
+                cfg = _get_producer_config(spv_id)
+                rate = float((cfg.get("exchange_rate") if cfg else 1) or 1)
+                pi = load_priority_indicators_for_spv(spv_id, risk_data=risk_data, exchange_rate=rate)
+                priority_indicators = pi or compute_priority_from_risk_data(spv_id, risk_data, rate)
+            except Exception:
+                pass
+
+    try:
+        from openpyxl import Workbook
+        from openpyxl.utils import get_column_letter
+        from io import BytesIO
+
+        wb = Workbook()
+        wb.remove(wb.active)
+
+        # Tab 1: 风控
+        ws1 = wb.create_sheet("风控", 0)
+        h1, r1 = _json_to_excel_rows(risk_data)
+        if h1:
+            ws1.append(h1)
+            for row in r1:
+                ws1.append(row)
+
+        # Tab 2: 收益
+        ws2 = wb.create_sheet("收益", 1)
+        h2, r2 = _json_to_excel_rows(revenue_data)
+        if h2:
+            ws2.append(h2)
+            for row in r2:
+                ws2.append(row)
+
+        # Tab 3: 现金流
+        ws3 = wb.create_sheet("现金流", 2)
+        h3, r3 = _json_to_excel_rows(cashflow_data)
+        if h3:
+            ws3.append(h3)
+            for row in r3:
+                ws3.append(row)
+
+        # Tab 4: 优先级指标（含覆盖倍数拆解）
+        flat_pi = _flatten_priority_indicators(priority_indicators)
+        if flat_pi:
+            ws4 = wb.create_sheet("优先级指标", 3)
+            # 固定列顺序：主要指标在前，便于查看
+            priority_order = [
+                "priority_principal", "priority_yield_current", "priority_yield_target",
+                "leverage_ratio_current", "leverage_ratio_limit",
+                "coverage_ratio_current", "coverage_liquidation_line", "coverage_margin_call_line", "coverage_baseline",
+                "breakdown_stat_date", "breakdown_m0_balance", "breakdown_m0_accrued_interest",
+                "breakdown_early_repayment_overdue_discount", "breakdown_m0_interest_discounted",
+                "breakdown_vtg30_predicted_default_rate", "breakdown_after_default_local", "breakdown_cash",
+                "breakdown_value_local", "breakdown_exchange_rate", "breakdown_value_usd",
+                "breakdown_coop_principal", "breakdown_unallocated", "breakdown_loan_usd", "breakdown_coverage_ratio",
+            ]
+            h4 = [k for k in priority_order if k in flat_pi]
+            h4 += sorted(k for k in flat_pi if k not in h4)
+            r4 = [[flat_pi.get(h) for h in h4]]
+            if h4:
+                ws4.append(h4)
+                for row in r4:
+                    ws4.append(row)
+
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        prod = load_producers(json_only=True).get(spv_id, {})
+        name = (prod.get("name") or prod.get("id") or spv_id).replace("/", "_").replace("\\", "_")
+        filename = f"{name}_数据导出.xlsx"
+
+        return send_file(
+            buf,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename,
+        )
+    except ImportError:
+        return jsonify({"error": "openpyxl 未安装，请运行 pip install openpyxl"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/user")

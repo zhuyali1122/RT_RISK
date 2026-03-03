@@ -19,22 +19,23 @@ def _cache_path(spv_id: str) -> str:
 def load_cashflow_cache(spv_id: str):
     """
     从缓存加载 cashflow forecast 数据
-    返回: (forecast_list, last_updated)，无缓存时返回 (None, None)
+    返回: (forecast_list, last_updated, collection_rate)，无缓存时 (None, None, 0.98)
     """
     path = _cache_path(spv_id)
     if not os.path.exists(path):
-        return None, None
+        return None, None, 0.98
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         forecast = data.get("forecast", [])
-        return forecast, data.get("last_updated")
+        return forecast, data.get("last_updated"), data.get("collection_rate", 0.98)
     except Exception:
-        return None, None
+        return None, None, 0.98
 
 
 def save_cashflow_cache(spv_id: str, forecast: list, total_expected: float = 0,
-                       currency: str = "USD", exchange_rate: float = 1):
+                       currency: str = "USD", exchange_rate: float = 1,
+                       collection_rate: float = 0.98):
     """保存现金流预测到缓存"""
     path = _cache_path(spv_id)
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -43,6 +44,7 @@ def save_cashflow_cache(spv_id: str, forecast: list, total_expected: float = 0,
             "spv_id": spv_id,
             "currency": currency,
             "exchange_rate": exchange_rate,
+            "collection_rate": collection_rate,
             "last_updated": datetime.now().isoformat(),
             "forecast": forecast,
             "total_expected": total_expected,
@@ -64,7 +66,7 @@ def refresh_cashflow_cache(spv_id: str, exchange_rate: float = 1, currency: str 
     forecast = cf.get("forecast", [])
     total_expected = cf.get("total_expected", 0)
 
-    save_cashflow_cache(spv_id, forecast, total_expected, currency, exchange_rate or 1)
+    save_cashflow_cache(spv_id, forecast, total_expected, currency, exchange_rate or 1, collection_rate)
     return {
         "ok": True,
         "forecast": forecast,

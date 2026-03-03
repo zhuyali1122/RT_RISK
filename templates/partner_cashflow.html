@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHUAN | {{ partner.name }} - 现金流预测</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -150,10 +149,10 @@
                     刷新
                 </button>
                 {% endif %}
-                <button class="btn-pdf" onclick="downloadPDF()" title="下载当前页面为 PDF">
+                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="下载风控、收益、现金流数据为 Excel" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    下载 PDF
-                </button>
+                    下载 Excel
+                </a>
                 {% if local_currency != 'USD' %}
                 <div class="currency-selector">
                     <div class="currency-selector-row">
@@ -177,6 +176,32 @@
         const data = {{ cashflow_data | tojson }};
         const localCurrency = '{{ local_currency }}';
         const exchangeRate = {{ exchange_rate }};
+        const collectionRatePct = {{ (collection_rate * 100)|round(1) }};  // 回收率（来自收益规模最新月）
+
+        async function handleDownloadExcel(ev, pid) {
+            ev.preventDefault();
+            const url = (window.APP_ROOT || '') + '/api/partner/' + (pid || partnerId) + '/download-excel';
+            try {
+                const res = await fetch(url, { credentials: 'same-origin' });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    alert('下载失败: ' + (data.error || res.statusText || '请先登录'));
+                    return false;
+                }
+                const blob = await res.blob();
+                const disposition = res.headers.get('Content-Disposition') || '';
+                const m = disposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i) || disposition.match(/filename="?([^";]+)/);
+                const filename = (m ? decodeURIComponent((m[1] || '').replace(/^"/, '').replace(/"$/, '')) : '').trim() || '数据导出.xlsx';
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename || '数据导出.xlsx';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) {
+                alert('下载失败: ' + (e.message || '网络错误'));
+            }
+            return false;
+        }
 
         async function refreshCashflow() {
             const btn = document.querySelector('.btn-refresh');
@@ -196,30 +221,6 @@
             } catch (e) {
                 alert('刷新失败: ' + e.message);
             } finally {
-                if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
-            }
-        }
-
-        async function downloadPDF() {
-            const btn = document.querySelector('.btn-pdf');
-            if (btn) { btn.disabled = true; btn.classList.add('loading'); }
-            try {
-                document.body.classList.add('pdf-export');
-                const el = document.querySelector('.page');
-                const name = ({{ partner.name|tojson }} || 'report').replace(/[\/\\:*?"<>|]/g, '_');
-                const opt = {
-                    margin: [12, 12, 12, 12],
-                    filename: name + '_现金流预测.pdf',
-                    image: { type: 'jpeg', quality: 0.95 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['avoid-all', 'css'], avoid: ['tr', '.kpi-card', '.chart-panel', '.table-panel'] }
-                };
-                await html2pdf().set(opt).from(el).save();
-            } catch (e) {
-                alert('下载失败: ' + (e.message || '未知错误'));
-            } finally {
-                document.body.classList.remove('pdf-export');
                 if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
             }
         }
@@ -261,12 +262,12 @@
                 <div class="kpi-grid">
                     <div class="kpi-card">
                         <div class="kpi-label">12 个月预期回收</div>
-                        ${(localCurrency || 'USD') === 'USD' ? `<div class="kpi-value">${fmtK(total)}</div>` : `<div class="kpi-value kpi-dual"><span class="kpi-local">${fmtDisplayLocal(total)}</span><span class="kpi-usd">${fmtDisplayUSD(getUsdVal(total))}</span></div>`}
-                        <div class="kpi-sub">按 98% 回收率估算</div>
+                        <div class="kpi-value">${fmtK(total)}</div>
+                        <div class="kpi-sub">按 ${collectionRatePct}% 回收率估算</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-label">下月预期回收</div>
-                        ${(localCurrency || 'USD') === 'USD' ? `<div class="kpi-value">${fmtK(nextMonth.expected_inflow)}</div>` : `<div class="kpi-value kpi-dual"><span class="kpi-local">${fmtDisplayLocal(nextMonth.expected_inflow)}</span><span class="kpi-usd">${fmtDisplayUSD(getUsdVal(nextMonth.expected_inflow))}</span></div>`}
+                        <div class="kpi-value">${fmtK(nextMonth.expected_inflow)}</div>
                         <div class="kpi-sub">${nextMonth.month}</div>
                     </div>
                     <div class="kpi-card">
@@ -288,15 +289,17 @@
                             '</div>';
                         }).join('')}
                     </div>
-                    <div class="cf-hint">基于 raw_loan.repayment_schedule 中未到期应还金额，按月份汇总；仅考虑 calc_overdue 中 loan_status 1/2 的活跃贷款。</div>
+                    <div class="cf-hint">
+                    <strong>计算公式：</strong>预期回收 = (应还本金 + 应还利息) × 回收率。数据来自 raw_loan.repayment_schedule 中未到期应还金额，按月份汇总；仅考虑 calc_overdue 中 loan_status 1/2 的活跃贷款。回收率取自收益规模最新月的实际回收÷应回收，无则默认 98%。
+                </div>
                 </div>
 
                 <div class="table-panel">
                     <div class="chart-title">月度明细</div>
                     <table class="cf-table">
-                        <thead><tr><th>月份</th><th>应还本金</th><th>应还利息</th><th>预期回收</th><th>涉及笔数</th></tr></thead>
+                        <thead><tr><th>月份</th><th>应还本金</th><th>应还利息</th><th>回收率</th><th>预期回收</th><th>涉及笔数</th></tr></thead>
                         <tbody>
-                            ${data.map(r => `<tr><td>${r.month}</td><td>${fmtK(r.principal)}</td><td>${fmtK(r.interest)}</td><td>${fmtK(r.expected_inflow)}</td><td>${r.loan_count || '-'}</td></tr>`).join('')}
+                            ${data.map(r => `<tr><td>${r.month}</td><td>${fmtK(r.principal)}</td><td>${fmtK(r.interest)}</td><td>${collectionRatePct}%</td><td>${fmtK(r.expected_inflow)}</td><td>${r.loan_count || '-'}</td></tr>`).join('')}
                         </tbody>
                     </table>
                 </div>

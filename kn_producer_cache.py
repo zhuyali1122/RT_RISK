@@ -106,7 +106,8 @@ def refresh_producer_full_cache():
 
             coll_rate = 0.98
             if revenue_data:
-                coll_rate = revenue_data[-1].get("collection_rate", 0.98) or 0.98
+                cr = revenue_data[-1].get("collection_rate", 0.98) or 0.98
+                coll_rate = cr if cr >= 0.5 else (revenue_data[-2].get("collection_rate", 0.98) or 0.98 if len(revenue_data) >= 2 else 0.98)
             cashflow_data = []
             try:
                 from kn_cashflow_cache import refresh_cashflow_cache
@@ -116,12 +117,26 @@ def refresh_producer_full_cache():
             except Exception:
                 pass
 
+            priority_indicators = None
+            try:
+                from spv_internal_params import load_priority_indicators_for_spv, compute_priority_from_risk_data
+                pi = load_priority_indicators_for_spv(sid, risk_data=risk_data, exchange_rate=rate)
+                if pi:
+                    priority_indicators = pi
+                elif risk_data:
+                    pi = compute_priority_from_risk_data(sid, risk_data, rate)
+                    if pi:
+                        priority_indicators = pi
+            except Exception:
+                pass
+
             producers_cache[sid] = {
                 "risk_data": risk_data,
                 "revenue_data": revenue_data,
                 "cashflow_data": cashflow_data,
                 "exchange_rate": rate,
                 "currency": currency,
+                "priority_indicators": priority_indicators,
             }
 
         save_producer_full_cache(producers_cache)
@@ -141,6 +156,88 @@ def _get_producer_config(spv_id):
         return _get_producer_config(spv_id)
     except Exception:
         return None
+
+
+def update_producer_risk_in_full_cache(spv_id: str, exchange_rate: float = 1, currency: str = "USD"):
+    """
+    刷新单个生产商的风控数据后，同步更新 producer_full_cache 中该生产商的 risk_data 和 priority_indicators。
+    供 api_refresh_risk 调用，确保页面刷新后显示最新数据。
+    """
+    producers, _ = load_producer_full_cache()
+    if not producers:
+        return
+    sid = str(spv_id or "").strip().lower()
+    pc = producers.get(spv_id) or producers.get(sid)
+    if not pc:
+        return
+    try:
+        from kn_risk_cache import load_risk_cache
+        merged, _ = load_risk_cache(sid)
+        if merged:
+            pc["risk_data"] = merged
+        priority_indicators = None
+        try:
+            from spv_internal_params import load_priority_indicators_for_spv, compute_priority_from_risk_data
+            pi = load_priority_indicators_for_spv(sid, risk_data=pc.get("risk_data", []), exchange_rate=exchange_rate)
+            if pi:
+                priority_indicators = pi
+            elif pc.get("risk_data"):
+                pi = compute_priority_from_risk_data(sid, pc["risk_data"], exchange_rate)
+                if pi:
+                    priority_indicators = pi
+        except Exception:
+            pass
+        pc["priority_indicators"] = priority_indicators
+        producers[sid] = pc
+        save_producer_full_cache(producers)
+    except Exception:
+        pass
+
+
+def update_producer_revenue_in_full_cache(spv_id: str):
+    """
+    刷新单个生产商的收益数据后，同步更新 producer_full_cache 中该生产商的 revenue_data。
+    供 api_refresh_revenue 调用，确保页面刷新后显示最新数据。
+    """
+    producers, _ = load_producer_full_cache()
+    if not producers:
+        return
+    sid = str(spv_id or "").strip().lower()
+    pc = producers.get(spv_id) or producers.get(sid)
+    if not pc:
+        return
+    try:
+        from kn_revenue_cache import load_revenue_cache
+        cached_rev, _ = load_revenue_cache(sid)
+        if cached_rev is not None:
+            pc["revenue_data"] = cached_rev
+            producers[sid] = pc
+            save_producer_full_cache(producers)
+    except Exception:
+        pass
+
+
+def update_producer_cashflow_in_full_cache(spv_id: str):
+    """
+    刷新单个生产商的现金流数据后，同步更新 producer_full_cache 中该生产商的 cashflow_data。
+    供 api_refresh_cashflow 调用，确保页面刷新后显示最新数据。
+    """
+    producers, _ = load_producer_full_cache()
+    if not producers:
+        return
+    sid = str(spv_id or "").strip().lower()
+    pc = producers.get(spv_id) or producers.get(sid)
+    if not pc:
+        return
+    try:
+        from kn_cashflow_cache import load_cashflow_cache
+        cached_cf, _, _ = load_cashflow_cache(sid)
+        if cached_cf is not None:
+            pc["cashflow_data"] = cached_cf
+            producers[sid] = pc
+            save_producer_full_cache(producers)
+    except Exception:
+        pass
 
 
 def refresh_producer_full_cache_async():

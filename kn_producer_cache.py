@@ -126,19 +126,26 @@ def load_cache_meta():
     加载缓存元数据（轻量，供全局展示）
     进程内复用，保存时失效
     """
+    import logging
+    log = logging.getLogger("kn_producer_cache")
     global _cache_meta_memory, _cache_meta_mtime
+    log.info("[load_cache_meta] 开始加载，路径=%s", CACHE_META_FILE)
     if not os.path.isfile(CACHE_META_FILE):
+        log.info("[load_cache_meta] 文件不存在，返回 None")
         return None
     try:
         mtime = os.path.getmtime(CACHE_META_FILE)
         if _cache_meta_memory is not None and mtime == _cache_meta_mtime:
+            log.info("[load_cache_meta] 使用进程内缓存，last_updated=%s", (_cache_meta_memory.get("last_updated") or "")[:19])
             return _cache_meta_memory
         with open(CACHE_META_FILE, "r", encoding="utf-8") as f:
             out = json.load(f)
         _cache_meta_memory = out
         _cache_meta_mtime = mtime
+        log.info("[load_cache_meta] 加载成功 last_updated=%s", (out.get("last_updated") or "")[:19])
         return out
-    except Exception:
+    except Exception as e:
+        log.warning("[load_cache_meta] 加载失败: %s", e)
         return None
 
 
@@ -207,16 +214,40 @@ def refresh_producer_full_cache():
     logs = []
     try:
         _append_log(logs, "开始刷新全量缓存...", truncate_first=True)
-        from spv_config import load_producers_from_spv_config
+
+        # 1) 测试数据库连接
+        _append_log(logs, "正在连接数据库...")
+        try:
+            from db_connect import get_connection
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            cur.fetchone()
+            cur.close()
+            conn.close()
+            _append_log(logs, "数据库连接成功")
+        except Exception as e:
+            _append_log(logs, f"数据库连接失败: {e}（将尝试从配置文件加载生产商）")
+
+        # 2) 加载生产商列表
+        _append_log(logs, "正在加载生产商配置...")
+        from spv_config import load_spv_config, load_producers_from_spv_config
+        db_producers = load_spv_config()
+        if db_producers:
+            _append_log(logs, f"从数据库 spv_config 表加载到 {len(db_producers)} 个生产商")
         producers_raw = load_producers_from_spv_config()
         if not producers_raw:
             from app import load_producers
             producers_raw = load_producers()
+            if producers_raw:
+                _append_log(logs, f"从配置文件 producers.json 加载到 {len(producers_raw)} 个生产商")
+        elif not db_producers:
+            _append_log(logs, f"从配置文件 producers.json 加载到 {len(producers_raw)} 个生产商")
         if not producers_raw:
             _append_log(logs, "错误: 无生产商数据")
             return {"error": "无生产商数据", "logs": logs}
 
-        _append_log(logs, f"加载到 {len(producers_raw)} 个生产商")
+        _append_log(logs, f"共 {len(producers_raw)} 个生产商，开始逐个加载风控/收益/现金流数据...")
         producers_cache = {}
         all_stat_dates = []
         for spv_id, prod in producers_raw.items():
@@ -228,6 +259,7 @@ def refresh_producer_full_cache():
             risk_data = []
             try:
                 from kn_risk_cache import refresh_risk_cache, load_risk_cache
+                _append_log(logs, f"  {sid}: 风控数据查询中（连接数据库）...")
                 refresh_risk_cache(sid, rate, currency)
                 merged, _ = load_risk_cache(sid)
                 if merged:
@@ -243,11 +275,13 @@ def refresh_producer_full_cache():
             revenue_data = []
             try:
                 from kn_revenue_cache import refresh_revenue_cache
+                _append_log(logs, f"  {sid}: 收益数据查询中（连接数据库）...")
                 r = refresh_revenue_cache(sid, rate, currency)
                 if "revenue_data" in r:
                     revenue_data = r["revenue_data"]
-            except Exception:
-                pass
+                _append_log(logs, f"  {sid}: 收益 {len(revenue_data)} 条")
+            except Exception as e:
+                _append_log(logs, f"  {sid}: 收益失败 - {e}")
 
             coll_rate = 0.98
             if revenue_data:
@@ -256,11 +290,13 @@ def refresh_producer_full_cache():
             cashflow_data = []
             try:
                 from kn_cashflow_cache import refresh_cashflow_cache
+                _append_log(logs, f"  {sid}: 现金流数据查询中（连接数据库）...")
                 r = refresh_cashflow_cache(sid, rate, currency, coll_rate)
                 if "forecast" in r:
                     cashflow_data = r["forecast"]
-            except Exception:
-                pass
+                _append_log(logs, f"  {sid}: 现金流 {len(cashflow_data)} 条")
+            except Exception as e:
+                _append_log(logs, f"  {sid}: 现金流失败 - {e}")
 
             priority_indicators = None
             try:
@@ -296,12 +332,15 @@ def refresh_producer_full_cache():
         # 投资组合累计统计与平台持仓
         portfolio_cumulative_stats = None
         allocation_by_platform = None
+        _append_log(logs, "正在从数据库加载投资组合统计与平台持仓...")
         try:
             from spv_internal_params import load_invested_spv_ids_for_portfolio, load_all_spv_internal_params_for_portfolio
             from kn_risk_query import query_portfolio_cumulative_stats
             spv_ids = load_invested_spv_ids_for_portfolio()
+            _append_log(logs, f"投资组合包含 {len(spv_ids)} 个生产商，查询累计统计中...")
             portfolio_cumulative_stats = query_portfolio_cumulative_stats(spv_ids)
             trades = load_all_spv_internal_params_for_portfolio()
+            _append_log(logs, f"投资组合统计加载完成，平台持仓 {len(trades) if trades else 0} 条")
             if trades:
                 total_principal = sum(t.get("principal_amount") or 0 for t in trades)
                 allocation_by_platform = []
@@ -319,12 +358,13 @@ def refresh_producer_full_cache():
                         "agreed_rate": agreed_pct,
                         "effective_date": t.get("effective_date") or "-",
                     })
-        except Exception:
-            pass
+        except Exception as e:
+            _append_log(logs, f"投资组合统计加载失败: {e}")
 
         system_cutover_date = max(all_stat_dates) if all_stat_dates else ""
         _append_log(logs, f"系统切日: {system_cutover_date or '(无)'}")
 
+        _append_log(logs, "正在写入缓存文件...")
         save_producer_full_cache({
             "producers": producers_cache,
             "portfolio_cumulative_stats": portfolio_cumulative_stats,
@@ -456,13 +496,20 @@ def update_producer_cashflow_in_full_cache(spv_id: str):
 
 def load_refresh_log():
     """读取最近一次刷新的日志（最后 500 行）"""
+    import logging
+    log = logging.getLogger("kn_producer_cache")
+    log.info("[load_refresh_log] 开始加载，路径=%s", REFRESH_LOG_FILE)
     if not os.path.isfile(REFRESH_LOG_FILE):
+        log.info("[load_refresh_log] 文件不存在，返回空列表")
         return []
     try:
         with open(REFRESH_LOG_FILE, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        return lines[-500:] if len(lines) > 500 else lines
-    except Exception:
+        result = lines[-500:] if len(lines) > 500 else lines
+        log.info("[load_refresh_log] 加载成功，总行数=%d，返回行数=%d", len(lines), len(result))
+        return result
+    except Exception as e:
+        log.warning("[load_refresh_log] 加载失败: %s", e)
         return []
 
 

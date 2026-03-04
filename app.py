@@ -2,6 +2,7 @@
 RT_RISK Web 应用 - 角色化资产管理平台
 """
 import json
+import logging
 import os
 from functools import wraps
 from flask import (
@@ -406,14 +407,7 @@ def api_login():
                 "permissions": role_info.get("permissions", []),
             }
 
-            # 仅 Admin 登录时后台刷新缓存；PM/Investor 仅读缓存，由 Admin 通过 Dashboard「管理」按钮刷新
-            if user["role"] == "admin":
-                try:
-                    from kn_producer_cache import refresh_producer_full_cache_async
-                    refresh_producer_full_cache_async()
-                except Exception:
-                    pass
-
+            # Admin 登录后不自动刷新缓存；需在「缓存管理」页面手动点击「刷新全量缓存」
             redirect_url = (APP_ROOT or "") + "/dashboard"
             return jsonify({"success": True, "redirect": redirect_url})
 
@@ -439,13 +433,20 @@ def dashboard():
 @app.route("/admin/cache-refresh")
 @login_required
 def admin_cache_refresh():
-    """Admin 数据刷新页面：显示更新时间、系统切日，需确认后刷新，可查看日志"""
+    """Admin 数据刷新页面：显示更新时间、系统切日，需确认后刷新，可查看日志。仅进入界面，不自动启动刷新。"""
+    app.logger.info("[admin_cache_refresh] 进入缓存管理页面")
+
     user = _user_with_role_label(session["user"], _get_lang())
     if not _is_admin(user):
+        app.logger.warning("[admin_cache_refresh] 非 Admin 用户，重定向到 dashboard")
         return redirect(url_for("dashboard"))
+
     cache_meta = None
+    refresh_logs = []
+    refresh_logs_text = ""
     try:
         from kn_producer_cache import load_cache_meta, load_refresh_log
+        app.logger.info("[admin_cache_refresh] 开始加载 cache_meta")
         raw = load_cache_meta()
         if raw:
             lu = raw.get("last_updated") or ""
@@ -454,11 +455,20 @@ def admin_cache_refresh():
                 "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
                 "system_cutover_date": raw.get("system_cutover_date") or "",
             }
+            app.logger.info("[admin_cache_refresh] cache_meta 加载成功 last_updated=%s", lu[:19] if lu else "N/A")
+        else:
+            app.logger.info("[admin_cache_refresh] cache_meta 为空（无缓存或文件不存在）")
+
+        app.logger.info("[admin_cache_refresh] 开始加载 refresh_log")
         refresh_logs = load_refresh_log()
         refresh_logs_text = "".join(refresh_logs) if refresh_logs else ""
-    except Exception:
+        app.logger.info("[admin_cache_refresh] refresh_log 加载完成，行数=%d", len(refresh_logs))
+    except Exception as e:
+        app.logger.exception("[admin_cache_refresh] 加载失败: %s", e)
         refresh_logs = []
         refresh_logs_text = ""
+
+    app.logger.info("[admin_cache_refresh] 渲染完成，准备返回页面")
     return render_template(
         "admin_cache_refresh.html",
         user=user,
@@ -2172,5 +2182,6 @@ def logout():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
     port = int(os.getenv("PORT", "5001"))
     app.run(host="0.0.0.0", port=port, debug=True)

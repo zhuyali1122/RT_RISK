@@ -50,6 +50,35 @@
 
 ---
 
+## 共享缓存（Admin 刷新后其他用户可访问）
+
+Vercel Serverless 的 `/tmp` 是**实例级** ephemeral 存储，不同请求可能落在不同实例，Admin 刷新的缓存在其他用户请求时可能读不到。需使用 **Vercel KV (Upstash Redis)** 作为共享缓存。
+
+### 1. 添加 Vercel KV
+
+1. 进入项目 → **Storage** → **Create Database**
+2. 选择 **KV**（或从 Marketplace 添加 Upstash Redis）
+3. 创建后，Vercel 会自动注入 `KV_REST_API_URL` 和 `KV_REST_API_TOKEN`
+
+### 2. 环境变量（自动注入）
+
+添加 KV 后，以下变量会自动注入，**无需手动配置**：
+
+| 变量 | 说明 |
+|------|------|
+| `KV_REST_API_URL` | Redis REST API 地址 |
+| `KV_REST_API_TOKEN` | 认证 Token |
+
+若使用 Upstash 直接创建，可手动配置 `UPSTASH_REDIS_REST_URL` 和 `UPSTASH_REDIS_REST_TOKEN`。
+
+### 3. 工作流程
+
+- **Admin** 登录 → 进入「缓存管理」→ 点击「刷新全量缓存」
+- 缓存写入 **Redis**，所有 Vercel 实例共享
+- **PM/Investor** 登录后，任意实例均可读取最新缓存，无需再次刷新
+
+---
+
 ## 设置入口为 chuanx.xyz/rtrisk
 
 ### 1. 在 RT_RISK 项目中设置环境变量

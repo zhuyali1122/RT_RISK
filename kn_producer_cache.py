@@ -3,6 +3,7 @@
 - PM/Investor 仅从缓存读取，不访问数据库
 - Admin 通过 Dashboard「管理」按钮每日刷新全量缓存
 - 缓存保留最多 30 天历史
+- Vercel 部署：使用 Vercel KV (Redis) 共享缓存，Admin 刷新后所有用户实例可访问
 """
 import json
 import os
@@ -71,9 +72,11 @@ _cache_meta_mtime = 0
 
 def load_producer_full_cache():
     """
-    从缓存文件加载所有生产商数据及投资组合数据
+    从缓存加载所有生产商数据及投资组合数据
+    - Vercel + KV：从 Redis 读取，所有实例共享
+    - 本地：从文件读取
     1. 请求内复用（Flask g）
-    2. 进程内复用（文件未变更时）
+    2. 进程内复用（文件/Redis 未变更时）
     返回: (data, last_updated) 或 (None, None)
     """
     global _producer_cache_memory, _producer_cache_mtime
@@ -83,6 +86,32 @@ def load_producer_full_cache():
             return g._rt_producer_full_cache
     except RuntimeError:
         pass  # 非请求上下文（如后台刷新线程）
+    except Exception:
+        pass
+
+    try:
+        from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_CACHE
+        if _use_redis():
+            d = cache_get_json(REDIS_KEY_CACHE)
+            if not d:
+                return None, None
+            producers = d.get("producers", {})
+            last_updated = d.get("last_updated")
+            result = (
+                {
+                    "producers": producers,
+                    "portfolio_cumulative_stats": d.get("portfolio_cumulative_stats"),
+                    "allocation_by_platform": d.get("allocation_by_platform"),
+                    "system_cutover_date": d.get("system_cutover_date"),
+                },
+                last_updated,
+            )
+            try:
+                from flask import g
+                g._rt_producer_full_cache = result
+            except (RuntimeError, Exception):
+                pass
+            return result
     except Exception:
         pass
 
@@ -131,6 +160,16 @@ def load_cache_meta():
     log = logging.getLogger("kn_producer_cache")
     global _cache_meta_memory, _cache_meta_mtime
     log.info("[load_cache_meta] 开始加载，路径=%s", CACHE_META_FILE)
+    try:
+        from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_META
+        if _use_redis():
+            out = cache_get_json(REDIS_KEY_META)
+            if out:
+                _cache_meta_memory = out
+                log.info("[load_cache_meta] Redis 加载成功 last_updated=%s", (out.get("last_updated") or "")[:19])
+            return out
+    except Exception as e:
+        log.warning("[load_cache_meta] Redis 加载失败: %s", e)
     if not os.path.isfile(CACHE_META_FILE):
         log.info("[load_cache_meta] 文件不存在，返回 None")
         return None
@@ -152,8 +191,8 @@ def load_cache_meta():
 
 def save_producer_full_cache(payload: dict):
     """
-    保存全量缓存到主文件，并归档到每日目录（保留 30 天）
-    同时写入 cache_meta.json 供全局展示
+    保存全量缓存到主文件或 Redis，并归档到每日目录（保留 30 天，仅文件模式）
+    同时写入 cache_meta 供全局展示
     payload: { producers, portfolio_cumulative_stats?, allocation_by_platform?, system_cutover_date? }
     """
     global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime
@@ -161,7 +200,6 @@ def save_producer_full_cache(payload: dict):
     _producer_cache_mtime = 0
     _cache_meta_memory = None
     _cache_meta_mtime = 0
-    _ensure_cache_dir()
     now = datetime.now()
     last_updated = now.isoformat()
     system_cutover_date = payload.get("system_cutover_date")
@@ -172,18 +210,23 @@ def save_producer_full_cache(payload: dict):
         "portfolio_cumulative_stats": payload.get("portfolio_cumulative_stats"),
         "allocation_by_platform": payload.get("allocation_by_platform"),
     }
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    # 轻量元数据，供 top_bar 等全局展示
+    meta = {"last_updated": last_updated, "system_cutover_date": system_cutover_date or ""}
     try:
-        with open(CACHE_META_FILE, "w", encoding="utf-8") as f:
-            json.dump({
-                "last_updated": last_updated,
-                "system_cutover_date": system_cutover_date or "",
-            }, f, ensure_ascii=False)
+        from kn_cache_storage import _use_redis, cache_set_json, REDIS_KEY_CACHE, REDIS_KEY_META
+        if _use_redis():
+            cache_set_json(REDIS_KEY_CACHE, data)
+            cache_set_json(REDIS_KEY_META, meta)
+            return
     except Exception:
         pass
-    # 每日归档
+    _ensure_cache_dir()
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        with open(CACHE_META_FILE, "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False)
+    except Exception:
+        pass
     daily_path = os.path.join(DAILY_CACHE_DIR, f"producer_full_cache_{now.strftime('%Y-%m-%d')}.json")
     try:
         with open(daily_path, "w", encoding="utf-8") as f:
@@ -194,15 +237,25 @@ def save_producer_full_cache(payload: dict):
 
 
 def _append_log(logs: list, msg: str, truncate_first: bool = False):
-    """追加日志并写入文件。truncate_first=True 时先清空文件（每次刷新开始时调用）"""
+    """追加日志并写入文件或 Redis。truncate_first=True 时先清空（每次刷新开始时调用）"""
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{ts}] {msg}"
-    logs.append(line)
+    line = f"[{ts}] {msg}\n"
+    logs.append(line.rstrip())
+    try:
+        from kn_cache_storage import _use_redis, cache_append, cache_set, REDIS_KEY_LOG
+        if _use_redis():
+            if truncate_first:
+                cache_set(REDIS_KEY_LOG, line)
+            else:
+                cache_append(REDIS_KEY_LOG, line)
+            return
+    except Exception:
+        pass
     try:
         _ensure_cache_dir()
         mode = "w" if truncate_first else "a"
         with open(REFRESH_LOG_FILE, mode, encoding="utf-8") as f:
-            f.write(line + "\n")
+            f.write(line)
     except Exception:
         pass
 
@@ -567,6 +620,19 @@ def load_refresh_log():
     import logging
     log = logging.getLogger("kn_producer_cache")
     log.info("[load_refresh_log] 开始加载，路径=%s", REFRESH_LOG_FILE)
+    try:
+        from kn_cache_storage import _use_redis, cache_get, REDIS_KEY_LOG
+        if _use_redis():
+            raw = cache_get(REDIS_KEY_LOG)
+            if not raw:
+                log.info("[load_refresh_log] Redis 无数据，返回空列表")
+                return []
+            lines = raw.strip().split("\n") if raw else []
+            result = lines[-500:] if len(lines) > 500 else lines
+            log.info("[load_refresh_log] Redis 加载成功，总行数=%d，返回行数=%d", len(lines), len(result))
+            return [ln + "\n" for ln in result] if result else []
+    except Exception as e:
+        log.warning("[load_refresh_log] Redis 加载失败: %s", e)
     if not os.path.isfile(REFRESH_LOG_FILE):
         log.info("[load_refresh_log] 文件不存在，返回空列表")
         return []

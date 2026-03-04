@@ -3,9 +3,12 @@
 用于资产商管理-现金流 Tab，支持 KN、Docking 等 spv_id
 计算基准：使用数据库最新数据日（get_latest_data_date），非系统当前日期
 """
+import logging
 from datetime import datetime, date
 
 from kn_data_utils import get_calc_table
+
+log = logging.getLogger("kn_cashflow")
 
 
 def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collection_rate: float = 0.98):
@@ -21,11 +24,13 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
         "as_of_date": str,
     }
     """
+    log.info("[现金流] 开始计算 spv_id=%s months_ahead=%d", spv_id, months_ahead)
     try:
         from db_connect import get_connection
         conn = get_connection()
         cur = conn.cursor()
-    except Exception:
+    except Exception as e:
+        log.warning("[现金流] 数据库连接失败: %s", e)
         return {"forecast": [], "total_expected": 0, "as_of_date": datetime.now().strftime("%Y-%m-%d")}
 
     today = date.today()
@@ -38,31 +43,35 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
     as_of_str = as_of_date.strftime("%Y-%m-%d")
 
     # 1. 获取活跃 loan_id 列表（最新 calc_overdue 快照中 loan_status 1,2，基准日期为 as_of_date）
+    log.info("[现金流] 查找最新 calc_overdue 表...")
     active_loan_ids = set()
     latest_tbl = None
     latest_dt = None
-    for year in [2024, 2025, 2026, 2027]:
-        for month in range(1, 13):
-            tbl = get_calc_table(year, month)
-            try:
-                cur.execute(
-                    "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name = %s",
-                    (tbl,)
-                )
-                if not cur.fetchone():
-                    continue
-                cur.execute(
-                    f"SELECT MAX(stat_date)::date FROM {tbl} WHERE spv_id = %s AND stat_date::date <= %s::date",
-                    (spv_id, as_of_str)
-                )
-                row = cur.fetchone()
-                if row and row[0] and (not latest_dt or row[0] > latest_dt):
-                    latest_dt = row[0]
-                    latest_tbl = tbl
-            except Exception:
-                continue
+    tables_to_check = [get_calc_table(y, m) for y in [2024, 2025, 2026, 2027] for m in range(1, 13)]
+    placeholders = ",".join(["%s"] * len(tables_to_check))
+    try:
+        cur.execute(
+            f"SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN ({placeholders})",
+            tables_to_check
+        )
+        existing_tables = [r[0] for r in cur.fetchall() if r and r[0]]
+    except Exception:
+        existing_tables = []
+    for tbl in existing_tables:
+        try:
+            cur.execute(
+                f"SELECT MAX(stat_date)::date FROM {tbl} WHERE spv_id = %s AND stat_date::date <= %s::date",
+                (spv_id, as_of_str)
+            )
+            row = cur.fetchone()
+            if row and row[0] and (not latest_dt or row[0] > latest_dt):
+                latest_dt = row[0]
+                latest_tbl = tbl
+        except Exception:
+            continue
 
     if latest_tbl and latest_dt:
+        log.info("[现金流] 最新表 %s stat_date=%s，获取活跃 loan_id...", latest_tbl, latest_dt)
         try:
             cur.execute(
                 f"SELECT loan_id FROM {latest_tbl} WHERE spv_id = %s AND loan_status IN (1, 2) AND stat_date::date = %s",
@@ -77,9 +86,11 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
     if not active_loan_ids:
         cur.close()
         conn.close()
+        log.info("[现金流] 无活跃贷款")
         return {"forecast": [], "total_expected": 0, "as_of_date": as_of_str}
 
     # 2. 从 raw_loan 获取还款计划，汇总未来各月应还金额（仅活跃贷款）
+    log.info("[现金流] 汇总未来 %d 笔贷款的应还金额...", len(active_loan_ids))
     loan_ids_list = list(active_loan_ids)
     forecast = []
     total_expected = 0.0
@@ -120,6 +131,7 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
 
     cur.close()
     conn.close()
+    log.info("[现金流] 完成，%d 个月预测，总预期 %.0f", len(forecast), total_expected)
     return {
         "forecast": forecast,
         "total_expected": int(round(total_expected)),

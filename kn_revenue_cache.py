@@ -3,8 +3,11 @@
 打开页面时直接读缓存，无需访问数据库；用户点击刷新时从 DB 拉取并更新缓存
 """
 import json
+import logging
 import os
 from datetime import datetime
+
+log = logging.getLogger("kn_revenue_cache")
 
 BASE_DIR = os.path.dirname(__file__)
 # Vercel/AWS Lambda 等 serverless 仅 /tmp 可写，与 kn_producer_cache 保持一致
@@ -52,20 +55,28 @@ def save_revenue_cache(spv_id: str, revenue_data: list, currency: str = "USD", e
         }, f, ensure_ascii=False, indent=2)
 
 
-def refresh_revenue_cache(spv_id: str, exchange_rate: float = 1, currency: str = "USD"):
+def refresh_revenue_cache(spv_id: str, exchange_rate: float = 1, currency: str = "USD", log_fn=None):
     """
     从数据库计算 revenue_data 并保存到缓存
     返回: { "ok": True, "revenue_data": [...], "last_updated": "..." } 或 { "error": "..." }
     """
+    def _log(msg):
+        log.info("[收益缓存] %s", msg)
+        if log_fn:
+            log_fn(msg)
+    _log(f"开始刷新 spv_id={spv_id}")
     try:
         from kn_revenue import compute_revenue_data
     except ImportError as e:
+        log.warning("[收益缓存] 模块导入失败: %s", e)
         return {"error": str(e)}
 
     revenue_data = compute_revenue_data(spv_id=spv_id)
     if not revenue_data:
+        log.warning("[收益缓存] 无可用数据 spv_id=%s", spv_id)
         return {"error": "无可用数据"}
 
+    _log(f"保存缓存，共 {len(revenue_data)} 条")
     save_revenue_cache(spv_id, revenue_data, currency, exchange_rate or 1)
     return {
         "ok": True,

@@ -281,12 +281,13 @@ def refresh_producer_full_cache():
                     rate = float(os.environ.get(env_key))
                 except (ValueError, TypeError):
                     pass
+            _append_log(logs, f"  {sid}: 汇率={rate}, 币种={currency}")
 
             risk_data = []
             try:
                 from kn_risk_cache import refresh_risk_cache, load_risk_cache
                 _append_log(logs, f"  {sid}: 风控数据查询中（连接数据库）...")
-                refresh_risk_cache(sid, rate, currency)
+                refresh_risk_cache(sid, rate, currency, log_fn=lambda m: _append_log(logs, f"    [风控] {m}"))
                 merged, _ = load_risk_cache(sid)
                 if merged:
                     risk_data = merged
@@ -302,7 +303,7 @@ def refresh_producer_full_cache():
             try:
                 from kn_revenue_cache import refresh_revenue_cache, load_revenue_cache
                 _append_log(logs, f"  {sid}: 收益数据查询中（连接数据库）...")
-                r = refresh_revenue_cache(sid, rate, currency)
+                r = refresh_revenue_cache(sid, rate, currency, log_fn=lambda m: _append_log(logs, f"    [收益] {m}"))
                 if "revenue_data" in r and r["revenue_data"]:
                     revenue_data = r["revenue_data"]
                 if not revenue_data:
@@ -333,7 +334,7 @@ def refresh_producer_full_cache():
             try:
                 from kn_cashflow_cache import refresh_cashflow_cache, load_cashflow_cache
                 _append_log(logs, f"  {sid}: 现金流数据查询中（连接数据库）...")
-                r = refresh_cashflow_cache(sid, rate, currency, coll_rate)
+                r = refresh_cashflow_cache(sid, rate, currency, coll_rate, log_fn=lambda m: _append_log(logs, f"    [现金流] {m}"))
                 if "forecast" in r and r["forecast"]:
                     cashflow_data = r["forecast"]
                 if not cashflow_data:
@@ -486,6 +487,8 @@ def update_producer_risk_in_full_cache(spv_id: str, exchange_rate: float = 1, cu
         except Exception:
             pass
         pc["priority_indicators"] = priority_indicators
+        pc["exchange_rate"] = exchange_rate
+        pc["currency"] = currency
         producers[sid] = pc
         save_producer_full_cache({
             "producers": producers,
@@ -497,9 +500,9 @@ def update_producer_risk_in_full_cache(spv_id: str, exchange_rate: float = 1, cu
         pass
 
 
-def update_producer_revenue_in_full_cache(spv_id: str):
+def update_producer_revenue_in_full_cache(spv_id: str, exchange_rate: float = 1, currency: str = "USD"):
     """
-    刷新单个生产商的收益数据后，同步更新 producer_full_cache 中该生产商的 revenue_data。
+    刷新单个生产商的收益数据后，同步更新 producer_full_cache 中该生产商的 revenue_data 及汇率。
     供 api_refresh_revenue 调用，确保页面刷新后显示最新数据。
     """
     data, _ = load_producer_full_cache()
@@ -515,20 +518,22 @@ def update_producer_revenue_in_full_cache(spv_id: str):
         cached_rev, _ = load_revenue_cache(sid)
         if cached_rev is not None:
             pc["revenue_data"] = cached_rev
-            producers[sid] = pc
-            save_producer_full_cache({
-                "producers": producers,
-                "portfolio_cumulative_stats": data.get("portfolio_cumulative_stats"),
-                "allocation_by_platform": data.get("allocation_by_platform"),
-                "system_cutover_date": data.get("system_cutover_date"),
-            })
+        pc["exchange_rate"] = exchange_rate or 1
+        pc["currency"] = currency or "USD"
+        producers[sid] = pc
+        save_producer_full_cache({
+            "producers": producers,
+            "portfolio_cumulative_stats": data.get("portfolio_cumulative_stats"),
+            "allocation_by_platform": data.get("allocation_by_platform"),
+            "system_cutover_date": data.get("system_cutover_date"),
+        })
     except Exception:
         pass
 
 
-def update_producer_cashflow_in_full_cache(spv_id: str):
+def update_producer_cashflow_in_full_cache(spv_id: str, exchange_rate: float = 1, currency: str = "USD"):
     """
-    刷新单个生产商的现金流数据后，同步更新 producer_full_cache 中该生产商的 cashflow_data。
+    刷新单个生产商的现金流数据后，同步更新 producer_full_cache 中该生产商的 cashflow_data 及汇率。
     供 api_refresh_cashflow 调用，确保页面刷新后显示最新数据。
     """
     data, _ = load_producer_full_cache()
@@ -544,13 +549,15 @@ def update_producer_cashflow_in_full_cache(spv_id: str):
         cached_cf, _, _ = load_cashflow_cache(sid)
         if cached_cf is not None:
             pc["cashflow_data"] = cached_cf
-            producers[sid] = pc
-            save_producer_full_cache({
-                "producers": producers,
-                "portfolio_cumulative_stats": data.get("portfolio_cumulative_stats"),
-                "allocation_by_platform": data.get("allocation_by_platform"),
-                "system_cutover_date": data.get("system_cutover_date"),
-            })
+        pc["exchange_rate"] = exchange_rate or 1
+        pc["currency"] = currency or "USD"
+        producers[sid] = pc
+        save_producer_full_cache({
+            "producers": producers,
+            "portfolio_cumulative_stats": data.get("portfolio_cumulative_stats"),
+            "allocation_by_platform": data.get("allocation_by_platform"),
+            "system_cutover_date": data.get("system_cutover_date"),
+        })
     except Exception:
         pass
 

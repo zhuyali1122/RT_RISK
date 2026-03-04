@@ -4,6 +4,10 @@ RT_RISK Web 应用 - 角色化资产管理平台
 import json
 import logging
 import os
+
+# 确保风控/收益/现金流模块的进度日志可输出（若尚未配置）
+if not logging.getLogger().handlers:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 from functools import wraps
 from flask import (
     Flask, render_template, jsonify, request,
@@ -81,12 +85,15 @@ def _inject_app_root():
     except Exception:
         pass
 
+    u = session.get("user", {})
+    can_refresh_cache = u.get("role") == "admin" or "manage_system" in (u.get("permissions") or []) or "manage_partners" in (u.get("permissions") or [])
     return {
         "app_root": APP_ROOT,
         "lang": lang,
         "t": t,
         "translations_json": trans,
         "cache_meta": cache_meta,
+        "can_refresh_cache": can_refresh_cache,
     }
 
 
@@ -437,8 +444,8 @@ def admin_cache_refresh():
     app.logger.info("[admin_cache_refresh] 进入缓存管理页面")
 
     user = _user_with_role_label(session["user"], _get_lang())
-    if not _is_admin(user):
-        app.logger.warning("[admin_cache_refresh] 非 Admin 用户，重定向到 dashboard")
+    if not _can_refresh_cache(user):
+        app.logger.warning("[admin_cache_refresh] 无刷新权限，重定向到 dashboard")
         return redirect(url_for("dashboard"))
 
     cache_meta = None
@@ -950,7 +957,7 @@ def partner_manage():
         partners_revenue=partners_revenue,
         partners_cashflow=partners_cashflow,
         data_source="cache" if cache_exists else "database",
-        show_refresh=not cache_only,
+        show_refresh=_can_refresh_cache(user),
     )
 
 
@@ -979,6 +986,12 @@ def _is_admin(user=None):
     """当前用户是否为 Admin"""
     u = user or session.get("user", {})
     return u.get("role") == "admin" or "manage_system" in (u.get("permissions") or [])
+
+
+def _can_refresh_cache(user=None):
+    """当前用户是否为 Admin 或拥有 manage_partners（可刷新全量缓存）"""
+    u = user or session.get("user", {})
+    return _is_admin(u) or "manage_partners" in (u.get("permissions") or [])
 
 
 def _cache_only_mode(user=None):
@@ -1769,8 +1782,8 @@ def api_risk_query_loan(loan_id):
 @app.route("/api/partner/refresh-all-cache", methods=["POST"])
 @login_required
 def api_refresh_all_producer_cache():
-    """Admin 启动后台刷新：立即返回，刷新在后台执行，可通过 /api/partner/refresh-status 轮询"""
-    if not _is_admin():
+    """Admin/项目经理 启动后台刷新：立即返回，刷新在后台执行，可通过 /api/partner/refresh-status 轮询"""
+    if not _can_refresh_cache():
         return jsonify({"error": "权限不足"}), 403
     try:
         from kn_producer_cache import refresh_producer_full_cache_async
@@ -1783,8 +1796,8 @@ def api_refresh_all_producer_cache():
 @app.route("/api/partner/refresh-status")
 @login_required
 def api_refresh_status():
-    """轮询刷新状态与日志（Admin）"""
-    if not _is_admin():
+    """轮询刷新状态与日志（Admin/项目经理）"""
+    if not _can_refresh_cache():
         return jsonify({"error": "权限不足"}), 403
     try:
         from kn_producer_cache import get_refresh_status, load_refresh_log, load_cache_meta
@@ -1814,8 +1827,8 @@ def api_refresh_status():
 @app.route("/api/partner/<partner_id>/refresh-risk", methods=["POST"])
 @login_required
 def api_refresh_risk(partner_id):
-    """刷新生产商风控数据缓存：从数据库重新计算核心指标、DPD、Vintage 等并保存（仅 Admin）"""
-    if not _is_admin():
+    """刷新生产商风控数据缓存：从数据库重新计算核心指标、DPD、Vintage 等并保存（Admin/项目经理）"""
+    if not _can_refresh_cache():
         return jsonify({"error": "权限不足"}), 403
     spv_map = _get_partner_spv_map()
     spv_id = spv_map.get(partner_id) or spv_map.get(str(partner_id).lower()) or partner_id
@@ -1842,8 +1855,8 @@ def api_refresh_risk(partner_id):
 @app.route("/api/partner/<partner_id>/refresh-revenue", methods=["POST"])
 @login_required
 def api_refresh_revenue(partner_id):
-    """刷新生产商收益数据缓存：从数据库重新计算并保存（仅 Admin）"""
-    if not _is_admin():
+    """刷新生产商收益数据缓存：从数据库重新计算并保存（Admin/项目经理）"""
+    if not _can_refresh_cache():
         return jsonify({"error": "权限不足"}), 403
     spv_id = _get_partner_spv_map().get(partner_id) or partner_id
     valid_spv = set(_get_partner_spv_map().values() or []) | set(load_producers().keys() or [])
@@ -1858,7 +1871,7 @@ def api_refresh_revenue(partner_id):
         result = refresh_revenue_cache(spv_id, exchange_rate, currency)
         if "error" in result:
             return jsonify(result), 500
-        update_producer_revenue_in_full_cache(spv_id)
+        update_producer_revenue_in_full_cache(spv_id, exchange_rate, currency)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1867,8 +1880,8 @@ def api_refresh_revenue(partner_id):
 @app.route("/api/partner/<partner_id>/refresh-cashflow", methods=["POST"])
 @login_required
 def api_refresh_cashflow(partner_id):
-    """刷新生产商现金流数据缓存：从数据库重新计算并保存（仅 Admin）"""
-    if not _is_admin():
+    """刷新生产商现金流数据缓存：从数据库重新计算并保存（Admin/项目经理）"""
+    if not _can_refresh_cache():
         return jsonify({"error": "权限不足"}), 403
     spv_id = _get_partner_spv_map().get(partner_id) or partner_id
     valid_spv = set(_get_partner_spv_map().values() or []) | set(load_producers().keys() or [])
@@ -1892,7 +1905,7 @@ def api_refresh_cashflow(partner_id):
         result = refresh_cashflow_cache(spv_id, exchange_rate, currency, coll_rate)
         if "error" in result:
             return jsonify(result), 500
-        update_producer_cashflow_in_full_cache(spv_id)
+        update_producer_cashflow_in_full_cache(spv_id, exchange_rate, currency)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

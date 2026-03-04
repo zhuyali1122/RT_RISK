@@ -3,8 +3,11 @@
 打开页面时直接读缓存，无需访问数据库；用户点击刷新时从 DB 拉取并更新缓存
 """
 import json
+import logging
 import os
 from datetime import datetime
+
+log = logging.getLogger("kn_cashflow_cache")
 
 BASE_DIR = os.path.dirname(__file__)
 # Vercel/AWS Lambda 等 serverless 仅 /tmp 可写，与 kn_producer_cache 保持一致
@@ -55,20 +58,28 @@ def save_cashflow_cache(spv_id: str, forecast: list, total_expected: float = 0,
 
 
 def refresh_cashflow_cache(spv_id: str, exchange_rate: float = 1, currency: str = "USD",
-                          collection_rate: float = 0.98):
+                          collection_rate: float = 0.98, log_fn=None):
     """
     从数据库计算现金流预测并保存到缓存
     返回: { "ok": True, "forecast": [...], "last_updated": "..." } 或 { "error": "..." }
     """
+    def _log(msg):
+        log.info("[现金流缓存] %s", msg)
+        if log_fn:
+            log_fn(msg)
+    _log(f"开始刷新 spv_id={spv_id}")
+
     try:
         from kn_cashflow import compute_cashflow_forecast
     except ImportError as e:
+        log.warning("[现金流缓存] 模块导入失败: %s", e)
         return {"error": str(e)}
 
     cf = compute_cashflow_forecast(spv_id=spv_id, months_ahead=12, collection_rate=collection_rate)
     forecast = cf.get("forecast", [])
     total_expected = cf.get("total_expected", 0)
 
+    _log(f"保存缓存，共 {len(forecast)} 条")
     save_cashflow_cache(spv_id, forecast, total_expected, currency, exchange_rate or 1, collection_rate)
     return {
         "ok": True,

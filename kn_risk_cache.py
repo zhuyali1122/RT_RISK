@@ -3,8 +3,11 @@
 打开页面时直接读缓存，无需访问数据库；用户点击刷新时从 DB 拉取并更新缓存
 """
 import json
+import logging
 import os
 from datetime import datetime
+
+log = logging.getLogger("kn_risk_cache")
 
 BASE_DIR = os.path.dirname(__file__)
 # Vercel/AWS Lambda 等 serverless 仅 /tmp 可写，与 kn_producer_cache 保持一致
@@ -69,21 +72,30 @@ def save_risk_cache(spv_id: str, risk_data_local: list, risk_data_usd: list, cur
         }, f, ensure_ascii=False, indent=2)
 
 
-def refresh_risk_cache(spv_id: str, exchange_rate: float = 1, currency: str = "USD"):
+def refresh_risk_cache(spv_id: str, exchange_rate: float = 1, currency: str = "USD", log_fn=None):
     """
     从数据库计算 risk_data，同时保存 local currency（如 MXN）和 USD 两部分
     返回: { "ok": True, "risk_data": [...], "last_updated": "..." } 或 { "error": "..." }
     """
+    def _log(msg):
+        log.info("[风控缓存] %s", msg)
+        if log_fn:
+            log_fn(msg)
+    _log(f"开始刷新 spv_id={spv_id}")
     try:
         from kn_risk_query import query_kn_core_metrics, get_available_stat_dates
         from kn_vintage import compute_vintage_data
         from copy import deepcopy
     except ImportError as e:
+        log.warning("[风控缓存] 模块导入失败: %s", e)
         return {"error": f"模块导入失败: {e}"}
 
     try:
-        dates = get_available_stat_dates(spv_id=spv_id, limit=14)
+        _log("获取可用 stat_date 列表...")
+        dates = get_available_stat_dates(spv_id=spv_id, limit=3)
+        _log(f"共 {len(dates)} 个日期待查询")
     except Exception as e:
+        log.warning("[风控缓存] 获取日期失败: %s", e)
         return {"error": f"获取可用日期失败 ({spv_id}): {e}"}
     if not dates:
         dates = ["2026-02-25"]
@@ -91,7 +103,8 @@ def refresh_risk_cache(spv_id: str, exchange_rate: float = 1, currency: str = "U
     risk_data_local = []
     last_error = None
     try:
-        for d in dates:
+        for i, d in enumerate(dates):
+            _log(f"查询 stat_date={d} ({i + 1}/{len(dates)})")
             row = query_kn_core_metrics(stat_date=d, spv_id=spv_id)
             if "error" in row:
                 last_error = row.get("error", "未知错误")
@@ -145,6 +158,7 @@ def refresh_risk_cache(spv_id: str, exchange_rate: float = 1, currency: str = "U
                     c[k] = _to_usd(c[k], rate)
         risk_data_usd.append(r)
 
+    _log(f"保存缓存，共 {len(risk_data_local)} 条")
     save_risk_cache(spv_id, risk_data_local, risk_data_usd, currency, rate)
     return {
         "ok": True,

@@ -2,7 +2,11 @@
 KN 风控核心指标查询 - 从 calc_overdue 和 raw_loan 获取真实数据
 spv_id=kn，stat_date 按日筛选
 """
+import logging
+
 from kn_data_utils import get_calc_table
+
+log = logging.getLogger("kn_risk_query")
 
 _get_calc_table = get_calc_table  # 兼容 scripts 等旧调用
 
@@ -14,6 +18,7 @@ def _compute_m0_accrued_interest(calc_table: str, stat_date: str, spv_id: str) -
     - 已到期未还：due_date <= stat_date 的应还利息 - 已还
     - 未来应还：due_date > stat_date 的应还利息
     数据来源：raw_loan.repayment_schedule (JSONB)、raw_repayment
+    优化：用 INNER JOIN 替代 IN (SELECT)，减少子查询开销
     """
     try:
         from db_connect import get_connection
@@ -23,14 +28,14 @@ def _compute_m0_accrued_interest(calc_table: str, stat_date: str, spv_id: str) -
         return 0
 
     try:
-        # 1) 已到期未还：due_date <= stat_date 的应还利息 - 已还
+        # 合并为单次查询：已到期未还 + 未来应还
         cur.execute("""
             WITH m0_loans AS (
                 SELECT c.loan_id
                 FROM """ + calc_table + """ c
                 WHERE c.stat_date = %s AND c.spv_id = %s AND c.dpd = 0 AND c.loan_status IN (1, 2)
             ),
-            schedule_past AS (
+            schedule_expanded AS (
                 SELECT
                     rl.loan_id,
                     (COALESCE(elem->>'term', elem->>'period', '0')::int) AS period_no,
@@ -38,56 +43,39 @@ def _compute_m0_accrued_interest(calc_table: str, stat_date: str, spv_id: str) -
                         (elem->>'interest')::numeric,
                         (elem->>'interest_due')::numeric,
                         0
-                    ) AS interest_due
+                    ) AS interest_due,
+                    (elem->>'due_date')::date AS due_date
                 FROM raw_loan rl
+                INNER JOIN m0_loans m ON rl.loan_id = m.loan_id
                 CROSS JOIN LATERAL jsonb_array_elements(
                     COALESCE(rl.repayment_schedule->'schedule', '[]'::jsonb)
                 ) AS elem
-                WHERE rl.spv_id = %s
-                AND rl.loan_id IN (SELECT loan_id FROM m0_loans)
-                AND elem->>'due_date' IS NOT NULL
-                AND (elem->>'due_date')::date <= %s::date
+                WHERE rl.spv_id = %s AND elem->>'due_date' IS NOT NULL
             ),
-            interest_due_total AS (
-                SELECT COALESCE(SUM(interest_due), 0) AS total FROM schedule_past
+            past_due AS (
+                SELECT loan_id, period_no, interest_due
+                FROM schedule_expanded WHERE due_date <= %s::date
             ),
+            interest_due_total AS (SELECT COALESCE(SUM(interest_due), 0) AS t FROM past_due),
             interest_paid_total AS (
-                SELECT COALESCE(SUM(rp.interest_repayment), 0) AS total
+                SELECT COALESCE(SUM(rp.interest_repayment), 0) AS t
                 FROM raw_repayment rp
-                INNER JOIN schedule_past sp ON rp.loan_id = sp.loan_id AND rp.repayment_term = sp.period_no
+                INNER JOIN past_due pd ON rp.loan_id = pd.loan_id AND rp.repayment_term = pd.period_no
                 WHERE rp.spv_id = %s
-            )
-            SELECT GREATEST(0, (SELECT total FROM interest_due_total) - COALESCE((SELECT total FROM interest_paid_total), 0)) AS accrued
-        """, (stat_date, spv_id, spv_id, stat_date, spv_id))
-        row = cur.fetchone()
-        accrued = max(0, float(row[0] or 0)) if row else 0
-
-        # 2) 未来应还：due_date > stat_date 的应还利息（仅 M0 贷款）
-        cur.execute("""
-            WITH m0_loans AS (
-                SELECT c.loan_id
-                FROM """ + calc_table + """ c
-                WHERE c.stat_date = %s AND c.spv_id = %s AND c.dpd = 0 AND c.loan_status IN (1, 2)
             ),
-            future_interest AS (
-                SELECT COALESCE(SUM(
-                    (COALESCE(elem->>'interest', elem->>'interest_due', '0'))::numeric
-                ), 0) AS total
-                FROM raw_loan rl
-                CROSS JOIN LATERAL jsonb_array_elements(
-                    COALESCE(rl.repayment_schedule->'schedule', '[]'::jsonb)
-                ) elem
-                WHERE rl.spv_id = %s AND rl.loan_id IN (SELECT loan_id FROM m0_loans)
-                AND elem->>'due_date' IS NOT NULL AND (elem->>'due_date')::date > %s::date
+            future_total AS (
+                SELECT COALESCE(SUM(interest_due), 0) AS t
+                FROM schedule_expanded WHERE due_date > %s::date
             )
-            SELECT total FROM future_interest
-        """, (stat_date, spv_id, spv_id, stat_date))
-        row2 = cur.fetchone()
-        future = float(row2[0] or 0) if row2 else 0
+            SELECT GREATEST(0, (SELECT t FROM interest_due_total) - COALESCE((SELECT t FROM interest_paid_total), 0))
+                   + COALESCE((SELECT t FROM future_total), 0)
+        """, (stat_date, spv_id, spv_id, stat_date, spv_id, stat_date))
+        row = cur.fetchone()
+        total = max(0, float(row[0] or 0)) if row else 0
 
         cur.close()
         conn.close()
-        return accrued + future
+        return total
     except Exception:
         try:
             conn.rollback()
@@ -105,116 +93,69 @@ def _compute_m0_accrued_interest(calc_table: str, stat_date: str, spv_id: str) -
     return 0
 
 
-def _compute_all_accrued_interest(calc_table: str, stat_date: str, spv_id: str) -> float:
+def _compute_all_accrued_and_remaining_interest(calc_table: str, stat_date: str, spv_id: str) -> tuple:
     """
-    全量应收利息 = 所有活跃贷款的「应还未还利息」之和（不限 M0）
-    用于方案二（ABS）覆盖倍数计算
-    直接使用 raw_loan.repayment_schedule + raw_repayment 计算，不取 calc_overdue.accrued_interest
+    一次查询返回 (all_accrued_interest, all_remaining_interest)
+    全量应收 = 已到期未还（due_date<=stat_date 应还 - 已还）；剩余全量 = 全量应收 + 未来应还
+    优化：INNER JOIN 替代 IN (SELECT)，合并两次查询为一次
     """
     try:
         from db_connect import get_connection
         conn = get_connection()
         cur = conn.cursor()
     except Exception:
-        return 0
+        return 0.0, 0.0
 
-    try:
-        cur.execute("""
-            WITH active_loans AS (
-                SELECT c.loan_id
-                FROM """ + calc_table + """ c
-                WHERE c.stat_date = %s AND c.spv_id = %s AND c.loan_status IN (1, 2)
-            ),
-            schedule_past AS (
-                SELECT
-                    rl.loan_id,
-                    (COALESCE(elem->>'term', elem->>'period', '0')::int) AS period_no,
-                    COALESCE(
-                        (elem->>'interest')::numeric,
-                        (elem->>'interest_due')::numeric,
-                        0
-                    ) AS interest_due
-                FROM raw_loan rl
-                CROSS JOIN LATERAL jsonb_array_elements(
-                    COALESCE(rl.repayment_schedule->'schedule', '[]'::jsonb)
-                ) AS elem
-                WHERE rl.spv_id = %s
-                AND rl.loan_id IN (SELECT loan_id FROM active_loans)
-                AND elem->>'due_date' IS NOT NULL
-                AND (elem->>'due_date')::date <= %s::date
-            ),
-            interest_due_total AS (
-                SELECT COALESCE(SUM(interest_due), 0) AS total FROM schedule_past
-            ),
-            interest_paid_total AS (
-                SELECT COALESCE(SUM(rp.interest_repayment), 0) AS total
-                FROM raw_repayment rp
-                INNER JOIN schedule_past sp ON rp.loan_id = sp.loan_id AND rp.repayment_term = sp.period_no
-                WHERE rp.spv_id = %s
-            )
-            SELECT (SELECT total FROM interest_due_total) - (SELECT total FROM interest_paid_total) AS all_accrued
-        """, (stat_date, spv_id, spv_id, stat_date, spv_id))
-        row = cur.fetchone()
-        if row and row[0] is not None:
-            val = max(0, float(row[0]))
-            cur.close()
-            conn.close()
-            return val
-    except Exception:
-        try:
-            conn.rollback()
-        except Exception:
-            pass
-    finally:
-        try:
-            cur.close()
-        except Exception:
-            pass
-        try:
-            conn.close()
-        except Exception:
-            pass
-    return 0
-
-
-def _compute_all_remaining_interest(calc_table: str, stat_date: str, spv_id: str) -> float:
-    """
-    剩余全量应收利息 = 已到期未还利息 + 未来应还利息
-    用于方案二（ABS）覆盖倍数，与加权久期×日利率×30 的量级一致
-    - 已到期未还：due_date <= stat_date 的应还利息 - 已还
-    - 未来应还：due_date > stat_date 的应还利息
-    """
-    accrued = _compute_all_accrued_interest(calc_table, stat_date, spv_id)
-    try:
-        from db_connect import get_connection
-        conn = get_connection()
-        cur = conn.cursor()
-    except Exception:
-        return accrued
     try:
         cur.execute("""
             WITH active_loans AS (
                 SELECT c.loan_id FROM """ + calc_table + """ c
                 WHERE c.stat_date = %s AND c.spv_id = %s AND c.loan_status IN (1, 2)
             ),
-            future_interest AS (
-                SELECT COALESCE(SUM(
-                    (COALESCE(elem->>'interest', elem->>'interest_due', '0'))::numeric
-                ), 0) AS total
+            schedule_expanded AS (
+                SELECT
+                    rl.loan_id,
+                    (COALESCE(elem->>'term', elem->>'period', '0')::int) AS period_no,
+                    COALESCE(
+                        (elem->>'interest')::numeric,
+                        (elem->>'interest_due')::numeric,
+                        0
+                    ) AS interest_due,
+                    (elem->>'due_date')::date AS due_date
                 FROM raw_loan rl
+                INNER JOIN active_loans a ON rl.loan_id = a.loan_id
                 CROSS JOIN LATERAL jsonb_array_elements(
                     COALESCE(rl.repayment_schedule->'schedule', '[]'::jsonb)
-                ) elem
-                WHERE rl.spv_id = %s AND rl.loan_id IN (SELECT loan_id FROM active_loans)
-                AND elem->>'due_date' IS NOT NULL AND (elem->>'due_date')::date > %s::date
+                ) AS elem
+                WHERE rl.spv_id = %s AND elem->>'due_date' IS NOT NULL
+            ),
+            past_due AS (
+                SELECT loan_id, period_no, interest_due
+                FROM schedule_expanded WHERE due_date <= %s::date
+            ),
+            interest_due_total AS (SELECT COALESCE(SUM(interest_due), 0) AS t FROM past_due),
+            interest_paid_total AS (
+                SELECT COALESCE(SUM(rp.interest_repayment), 0) AS t
+                FROM raw_repayment rp
+                INNER JOIN past_due pd ON rp.loan_id = pd.loan_id AND rp.repayment_term = pd.period_no
+                WHERE rp.spv_id = %s
+            ),
+            future_total AS (
+                SELECT COALESCE(SUM(interest_due), 0) AS t
+                FROM schedule_expanded WHERE due_date > %s::date
             )
-            SELECT total FROM future_interest
-        """, (stat_date, spv_id, spv_id, stat_date))
+            SELECT
+                GREATEST(0, (SELECT t FROM interest_due_total) - COALESCE((SELECT t FROM interest_paid_total), 0)) AS accrued,
+                GREATEST(0, (SELECT t FROM interest_due_total) - COALESCE((SELECT t FROM interest_paid_total), 0))
+                    + COALESCE((SELECT t FROM future_total), 0) AS remaining
+        """, (stat_date, spv_id, spv_id, stat_date, spv_id, stat_date))
         row = cur.fetchone()
-        future = float(row[0] or 0) if row else 0
         cur.close()
         conn.close()
-        return accrued + future
+        if row and len(row) >= 2:
+            accrued = max(0, float(row[0] or 0))
+            remaining = max(0, float(row[1] or 0))
+            return accrued, remaining
     except Exception:
         try:
             conn.rollback()
@@ -228,6 +169,12 @@ def _compute_all_remaining_interest(calc_table: str, stat_date: str, spv_id: str
             conn.close()
         except Exception:
             pass
+    return 0.0, 0.0
+
+
+def _compute_all_accrued_interest(calc_table: str, stat_date: str, spv_id: str) -> float:
+    """兼容 scripts：仅返回全量应收利息"""
+    accrued, _ = _compute_all_accrued_and_remaining_interest(calc_table, stat_date, spv_id)
     return accrued
 
 
@@ -235,6 +182,7 @@ def get_available_stat_dates(spv_id: str = "kn", limit: int = 30):
     """
     获取可用的 stat_date 列表（用于日期选择器）
     动态扫描所有 calc_overdue 表，支持 KN、Docking 等不同 spv_id
+    优化：先批量获取存在的表名，再只对存在的表查 stat_date，减少 information_schema 查询
     返回: [ "2026-02-25", "2026-02-24", ... ] 或 []
     """
     try:
@@ -243,26 +191,26 @@ def get_available_stat_dates(spv_id: str = "kn", limit: int = 30):
     except Exception:
         return []
     cur = conn.cursor()
+    # 一次查询获取所有 calc_overdue 表名
+    tables_to_check = [f"calc_overdue_y{y}m{m:02d}" for y in [2024, 2025, 2026, 2027] for m in range(1, 13)]
+    placeholders = ",".join(["%s"] * len(tables_to_check))
+    cur.execute(
+        f"SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN ({placeholders})",
+        tables_to_check
+    )
+    existing_tables = [r[0] for r in cur.fetchall() if r and r[0]]
     dates = []
-    for year in [2024, 2025, 2026, 2027]:
-        for month in range(1, 13):
-            table = f"calc_overdue_y{year}m{month:02d}"
-            try:
-                cur.execute(
-                    "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name = %s",
-                    (table,)
-                )
-                if not cur.fetchone():
-                    continue
-                cur.execute(
-                    f"SELECT DISTINCT stat_date::text FROM {table} WHERE spv_id = %s ORDER BY stat_date DESC LIMIT %s",
-                    (spv_id, limit)
-                )
-                for r in cur.fetchall():
-                    if r and r[0]:
-                        dates.append(r[0][:10])
-            except Exception:
-                continue
+    for table in existing_tables:
+        try:
+            cur.execute(
+                f"SELECT DISTINCT stat_date::text FROM {table} WHERE spv_id = %s ORDER BY stat_date DESC LIMIT %s",
+                (spv_id, limit)
+            )
+            for r in cur.fetchall():
+                if r and r[0]:
+                    dates.append(r[0][:10])
+        except Exception:
+            continue
     cur.close()
     conn.close()
     # 去重并排序
@@ -294,10 +242,12 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
     stat_date: 如 '2026-02-25'
     返回: { stat_date, cumulative_disbursement, current_balance, ... } 或 { error: str }
     """
+    log.info("[风控] 查询核心指标 spv_id=%s stat_date=%s", spv_id, stat_date)
     try:
         from db_connect import get_connection
         conn = get_connection()
     except Exception as e:
+        log.warning("[风控] 数据库连接失败: %s", e)
         return {"error": f"数据库连接失败: {e}"}
 
     stat_d = stat_date.strip() if isinstance(stat_date, str) else str(stat_date)
@@ -354,16 +304,16 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
     (active_loans, current_balance, m0_balance,
      o1, o3, o7, o15, o30,
      bal_m0, bal_m1, bal_m2, bal_m3, bal_m4, bal_m5, bal_m6) = row
+    log.info("[风控] calc_overdue 聚合完成: %d 笔, 余额 %.0f", active_loans or 0, float(current_balance or 0))
 
     total_bal = float(current_balance or 0)
     m0_ratio = float(m0_balance or 0) / total_bal if total_bal else 0
 
     # M0 应收利息 = 所有 M0 贷款的「应还未还利息」之和
+    log.info("[风控] 计算 M0 应收利息...")
     m0_accrued_interest = _compute_m0_accrued_interest(table, stat_d, spv_id)
-    # 全量应收利息（已到期未还）= 所有活跃贷款的 due_date<=stat_date 应还未还
-    all_accrued_interest = _compute_all_accrued_interest(table, stat_d, spv_id)
-    # 剩余全量应收利息 = 已到期未还 + 未来应还（用于方案二 ABS 覆盖倍数，与加权久期×利率量级一致）
-    all_remaining_interest = _compute_all_remaining_interest(table, stat_d, spv_id)
+    log.info("[风控] 计算全量应收/剩余利息...")
+    all_accrued_interest, all_remaining_interest = _compute_all_accrued_and_remaining_interest(table, stat_d, spv_id)
     n = int(active_loans or 0)
     overdue_1_plus_ratio = (int(o1 or 0) / n) if n else 0
     overdue_3_plus_ratio = (int(o3 or 0) / n) if n else 0
@@ -387,14 +337,15 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
 
     # avg_duration: 按 disbursement_time 与 loan_maturity_date 计算合同久期（月），不用 term_months
     # 若 loan_maturity_date 为空则取 repayment_schedule 最后一期 due_date
+    # 优化：用 jsonb 下标取最后元素，避免每行展开 jsonb_array_elements
     cur.execute("""
         SELECT AVG(dm) AS avg_duration
         FROM (
             SELECT
                 (COALESCE(r.loan_maturity_date::date,
-                    (SELECT MAX((elem->>'due_date')::date)
-                     FROM jsonb_array_elements(COALESCE(r.repayment_schedule->'schedule', '[]'::jsonb)) elem
-                     WHERE elem->>'due_date' IS NOT NULL)
+                    CASE WHEN jsonb_array_length(COALESCE(r.repayment_schedule->'schedule', '[]'::jsonb)) > 0
+                         THEN (((r.repayment_schedule->'schedule')->(jsonb_array_length(r.repayment_schedule->'schedule')-1))->>'due_date')::date
+                         ELSE NULL END
                 ) - r.disbursement_time::date) * 1.0 / 30.44 AS dm
             FROM """ + table + """ c
             JOIN raw_loan r ON r.loan_id = c.loan_id AND r.spv_id = c.spv_id
@@ -408,6 +359,7 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
     """, (stat_d, spv_id))
     avg_duration_row = cur.fetchone()
     avg_duration = float(avg_duration_row[0] or 0) if avg_duration_row else 0
+    log.info("[风控] 平均期限 %.1f 月", avg_duration)
 
     # cumulative_disbursement: 截至 stat_date 的所有放款
     cur.execute("""
@@ -466,6 +418,7 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
 
     cur.close()
     conn.close()
+    log.info("[风控] 核心指标查询完成 stat_date=%s", stat_d)
 
     dpd_distribution = []
     for bucket, loan_count, balance in bucket_rows:
@@ -781,12 +734,12 @@ def query_loans_by_maturity_month(spv_id: str, stat_date: str, maturity_month: s
     limit = max(1, min(per_page, 500))
 
     # maturity_month 来自 loan_maturity_date 或 repayment_schedule 最后一期 due_date
+    # 优化：用 jsonb 下标取最后元素，避免每行展开 jsonb_array_elements
     mm_cond = """
         COALESCE(to_char(r.loan_maturity_date::date, 'YYYY-MM'),
-            (SELECT to_char((elem->>'due_date')::date, 'YYYY-MM')
-             FROM jsonb_array_elements(COALESCE(r.repayment_schedule->'schedule', '[]'::jsonb)) elem
-             ORDER BY (elem->>'due_date')::date DESC
-             LIMIT 1)
+            CASE WHEN jsonb_array_length(COALESCE(r.repayment_schedule->'schedule', '[]'::jsonb)) > 0
+                 THEN to_char((((r.repayment_schedule->'schedule')->(jsonb_array_length(r.repayment_schedule->'schedule')-1))->>'due_date')::date, 'YYYY-MM')
+                 ELSE NULL END
         ) = %s
     """
 

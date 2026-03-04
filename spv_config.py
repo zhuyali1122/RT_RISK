@@ -107,6 +107,26 @@ def _load_revenue_data_from_json():
     return revenue_by_id
 
 
+def _load_fx_from_json():
+    """从 producers.json 加载 exchange_rate，用于 KN/Docking 等 DB 缺省时补充 FX 数据"""
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    fx_by_id = {}
+    producers_path = os.path.join(BASE_DIR, "config", "producers.json")
+    if os.path.exists(producers_path):
+        try:
+            with open(producers_path, "r", encoding="utf-8") as f:
+                for pid, p in (json.load(f).get("producers") or {}).items():
+                    rate = p.get("exchange_rate")
+                    if rate is not None and rate != "":
+                        try:
+                            fx_by_id[str(pid).strip().lower()] = float(rate)
+                        except (ValueError, TypeError):
+                            pass
+        except Exception:
+            pass
+    return fx_by_id
+
+
 def load_producers_from_spv_config(skip_revenue_compute=False, json_only=False):
     """
     优先从 spv_config 读取，若为空则 fallback 到 config/producers.json
@@ -131,8 +151,21 @@ def load_producers_from_spv_config(skip_revenue_compute=False, json_only=False):
     db_producers = load_spv_config()
     if db_producers:
         revenue_by_id = _load_revenue_data_from_json()
+        fx_by_id = _load_fx_from_json()
         for spv_id, p in db_producers.items():
             sid = str(spv_id).strip().lower()
+            currency = (p.get("currency") or "USD") or "USD"
+            rate = p.get("exchange_rate") or 1
+            # 当本币非 USD 且 DB 汇率为 1 或缺失时，从 producers.json 补充 FX 数据
+            if currency != "USD" and (not rate or rate <= 1) and sid in fx_by_id:
+                p["exchange_rate"] = fx_by_id[sid]
+            # 环境变量覆盖
+            env_key = f"{sid.upper()}_EXCHANGE_RATE"
+            if os.getenv(env_key):
+                try:
+                    p["exchange_rate"] = float(os.getenv(env_key))
+                except (ValueError, TypeError):
+                    pass
             rev = []
             if not skip_revenue_compute:
                 try:

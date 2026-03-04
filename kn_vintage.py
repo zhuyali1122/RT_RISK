@@ -1,17 +1,16 @@
 """
 KN Vintage 账龄分析 - 从 calc_overdue、raw_loan 计算，结果缓存到本地文件
+Vercel/serverless 下使用 /tmp/rt_risk_cache，与其它缓存模块一致
 """
 import json
 import os
 from datetime import datetime
 from decimal import Decimal
 
-BASE_DIR = os.path.dirname(__file__)
-CACHE_DIR = os.path.join(BASE_DIR, "config", "cache")
+from kn_data_utils import get_calc_table, get_cache_dir
+
+CACHE_DIR = get_cache_dir()
 CACHE_FILE_PREFIX = "vintage_cache_"
-
-
-from kn_data_utils import get_calc_table
 
 
 def compute_vintage_data(spv_id: str, stat_date: str):

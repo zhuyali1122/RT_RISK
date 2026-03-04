@@ -10,8 +10,9 @@ import threading
 from datetime import datetime, timedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Vercel 等 serverless 仅 /tmp 可写，部署环境 config/cache 在 .gitignore 中不存在
-_CACHE_BASE = os.path.join("/tmp", "rt_risk_cache") if os.getenv("VERCEL") else os.path.join(BASE_DIR, "config", "cache")
+# Vercel/AWS Lambda 等 serverless 仅 /tmp 可写，部署环境 config/cache 在 .gitignore 中不存在
+_IS_SERVERLESS = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"))
+_CACHE_BASE = os.path.join("/tmp", "rt_risk_cache") if _IS_SERVERLESS else os.path.join(BASE_DIR, "config", "cache")
 CACHE_DIR = _CACHE_BASE
 DAILY_CACHE_DIR = os.path.join(CACHE_DIR, "daily")
 CACHE_FILE = os.path.join(CACHE_DIR, "producer_full_cache.json")
@@ -209,11 +210,31 @@ def _append_log(logs: list, msg: str, truncate_first: bool = False):
 def refresh_producer_full_cache():
     """
     从数据库重新加载所有生产商的风控、收益、现金流数据并写入缓存
+
+    刷新流程：
+    1. 缓存 get_latest_data_date，供 kn_revenue/kn_cashflow 复用
+    2. 加载生产商列表：load_producers_from_spv_config(skip_revenue_compute=True)，避免重复计算收益
+    3. 按生产商逐个：
+       - 风控：refresh_risk_cache -> load_risk_cache
+       - 收益：refresh_revenue_cache；若为空则回退 load_revenue_cache 或 prod.revenue_data（producers.json）
+       - 现金流：refresh_cashflow_cache；若为空则回退 load_cashflow_cache
+       - 优先级：load_priority_indicators_for_spv，无则 compute_priority_from_risk_data
+    4. 投资组合统计：load_invested_spv_ids、query_portfolio_cumulative_stats、load_all_spv_internal_params
+    5. 写入 producer_full_cache.json 及 cache_meta.json
+
     返回: { "ok": True, "last_updated": "...", "system_cutover_date": "...", "producer_count": N, "logs": [...] } 或 { "error": "..." }
     """
     logs = []
     try:
         _append_log(logs, "开始刷新全量缓存...", truncate_first=True)
+
+        # 0) 缓存最新数据日，供 kn_revenue/kn_cashflow 等复用，避免重复查询
+        from kn_data_utils import get_latest_data_date, set_refresh_latest_date, clear_refresh_latest_date
+        try:
+            _latest_dt = get_latest_data_date()
+            set_refresh_latest_date(_latest_dt)
+        except Exception:
+            pass
 
         # 1) 测试数据库连接
         _append_log(logs, "正在连接数据库...")
@@ -229,13 +250,13 @@ def refresh_producer_full_cache():
         except Exception as e:
             _append_log(logs, f"数据库连接失败: {e}（将尝试从配置文件加载生产商）")
 
-        # 2) 加载生产商列表
+        # 2) 加载生产商列表（skip_revenue_compute=True：后续会逐个 refresh_revenue_cache，避免重复计算）
         _append_log(logs, "正在加载生产商配置...")
         from spv_config import load_spv_config, load_producers_from_spv_config
         db_producers = load_spv_config()
         if db_producers:
             _append_log(logs, f"从数据库 spv_config 表加载到 {len(db_producers)} 个生产商")
-        producers_raw = load_producers_from_spv_config()
+        producers_raw = load_producers_from_spv_config(skip_revenue_compute=True)
         if not producers_raw:
             from app import load_producers
             producers_raw = load_producers()
@@ -252,9 +273,14 @@ def refresh_producer_full_cache():
         all_stat_dates = []
         for spv_id, prod in producers_raw.items():
             sid = str(spv_id).strip().lower()
-            cfg = _get_producer_config(sid)
-            rate = float((cfg.get("exchange_rate") if cfg else 1) or 1)
-            currency = (cfg.get("currency") if cfg else "USD") or "USD"
+            rate = float(prod.get("exchange_rate", 1) or 1)
+            currency = (prod.get("currency") or "USD") or "USD"
+            env_key = f"{sid.upper()}_EXCHANGE_RATE"
+            if os.environ.get(env_key):
+                try:
+                    rate = float(os.environ.get(env_key))
+                except (ValueError, TypeError):
+                    pass
 
             risk_data = []
             try:
@@ -274,14 +300,30 @@ def refresh_producer_full_cache():
 
             revenue_data = []
             try:
-                from kn_revenue_cache import refresh_revenue_cache
+                from kn_revenue_cache import refresh_revenue_cache, load_revenue_cache
                 _append_log(logs, f"  {sid}: 收益数据查询中（连接数据库）...")
                 r = refresh_revenue_cache(sid, rate, currency)
-                if "revenue_data" in r:
+                if "revenue_data" in r and r["revenue_data"]:
                     revenue_data = r["revenue_data"]
+                if not revenue_data:
+                    cached_rev, _ = load_revenue_cache(sid)
+                    if cached_rev:
+                        revenue_data = cached_rev
+                        _append_log(logs, f"  {sid}: 收益使用单独缓存 {len(revenue_data)} 条")
+                if not revenue_data and prod.get("revenue_data"):
+                    revenue_data = prod.get("revenue_data", [])
+                    _append_log(logs, f"  {sid}: 收益使用 producers 配置 {len(revenue_data)} 条")
                 _append_log(logs, f"  {sid}: 收益 {len(revenue_data)} 条")
             except Exception as e:
                 _append_log(logs, f"  {sid}: 收益失败 - {e}")
+                try:
+                    from kn_revenue_cache import load_revenue_cache
+                    cached_rev, _ = load_revenue_cache(sid)
+                    if cached_rev:
+                        revenue_data = cached_rev
+                        _append_log(logs, f"  {sid}: 收益回退到单独缓存 {len(revenue_data)} 条")
+                except Exception:
+                    pass
 
             coll_rate = 0.98
             if revenue_data:
@@ -289,14 +331,27 @@ def refresh_producer_full_cache():
                 coll_rate = cr if cr >= 0.5 else (revenue_data[-2].get("collection_rate", 0.98) or 0.98 if len(revenue_data) >= 2 else 0.98)
             cashflow_data = []
             try:
-                from kn_cashflow_cache import refresh_cashflow_cache
+                from kn_cashflow_cache import refresh_cashflow_cache, load_cashflow_cache
                 _append_log(logs, f"  {sid}: 现金流数据查询中（连接数据库）...")
                 r = refresh_cashflow_cache(sid, rate, currency, coll_rate)
-                if "forecast" in r:
+                if "forecast" in r and r["forecast"]:
                     cashflow_data = r["forecast"]
+                if not cashflow_data:
+                    cached_cf, _, _ = load_cashflow_cache(sid)
+                    if cached_cf:
+                        cashflow_data = cached_cf
+                        _append_log(logs, f"  {sid}: 现金流使用单独缓存 {len(cashflow_data)} 条")
                 _append_log(logs, f"  {sid}: 现金流 {len(cashflow_data)} 条")
             except Exception as e:
                 _append_log(logs, f"  {sid}: 现金流失败 - {e}")
+                try:
+                    from kn_cashflow_cache import load_cashflow_cache
+                    cached_cf, _, _ = load_cashflow_cache(sid)
+                    if cached_cf:
+                        cashflow_data = cached_cf
+                        _append_log(logs, f"  {sid}: 现金流回退到单独缓存 {len(cashflow_data)} 条")
+                except Exception:
+                    pass
 
             priority_indicators = None
             try:
@@ -308,8 +363,8 @@ def refresh_producer_full_cache():
                     pi = compute_priority_from_risk_data(sid, risk_data, rate)
                     if pi:
                         priority_indicators = pi
-                if not priority_indicators or (not priority_indicators.get("priority_principal") and not priority_indicators.get("priority_yield")):
-                    _append_log(logs, f"  {sid}: 优先级指标缺失（spv_internal_params 无数据或 principal_amount=0）")
+                if not priority_indicators:
+                    _append_log(logs, f"  {sid}: 优先级指标缺失（spv_internal_params 无数据且 risk_data 不足）")
             except Exception as e:
                 _append_log(logs, f"  {sid}: 优先级指标加载失败 - {e}")
 
@@ -383,6 +438,12 @@ def refresh_producer_full_cache():
     except Exception as e:
         _append_log(logs, f"错误: {e}")
         return {"error": str(e), "logs": logs}
+    finally:
+        try:
+            from kn_data_utils import clear_refresh_latest_date
+            clear_refresh_latest_date()
+        except Exception:
+            pass
 
 
 def _get_producer_config(spv_id):

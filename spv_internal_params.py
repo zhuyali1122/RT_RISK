@@ -245,7 +245,7 @@ def load_all_spv_internal_params_for_portfolio():
     producers = {}
     try:
         from spv_config import load_producers_from_spv_config
-        producers = load_producers_from_spv_config()
+        producers = load_producers_from_spv_config(skip_revenue_compute=True)
     except Exception:
         pass
 

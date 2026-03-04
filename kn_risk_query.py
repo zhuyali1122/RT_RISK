@@ -371,12 +371,11 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
     overdue_15_plus_ratio = (int(o15 or 0) / n) if n else 0
     overdue_30_plus_ratio = (int(o30 or 0) / n) if n else 0
 
-    # 2. 从 raw_loan 获取 cumulative_disbursement, active_borrowers, avg_duration, rates
+    # 2. 从 raw_loan 获取 cumulative_disbursement, active_borrowers, rates
     cur.execute("""
         SELECT
             COALESCE(SUM(r.disbursement_amount), 0) AS cumulative_disbursement,
             COUNT(DISTINCT r.customer_id) AS active_borrowers,
-            AVG(r.term_months) AS avg_duration,
             AVG(r.customer_rate) AS avg_daily_rate,
             SUM(r.customer_rate * r.disbursement_amount) / NULLIF(SUM(r.disbursement_amount), 0) AS disbursement_weighted_rate
         FROM """ + table + """ c
@@ -384,7 +383,31 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
         WHERE c.stat_date = %s AND c.spv_id = %s AND c.loan_status IN (1, 2)
     """, (stat_d, spv_id))
     r2 = cur.fetchone()
-    cum_disb, active_borrowers, avg_duration, avg_rate, weighted_rate = r2 or (0, 0, 0, 0, 0)
+    cum_disb, active_borrowers, avg_rate, weighted_rate = r2 or (0, 0, 0, 0)
+
+    # avg_duration: 按 disbursement_time 与 loan_maturity_date 计算合同久期（月），不用 term_months
+    # 若 loan_maturity_date 为空则取 repayment_schedule 最后一期 due_date
+    cur.execute("""
+        SELECT AVG(dm) AS avg_duration
+        FROM (
+            SELECT
+                (COALESCE(r.loan_maturity_date::date,
+                    (SELECT MAX((elem->>'due_date')::date)
+                     FROM jsonb_array_elements(COALESCE(r.repayment_schedule->'schedule', '[]'::jsonb)) elem
+                     WHERE elem->>'due_date' IS NOT NULL)
+                ) - r.disbursement_time::date) * 1.0 / 30.44 AS dm
+            FROM """ + table + """ c
+            JOIN raw_loan r ON r.loan_id = c.loan_id AND r.spv_id = c.spv_id
+            WHERE c.stat_date = %s AND c.spv_id = %s AND c.loan_status IN (1, 2)
+              AND r.disbursement_time IS NOT NULL
+              AND (r.loan_maturity_date IS NOT NULL
+                   OR (r.repayment_schedule->'schedule' IS NOT NULL
+                       AND jsonb_array_length(COALESCE(r.repayment_schedule->'schedule', '[]'::jsonb)) > 0))
+        ) sub
+        WHERE dm > 0
+    """, (stat_d, spv_id))
+    avg_duration_row = cur.fetchone()
+    avg_duration = float(avg_duration_row[0] or 0) if avg_duration_row else 0
 
     # cumulative_disbursement: 截至 stat_date 的所有放款
     cur.execute("""

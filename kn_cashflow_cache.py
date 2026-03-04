@@ -7,7 +7,10 @@ import os
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(__file__)
-CACHE_DIR = os.path.join(BASE_DIR, "config", "cache")
+# Vercel/AWS Lambda 等 serverless 仅 /tmp 可写，与 kn_producer_cache 保持一致
+_IS_SERVERLESS = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"))
+_CACHE_BASE = os.path.join("/tmp", "rt_risk_cache") if _IS_SERVERLESS else os.path.join(BASE_DIR, "config", "cache")
+CACHE_DIR = _CACHE_BASE
 CACHE_FILE_PREFIX = "cashflow_cache_"
 
 

@@ -1,0 +1,28 @@
+{# Shared top bar with nav and language switcher - include in pages that need it #}
+<div class="top-bar">
+    <div class="left" style="display:flex;align-items:center;gap:24px;">
+        <div class="logo">CHUAN</div>
+        <nav style="display:flex;gap:4px;align-items:center;">
+            <a href="{{ app_root }}/dashboard" class="{% if request.endpoint == 'dashboard' %}active{% endif %}" style="color:rgba(255,255,255,0.9);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;{% if request.endpoint == 'dashboard' %}background:rgba(255,241,238,0.15);font-weight:600;{% endif %}">{{ t('nav_overview') }}</a>
+            <a href="{{ app_root }}/partner/manage" class="{% if request.endpoint == 'partner_manage' %}active{% endif %}" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;">{{ t('nav_partners') }}</a>
+            <a href="{{ app_root }}/help" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;">{{ t('nav_help') }}</a>
+            {% if user and user.role == 'admin' %}<a href="{{ app_root }}/admin/cache-refresh" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;{% if request.endpoint == 'admin_cache_refresh' %}background:rgba(255,241,238,0.15);font-weight:600;color:rgba(255,255,255,0.95);{% endif %}">{{ t('mod_cache_manage') }}</a>{% endif %}
+            <span class="lang-switch" style="margin-left:8px;font-size:0.72rem;display:inline-flex;align-items:center;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.95);">
+                <a href="{{ app_root }}{{ request.path }}?lang=zh" style="color:inherit;text-decoration:none;{% if lang == 'zh' %}font-weight:600;opacity:1;{% else %}opacity:0.75;{% endif %}">中文</a>
+                <span style="margin:0 6px;opacity:0.6;">|</span>
+                <a href="{{ app_root }}{{ request.path }}?lang=en" style="color:inherit;text-decoration:none;{% if lang == 'en' %}font-weight:600;opacity:1;{% else %}opacity:0.75;{% endif %}">EN</a>
+            </span>
+        </nav>
+    </div>
+    <div class="user-info" style="display:flex;align-items:center;gap:20px;">
+        {% if cache_meta and (cache_meta.last_updated_fmt or cache_meta.system_cutover_date) %}
+        <span style="font-size:0.72rem;opacity:0.9;">
+            {{ t('cache_last_updated') }}: {{ cache_meta.last_updated_fmt or '-' }}
+            {% if cache_meta.system_cutover_date %} · {{ t('cache_system_cutover') }}: {{ cache_meta.system_cutover_date }}{% endif %}
+        </span>
+        {% endif %}
+        <span>{{ user.display_name }}</span>
+        <span class="role-badge role-{{ user.role }}">{{ user.role_label }}</span>
+        <a href="{{ app_root }}/logout" class="btn-logout">{{ t('nav_logout') }}</a>
+    </div>
+</div>

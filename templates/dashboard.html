@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ 'en' if lang == 'en' else 'zh-CN' }}">
 <head>
     {% include '_app_root.html' %}
     <meta charset="UTF-8">
@@ -70,32 +70,18 @@
             transform: none;
         }
         .card.disabled::after {
-            content: '即将上线'; font-size: 0.7rem; color: #B0B8C4;
+            content: '{{ t("coming_soon") }}'; font-size: 0.7rem; color: #B0B8C4;
             display: block; margin-top: 8px;
         }
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div class="left" style="display:flex;align-items:center;gap:24px;">
-            <div class="logo">CHUAN</div>
-            <nav style="display:flex;gap:4px;">
-                <a href="{{ app_root }}/dashboard" style="color:rgba(255,255,255,0.9);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;background:rgba(255,241,238,0.15);font-weight:600;">概览</a>
-                <a href="{{ app_root }}/partner/manage" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;">资产商管理</a>
-                <a href="{{ app_root }}/help" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;padding:6px 14px;border-radius:6px;">Help</a>
-            </nav>
-        </div>
-        <div class="user-info">
-            <span>{{ user.display_name }}</span>
-            <span class="role-badge role-{{ user.role }}">{{ user.role_label }}</span>
-            <a href="{{ app_root }}/logout" class="btn-logout">退出登录</a>
-        </div>
-    </div>
+    {% include '_top_bar.html' %}
 
     <div class="main">
         <div class="welcome">
-            <h1>你好，{{ user.display_name }}</h1>
-            <p>角色：{{ user.role_label }} · {{ user.email }}</p>
+            <h1>{{ t('hello') }}，{{ user.display_name }}</h1>
+            <p>{{ t('role') }}：{{ user.role_label }} · {{ user.email }}</p>
         </div>
 
         <div class="cards" id="modules">
@@ -104,22 +90,25 @@
 
     <script>
         const user = {{ user | tojson }};
+        const T = {{ translations_json | tojson }};
+        const appRoot = {{ app_root | tojson }};
 
         const allModules = [
-            { icon: '👥', title: '用户管理', desc: '管理系统用户与角色权限', perm: 'manage_users', href: '#' },
-            { icon: '🔧', title: '系统设置', desc: '系统参数与全局配置', perm: 'manage_system', href: '#' },
-            { icon: '📋', title: '操作日志', desc: '查看所有操作记录', perm: 'view_logs', href: '#' },
-            { icon: '🛡️', title: '风控面板', desc: '风险指标监控与预警', perm: 'manage_risk', href: '#' },
-            { icon: '✅', title: '交易审批', desc: '审批待处理交易请求', perm: 'approve_transactions', href: (window.APP_ROOT||'')+'/transaction/review' },
-            { icon: '🏢', title: '资产商准入', desc: '审核与管理资产商准入', perm: 'manage_partner_admission', href: '#' },
-            { icon: '📄', title: '报告中心', desc: '月报、季报与年报下载', perm: 'view_reports', href: '#' },
-            { icon: '📊', title: '投资组合', desc: '查看资产配置与持仓详情', perm: 'view_portfolio', href: (window.APP_ROOT||'')+'/portfolio' },
-            { icon: '📈', title: '净值走势', desc: '基金净值与收益率分析', perm: 'view_nav', href: '#' },
-            { icon: '📝', title: '资产商申请', desc: '提交新资产商合作申请', perm: 'apply_partner', href: (window.APP_ROOT||'')+'/partner/apply' },
-            { icon: '💰', title: '交易申请', desc: '提交新交易与放款申请', perm: 'apply_transactions', href: (window.APP_ROOT||'')+'/transaction/apply' },
-            { icon: '🏦', title: '资产商管理', desc: '管理已合作资产商信息', perm: 'manage_partners', href: (window.APP_ROOT||'')+'/partner/manage' },
-            { icon: '🚨', title: '告警面板', desc: '对账预警与风控告警汇总', perm: 'alert_panel', href: (window.APP_ROOT||'')+'/alert/panel' },
-            { icon: '🔍', title: '数据查询', desc: '多维度数据检索与导出', perm: 'data_query', href: (window.APP_ROOT||'')+'/risk/query' },
+            { icon: '👥', title: T.mod_users, desc: T.mod_users_desc, perm: 'manage_users', href: '#' },
+            { icon: '🔧', title: T.mod_system, desc: T.mod_system_desc, perm: 'manage_system', href: '#' },
+            { icon: '📦', title: T.mod_cache_manage, desc: T.mod_cache_manage_desc, perm: 'manage_system', href: appRoot+'/admin/cache-refresh' },
+            { icon: '📋', title: T.mod_logs, desc: T.mod_logs_desc, perm: 'view_logs', href: '#' },
+            { icon: '🛡️', title: T.mod_risk, desc: T.mod_risk_desc, perm: 'manage_risk', href: '#' },
+            { icon: '✅', title: T.mod_transaction_review, desc: T.mod_transaction_review_desc, perm: 'approve_transactions', href: appRoot+'/transaction/review' },
+            { icon: '🏢', title: T.mod_partner_admission, desc: T.mod_partner_admission_desc, perm: 'manage_partner_admission', href: '#' },
+            { icon: '📄', title: T.mod_reports, desc: T.mod_reports_desc, perm: 'view_reports', href: '#' },
+            { icon: '📊', title: T.mod_portfolio, desc: T.mod_portfolio_desc, perm: 'view_portfolio', href: appRoot+'/portfolio' },
+            { icon: '📈', title: T.mod_nav, desc: T.mod_nav_desc, perm: 'view_nav', href: '#' },
+            { icon: '📝', title: T.mod_apply_partner, desc: T.mod_apply_partner_desc, perm: 'apply_partner', href: appRoot+'/partner/apply' },
+            { icon: '💰', title: T.mod_apply_transaction, desc: T.mod_apply_transaction_desc, perm: 'apply_transactions', href: appRoot+'/transaction/apply' },
+            { icon: '🏦', title: T.mod_manage_partners, desc: T.mod_manage_partners_desc, perm: 'manage_partners', href: appRoot+'/partner/manage' },
+            { icon: '🚨', title: T.mod_alert_panel, desc: T.mod_alert_panel_desc, perm: 'alert_panel', href: appRoot+'/alert/panel' },
+            { icon: '🔍', title: T.mod_data_query, desc: T.mod_data_query_desc, perm: 'data_query', href: appRoot+'/risk/query' },
         ];
 
         const modules = allModules.filter(m => user.permissions.includes(m.perm));

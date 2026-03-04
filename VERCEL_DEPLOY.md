@@ -1,5 +1,55 @@
 # Vercel 部署说明
 
+---
+
+## 数据库连接超时排查（Vercel → 阿里云 RDS）
+
+部署到 Vercel 后若出现 `connection timeout` 或 `connection to server at "xxx" failed: timeout expired`，请逐项检查：
+
+### 1. 不要设置 DB_HOST_IP（最常见原因）
+
+`DB_HOST_IP` 用于本地「域名解析失败时用 IP 直连」。若你在本地通过 VPN 或内网获取了 IP（如 198.18.x.x、10.x.x.x、172.x.x.x），该 IP 在 Vercel 上**不可达**。
+
+- **操作**：在 Vercel 环境变量中**删除** `DB_HOST_IP`，仅保留 `DATABASE_URL`
+- `DATABASE_URL` 中的 host 必须为**外网地址**（如 `pgm-xxx.pg.rds.aliyuncs.com`），不要用内网 IP
+
+### 2. 使用 RDS 外网地址
+
+- 阿里云 RDS 控制台 → 实例 → **数据库连接**
+- 确认已申请**外网地址**（未释放）
+- `DATABASE_URL` 中的 host 使用该外网地址，格式如：`postgresql://user:pass@pgm-xxx.pg.rds.aliyuncs.com:5432/dbname?sslmode=require`
+
+### 3. 白名单
+
+- RDS 控制台 → **数据安全性** → **白名单设置**
+- 添加 `0.0.0.0/0` 允许所有 IP（或添加 Vercel 出站 IP 段，但 Vercel IP 动态变化，建议测试阶段用 0.0.0.0/0）
+
+### 4. SSL
+
+- 阿里云 RDS 公网通常需 SSL，在 `DATABASE_URL` 末尾加 `?sslmode=require`
+- 或设置环境变量 `DB_SSLMODE=require`
+
+### 5. 连接超时与连接池（Vercel 限制）
+
+- Vercel Serverless 单次执行有超时（Hobby 10s，Pro 60s）
+- 建议在 Vercel 环境变量中设置：
+  - `DATABASE_POOL_SIZE=1`（Serverless 不宜用大连接池）
+  - `DATABASE_CONNECT_TIMEOUT=8`（缩短连接超时，避免长时间等待）
+
+### 6. 检查 Vercel 环境变量
+
+确认以下变量正确且**仅包含必要项**：
+
+| 变量 | 说明 | 注意 |
+|------|------|------|
+| `DATABASE_URL` | 必填，含外网 host | host 不要用内网 IP |
+| `DB_HOST_IP` | **建议删除** | 本地 VPN 解析的 IP 在 Vercel 不可达 |
+| `DB_SSLMODE` | 可选，`require` 或 `disable` | 阿里云公网通常需 `require` |
+| `DATABASE_POOL_SIZE` | 可选，建议 `1` | Serverless 场景 |
+| `APP_ROOT` | 若子路径部署则设置 | 如 `/rtrisk` |
+
+---
+
 ## 设置入口为 chuanx.xyz/rtrisk
 
 ### 1. 在 RT_RISK 项目中设置环境变量

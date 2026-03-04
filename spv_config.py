@@ -6,14 +6,7 @@ import os
 import json
 from decimal import Decimal
 
-
-def _serialize(val):
-    """将 Decimal/date 等转为 JSON 可序列化类型"""
-    if hasattr(val, "isoformat"):
-        return val.isoformat()
-    if isinstance(val, Decimal):
-        return float(val)
-    return val
+from kn_data_utils import serialize_for_json
 
 
 def load_spv_config():
@@ -50,7 +43,7 @@ def load_spv_config():
             if not spv_id:
                 continue
             spv_id = str(spv_id).strip().lower()
-            status = str(_serialize(rec.get("status") or "active")).strip().lower()
+            status = str(serialize_for_json(rec.get("status") or "active")).strip().lower()
             if status and status not in ("active", ""):
                 continue  # 只取 status=active 或空
             # 转为与 producers.json 兼容的格式
@@ -58,7 +51,7 @@ def load_spv_config():
                 for key in [k] + list(alts):
                     v = rec.get(key)
                     if v is not None and v != "":
-                        return _serialize(v)
+                        return serialize_for_json(v)
                 return default
 
             def _num(k, default=0):

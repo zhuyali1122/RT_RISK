@@ -62,7 +62,7 @@ def get_connection_string():
             s = re.sub(r"@([^:/]+):", f"@{host_ip}:", s)
         if port_override:
             s = re.sub(r"@([^:/]+):\d+(/|$)", rf"@\1:{port_override}\2", s)
-        # 阿里云 RDS 需 SSL，若 URL 未指定则追加 sslmode=require
+        # 阿里云 RDS 公网需 SSL，若 URL 未指定则追加 sslmode=require
         ssl_override = os.getenv("DB_SSLMODE")
         if ssl_override:
             sep = "&" if "?" in s else "?"

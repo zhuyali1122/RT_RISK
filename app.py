@@ -33,6 +33,12 @@ UPLOAD_DIR = os.path.join("/tmp", "rt_risk_uploads") if os.getenv("VERCEL") else
 try:
     os.makedirs(DD_TEMPLATES_DIR, exist_ok=True)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
+    # 确保缓存目录存在（config/cache 在 .gitignore，部署后需创建）
+    try:
+        from kn_producer_cache import _ensure_cache_dir
+        _ensure_cache_dir()
+    except Exception:
+        pass
 except OSError:
     pass
 
@@ -41,11 +47,46 @@ except OSError:
 def _set_script_root():
     if APP_ROOT:
         request.environ["SCRIPT_NAME"] = APP_ROOT
+    # Language: ?lang=en or ?lang=zh
+    if request.args.get("lang") in ("en", "zh"):
+        session["lang"] = request.args.get("lang")
+
+
+def _get_lang():
+    """Current UI language: en or zh (default)."""
+    return session.get("lang", "zh")
 
 
 @app.context_processor
 def _inject_app_root():
-    return {"app_root": APP_ROOT}
+    from translations import get_translations
+    lang = _get_lang()
+    trans = get_translations(lang)
+
+    def t(key, default=""):
+        return trans.get(key, default or key)
+
+    cache_meta = None
+    try:
+        from kn_producer_cache import load_cache_meta
+        raw = load_cache_meta()
+        if raw:
+            lu = raw.get("last_updated") or ""
+            cache_meta = {
+                "last_updated": lu,
+                "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
+                "system_cutover_date": raw.get("system_cutover_date") or "",
+            }
+    except Exception:
+        pass
+
+    return {
+        "app_root": APP_ROOT,
+        "lang": lang,
+        "t": t,
+        "translations_json": trans,
+        "cache_meta": cache_meta,
+    }
 
 
 def load_user_config():
@@ -80,6 +121,12 @@ def load_dd_checklist():
 
 def load_partners():
     """从 producers.json 读取，返回与旧 partners 兼容的结构：assignments + partners"""
+    try:
+        from flask import g
+        if hasattr(g, "_rt_load_partners"):
+            return g._rt_load_partners
+    except RuntimeError:
+        pass
     producers = load_producers(json_only=True)
     if not producers:
         return {"assignments": {}, "partners": {}}
@@ -115,7 +162,13 @@ def load_partners():
             "alerts": p.get("alerts", []),
             "priority_indicators": p.get("priority_indicators", {}),
         }
-    return {"assignments": assignments, "partners": partners}
+    out = {"assignments": assignments, "partners": partners}
+    try:
+        from flask import g
+        g._rt_load_partners = out
+    except (RuntimeError, Exception):
+        pass
+    return out
 
 
 def load_transactions():
@@ -153,8 +206,22 @@ def load_loan_details():
 
 def load_producers(json_only=False):
     """加载生产商配置：优先从 spv_config 表读取，否则 fallback 到 config/producers.json"""
+    if json_only:
+        try:
+            from flask import g
+            if hasattr(g, "_rt_producers_json"):
+                return g._rt_producers_json
+        except RuntimeError:
+            pass
     from spv_config import load_producers_from_spv_config
-    return load_producers_from_spv_config(json_only=json_only)
+    out = load_producers_from_spv_config(json_only=json_only)
+    if json_only:
+        try:
+            from flask import g
+            g._rt_producers_json = out
+        except (RuntimeError, Exception):
+            pass
+    return out
 
 
 def _find_loan(partner_id, loan_id):
@@ -315,42 +382,90 @@ def login_page():
 
 @app.route("/api/login", methods=["POST"])
 def api_login():
-    data = request.get_json()
+    data = request.get_json() or {}
     username = data.get("username", "").strip()
     password = data.get("password", "")
+
+    # Set lang from login request if provided
+    if data.get("lang") in ("en", "zh"):
+        session["lang"] = data["lang"]
+    lang = _get_lang()
 
     config = load_user_config()
 
     for user in config["users"]:
         if user["username"] == username and user["password"] == password:
             role_info = config["roles"].get(user["role"], {})
+            role_label = role_info.get("label_en" if lang == "en" else "label", user["role"])
             session["user"] = {
                 "username": user["username"],
                 "display_name": user["display_name"],
                 "email": user["email"],
                 "role": user["role"],
-                "role_label": role_info.get("label", user["role"]),
+                "role_label": role_label,
                 "permissions": role_info.get("permissions", []),
             }
 
-            # 登录成功后后台刷新生产商全量缓存（风控、收益、现金流）
-            try:
-                from kn_producer_cache import refresh_producer_full_cache_async
-                refresh_producer_full_cache_async()
-            except Exception:
-                pass
+            # 仅 Admin 登录时后台刷新缓存；PM/Investor 仅读缓存，由 Admin 通过 Dashboard「管理」按钮刷新
+            if user["role"] == "admin":
+                try:
+                    from kn_producer_cache import refresh_producer_full_cache_async
+                    refresh_producer_full_cache_async()
+                except Exception:
+                    pass
 
             redirect_url = (APP_ROOT or "") + "/dashboard"
             return jsonify({"success": True, "redirect": redirect_url})
 
-    return jsonify({"success": False, "message": "用户名或密码错误"})
+    err_msg = "Invalid username or password" if lang == "en" else "用户名或密码错误"
+    return jsonify({"success": False, "message": err_msg})
+
+
+def _user_with_role_label(user, lang):
+    """Ensure user.role_label matches current lang."""
+    cfg = load_user_config()
+    role_info = cfg.get("roles", {}).get(user.get("role", ""), {})
+    label = role_info.get("label_en" if lang == "en" else "label", user.get("role", ""))
+    return {**user, "role_label": label}
 
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    user = session["user"]
+    user = _user_with_role_label(session["user"], _get_lang())
     return render_template("dashboard.html", user=user)
+
+
+@app.route("/admin/cache-refresh")
+@login_required
+def admin_cache_refresh():
+    """Admin 数据刷新页面：显示更新时间、系统切日，需确认后刷新，可查看日志"""
+    user = _user_with_role_label(session["user"], _get_lang())
+    if not _is_admin(user):
+        return redirect(url_for("dashboard"))
+    cache_meta = None
+    try:
+        from kn_producer_cache import load_cache_meta, load_refresh_log
+        raw = load_cache_meta()
+        if raw:
+            lu = raw.get("last_updated") or ""
+            cache_meta = {
+                "last_updated": lu,
+                "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
+                "system_cutover_date": raw.get("system_cutover_date") or "",
+            }
+        refresh_logs = load_refresh_log()
+        refresh_logs_text = "".join(refresh_logs) if refresh_logs else ""
+    except Exception:
+        refresh_logs = []
+        refresh_logs_text = ""
+    return render_template(
+        "admin_cache_refresh.html",
+        user=user,
+        cache_meta=cache_meta,
+        refresh_logs=refresh_logs,
+        refresh_logs_text=refresh_logs_text,
+    )
 
 
 # Help 文档 slug -> 文件名映射（避免 URL 编码问题）
@@ -548,7 +663,7 @@ def api_producers_data():
 @app.route("/portfolio")
 @login_required
 def portfolio():
-    user = session["user"]
+    user = _user_with_role_label(session["user"], _get_lang())
     if "view_portfolio" not in user.get("permissions", []):
         return redirect(url_for("dashboard"))
     portfolio_data = load_portfolio_data()
@@ -565,35 +680,50 @@ def portfolio():
     fund.setdefault("annualized_return")
     fund.setdefault("sharpe_ratio")
     fund.setdefault("weighted_duration_days")
-    # 合并从 partners 汇总的累积指标（无数据时为 0）
-    cum = _portfolio_cumulative_stats()
-    fund["cumulative_disbursement"] = cum["cumulative_disbursement"]
-    fund["cumulative_loan_count"] = cum["cumulative_loan_count"]
-    fund["cumulative_borrower_count"] = cum["cumulative_borrower_count"]
-    # 平台持仓明细：从 spv_internal_params 读取（principal_amount=投资总量, agreed_rate=预期年化, effective_date=开始时间）
-    try:
-        from spv_internal_params import load_all_spv_internal_params_for_portfolio
-        trades = load_all_spv_internal_params_for_portfolio()
-        if trades:
-            total_principal = sum(t.get("principal_amount") or 0 for t in trades)
-            allocation = []
-            for t in trades:
-                pct = (t.get("principal_amount") or 0) / total_principal if total_principal > 0 else 0
-                agreed = t.get("agreed_rate") or 0
-                agreed_pct = agreed * 100 if agreed <= 1 else agreed
-                allocation.append({
-                    "name": t.get("name") or t.get("spv_id") or "-",
-                    "value": t.get("principal_amount") or 0,
-                    "pct": pct,
-                    "type": t.get("product_type") or "-",
-                    "region": t.get("region") or "-",
-                    "principal_amount": t.get("principal_amount"),
-                    "agreed_rate": agreed_pct,
-                    "effective_date": t.get("effective_date") or "-",
-                })
+    cache_only = _cache_only_mode(user)
+    # PM/Investor 从缓存读取累计指标与平台持仓；Admin 从 DB
+    if cache_only:
+        try:
+            from kn_producer_cache import load_producer_full_cache
+            cache_data, _ = load_producer_full_cache()
+            cum = (cache_data or {}).get("portfolio_cumulative_stats") or {}
+            allocation = (cache_data or {}).get("allocation_by_platform")
+        except Exception:
+            cum = {}
+            allocation = None
+        fund["cumulative_disbursement"] = cum.get("cumulative_disbursement", 0)
+        fund["cumulative_loan_count"] = cum.get("cumulative_loan_count", 0)
+        fund["cumulative_borrower_count"] = cum.get("cumulative_borrower_count", 0)
+        if allocation:
             portfolio_data["allocation_by_platform"] = allocation
-    except Exception:
-        pass
+    else:
+        cum = _portfolio_cumulative_stats()
+        fund["cumulative_disbursement"] = cum["cumulative_disbursement"]
+        fund["cumulative_loan_count"] = cum["cumulative_loan_count"]
+        fund["cumulative_borrower_count"] = cum["cumulative_borrower_count"]
+        try:
+            from spv_internal_params import load_all_spv_internal_params_for_portfolio
+            trades = load_all_spv_internal_params_for_portfolio()
+            if trades:
+                total_principal = sum(t.get("principal_amount") or 0 for t in trades)
+                allocation = []
+                for t in trades:
+                    pct = (t.get("principal_amount") or 0) / total_principal if total_principal > 0 else 0
+                    agreed = t.get("agreed_rate") or 0
+                    agreed_pct = agreed * 100 if agreed <= 1 else agreed
+                    allocation.append({
+                        "name": t.get("name") or t.get("spv_id") or "-",
+                        "value": t.get("principal_amount") or 0,
+                        "pct": pct,
+                        "type": t.get("product_type") or "-",
+                        "region": t.get("region") or "-",
+                        "principal_amount": t.get("principal_amount"),
+                        "agreed_rate": agreed_pct,
+                        "effective_date": t.get("effective_date") or "-",
+                    })
+                portfolio_data["allocation_by_platform"] = allocation
+        except Exception:
+            pass
     return render_template("portfolio.html", user=user, portfolio=portfolio_data)
 
 
@@ -610,33 +740,45 @@ def partner_apply():
 @app.route("/partner/manage")
 @login_required
 def partner_manage():
-    user = session["user"]
+    user = _user_with_role_label(session["user"], _get_lang())
     if "manage_partners" not in user.get("permissions", []):
         return redirect(url_for("dashboard"))
 
-    # 先加载统一缓存：若存在则完全走 JSON，避免 DB
-    full_cache = None
+    # 加载统一缓存
+    cache_data = None
+    full_cache = {}
     try:
         from kn_producer_cache import load_producer_full_cache
-        full_cache, _ = load_producer_full_cache()
+        cache_data, _ = load_producer_full_cache()
+        full_cache = (cache_data or {}).get("producers", {})
     except Exception:
         pass
     cache_exists = bool(full_cache)
+    cache_only = _cache_only_mode(user)
 
-    # 缓存存在时：仅从 producers.json 读取列表，不访问 DB
-    # 缓存不存在时：从 spv_config + compute_revenue_data 等（会访问 DB）
-    try:
-        from project_loader import load_projects_with_internal_params
-        if cache_exists:
-            projects = load_projects_with_internal_params(json_only=True, skip_priority_indicators=True)
-        else:
+    # PM/Investor 仅读缓存：无缓存时提示联系管理员
+    if cache_only and not cache_exists:
+        return render_template("partner_list.html", user=user, partners=[], partners_revenue=[], partners_cashflow=[],
+            data_source="cache", no_cache_hint=True, show_refresh=False)
+
+    # 生产商列表：缓存存在时从缓存；否则 Admin 从 DB
+    if cache_exists:
+        producers_active = [
+            {"id": sid, "name": p.get("name", sid), "region": p.get("region", "-"), "product_type": p.get("product_type", "-"),
+             "status": p.get("status", "active"), "onboard_date": p.get("onboard_date", "-"), "exchange_rate": p.get("exchange_rate", 1),
+             "currency": p.get("currency", "USD")}
+            for sid, p in full_cache.items() if str(p.get("status", "active")).lower() in ("active", "")
+        ]
+    else:
+        try:
+            from project_loader import load_projects_with_internal_params
             projects = load_projects_with_internal_params()
-    except Exception:
-        projects = {}
-    producers_active = [p for p in projects.values() if str(p.get("status", "active")).lower() in ("active", "")]
-    if not producers_active:
-        producers = load_producers()
-        producers_active = [p for p in producers.values() if p.get("status") == "active"]
+        except Exception:
+            projects = {}
+        producers_active = [p for p in projects.values() if str(p.get("status", "active")).lower() in ("active", "")]
+        if not producers_active:
+            producers = load_producers()
+            producers_active = [p for p in producers.values() if p.get("status") == "active"]
 
     partners = []
     partners_revenue = []
@@ -798,6 +940,7 @@ def partner_manage():
         partners_revenue=partners_revenue,
         partners_cashflow=partners_cashflow,
         data_source="cache" if cache_exists else "database",
+        show_refresh=not cache_only,
     )
 
 
@@ -810,15 +953,28 @@ def _get_producer_data_from_full_cache(spv_id):
     """
     try:
         from kn_producer_cache import load_producer_full_cache
-        full_cache, last_updated = load_producer_full_cache()
-        cache_exists = bool(full_cache)
-        if not full_cache:
+        data, last_updated = load_producer_full_cache()
+        cache_exists = bool(data and data.get("producers"))
+        if not cache_exists:
             return None, None, False
+        producers = data.get("producers", {})
         sid = str(spv_id or "").strip().lower()
-        pc = full_cache.get(spv_id) or full_cache.get(sid)
+        pc = producers.get(spv_id) or producers.get(sid)
         return pc, last_updated, True
     except Exception:
         return None, None, False
+
+
+def _is_admin(user=None):
+    """当前用户是否为 Admin"""
+    u = user or session.get("user", {})
+    return u.get("role") == "admin" or "manage_system" in (u.get("permissions") or [])
+
+
+def _cache_only_mode(user=None):
+    """PM/Investor 仅读缓存，不访问 DB"""
+    u = user or session.get("user", {})
+    return u.get("role") in ("project_manager", "investor")
 
 
 # partner_id -> spv_id 映射，从 spv_config 派生；无 DB 时 fallback
@@ -866,40 +1022,6 @@ def _get_producer_config(spv_id):
     }
 
 
-def _convert_local_to_usd(risk_data, exchange_rate):
-    """将本币金额转为 USD：usd = local / exchange_rate。数据库金额始终为 spv_config.currency（如 MXN、IDR）"""
-    if not exchange_rate or exchange_rate <= 0:
-        return risk_data
-
-    def to_usd(val):
-        if val is None or val == "":
-            return val
-        try:
-            return str(int(float(val) / exchange_rate))
-        except (ValueError, TypeError):
-            return val
-
-    out = []
-    for row in risk_data:
-        r = dict(row)
-        r["cumulative_disbursement"] = to_usd(r.get("cumulative_disbursement"))
-        r["current_balance"] = to_usd(r.get("current_balance"))
-        for d in r.get("dpd_distribution", []):
-            d["balance"] = to_usd(d.get("balance"))
-        for v in r.get("vintage_data", []):
-            for k in ("disbursement_amount", "current_balance"):
-                if k in v:
-                    v[k] = to_usd(v[k])
-        for c in r.get("collection_report", []):
-            for k in ("due_amount", "d0_into_collection", "d1_into_collection", "d3_into_collection",
-                      "d7_into_collection", "d30_into_collection", "d60_into_collection", "d90_into_collection",
-                      "d1_recovery", "d3_recovery", "d7_recovery", "d30_recovery", "d60_recovery", "d90_recovery"):
-                if k in c:
-                    c[k] = to_usd(c[k])
-        out.append(r)
-    return out
-
-
 def _load_risk_data_for_partner(partner_id, partner):
     """
     加载风控数据：优先从统一缓存读取（生产商页面数据一次性缓存，打开即用）
@@ -920,10 +1042,29 @@ def _load_risk_data_for_partner(partner_id, partner):
 
 
 def _allowed_partner_ids(user):
-    """用户可访问的 partner/producer id 列表"""
+    """用户可访问的 partner/producer id 列表（仅读 JSON，避免 DB）"""
     allowed = list(load_partners().get("assignments", {}).get(user["username"], []))
-    producer_ids = [p["id"] for p in load_producers().values() if p.get("status") == "active"]
+    producers = load_producers(json_only=True)
+    producer_ids = [p["id"] for p in producers.values() if str(p.get("status", "active")).lower() in ("active", "")]
     return allowed + producer_ids
+
+
+def _get_partner_from_cache_or_producer(partner_id, spv_id, cache_exists, pc=None):
+    """PM/Investor 有缓存时从缓存构建 partner；否则从 DB/JSON"""
+    if cache_exists and pc:
+        return {
+            "id": spv_id,
+            "name": pc.get("name", spv_id),
+            "country": pc.get("region", "-"),
+            "product_type": pc.get("product_type", "-"),
+            "contact": pc.get("contact", "-"),
+            "local_currency": pc.get("currency", "USD"),
+            "exchange_rate": float(pc.get("exchange_rate", 1) or 1),
+            "alerts": [],
+            "priority_indicators": pc.get("priority_indicators") or {},
+            "revenue_data": pc.get("revenue_data", []),
+        }
+    return _get_partner_or_producer(partner_id, json_only=cache_exists)
 
 
 def _get_partner_or_producer(partner_id, json_only=False):
@@ -966,21 +1107,17 @@ def _get_partner_or_producer(partner_id, json_only=False):
 @app.route("/partner/<partner_id>/risk")
 @login_required
 def partner_risk(partner_id):
-    user = session["user"]
+    user = _user_with_role_label(session["user"], _get_lang())
     allowed = _allowed_partner_ids(user)
     if partner_id not in allowed and user["role"] not in ("admin", "risk"):
         return redirect(url_for("dashboard"))
-    # 先取 spv_id 和缓存状态；有缓存时全程走 JSON 避免 DB
-    try:
-        from project_loader import get_partner_spv_map
-        spv_map = get_partner_spv_map(json_only=True)
-        if not spv_map:
-            spv_map = _get_partner_spv_map()
-    except Exception:
-        spv_map = _get_partner_spv_map()
-    spv_id = spv_map.get(partner_id) or partner_id
-    pc, full_cache_updated, cache_exists = _get_producer_data_from_full_cache(spv_id)
-    partner = _get_partner_or_producer(partner_id, json_only=cache_exists)
+    spv_id, cache_exists, valid_spv = _get_spv_id_and_cache(partner_id)
+    if _cache_only_mode(user) and not cache_exists:
+        return redirect(url_for("partner_manage"))
+    if spv_id not in valid_spv and valid_spv:
+        return redirect(url_for("partner_manage"))
+    pc, full_cache_updated, _ = _get_producer_data_from_full_cache(spv_id)
+    partner = _get_partner_from_cache_or_producer(partner_id, spv_id, cache_exists, pc)
     if not partner:
         return redirect(url_for("partner_manage"))
     cache_last_updated = None
@@ -1017,12 +1154,12 @@ def partner_risk(partner_id):
         local_currency = partner.get("local_currency", "USD")
         exchange_rate = partner.get("exchange_rate", 1)
 
-    # 优先级指标：有缓存时优先用 pc.priority_indicators（含优先本金、优先收益率）；无缓存时从 spv_internal_params 读取
+    # 优先级指标：有缓存时用 pc.priority_indicators；PM/Investor 不访问 DB
     priority_indicators = (pc or {}).get("priority_indicators") if cache_exists else None
     if not priority_indicators:
         priority_indicators = partner.get("priority_indicators") or {}
     need_load = not (priority_indicators.get("priority_principal") and priority_indicators.get("priority_yield"))
-    if spv_id and need_load:
+    if spv_id and need_load and not _cache_only_mode(user):
         try:
             from spv_internal_params import load_priority_indicators_for_spv, compute_priority_from_risk_data
             pi = load_priority_indicators_for_spv(spv_id, risk_data=risk_data, exchange_rate=exchange_rate)
@@ -1051,17 +1188,35 @@ def partner_risk(partner_id):
 
 
 def _get_spv_id_and_cache(partner_id):
-    """获取 spv_id 和 cache 状态，优先走 JSON 避免 DB"""
-    try:
-        from project_loader import get_partner_spv_map
-        spv_map = get_partner_spv_map(json_only=True)
-        if not spv_map:
+    """获取 spv_id 和 cache 状态；PM/Investor 仅从缓存，Admin 可走 DB"""
+    cache_only = _cache_only_mode()
+    if cache_only:
+        try:
+            from kn_producer_cache import load_producer_full_cache
+            data, _ = load_producer_full_cache()
+            producers = (data or {}).get("producers", {})
+            spv_map = {pid: pid for pid in producers}
+            if "kn" in spv_map:
+                spv_map["partner_beta"] = "kn"
+            cache_exists = bool(producers)
+            valid_spv = set(producers.keys()) if producers else set()
+        except Exception:
+            spv_map, cache_exists, valid_spv = {}, False, set()
+    else:
+        try:
+            from project_loader import get_partner_spv_map
+            spv_map = get_partner_spv_map(json_only=True)
+            if not spv_map:
+                spv_map = _get_partner_spv_map()
+        except Exception:
             spv_map = _get_partner_spv_map()
-    except Exception:
-        spv_map = _get_partner_spv_map()
+        spv_id = spv_map.get(partner_id) or partner_id
+        _, _, cache_exists = _get_producer_data_from_full_cache(spv_id)
+        valid_spv = set(spv_map.values() or []) | set(load_producers(json_only=cache_exists).keys() or [])
+        return spv_id, cache_exists, valid_spv
     spv_id = spv_map.get(partner_id) or partner_id
-    _, _, cache_exists = _get_producer_data_from_full_cache(spv_id)
-    valid_spv = set(spv_map.values() or []) | set(load_producers(json_only=cache_exists).keys() or [])
+    if not cache_exists:
+        _, _, cache_exists = _get_producer_data_from_full_cache(spv_id)
     return spv_id, cache_exists, valid_spv
 
 
@@ -1365,20 +1520,14 @@ def loan_detail(partner_id, loan_id):
 @app.route("/partner/<partner_id>/cashflow")
 @login_required
 def partner_cashflow(partner_id):
-    user = session["user"]
+    user = _user_with_role_label(session["user"], _get_lang())
     pid = str(partner_id or "").strip()
+    spv_id, cache_exists, valid_spv = _get_spv_id_and_cache(pid)
+    if _cache_only_mode(user) and not cache_exists:
+        return redirect(url_for("partner_manage"))
     allowed = _allowed_partner_ids(user)
     allowed_lower = {str(x).lower() for x in allowed}
-    try:
-        from project_loader import get_partner_spv_map
-        spv_map = get_partner_spv_map(json_only=True)
-        if not spv_map:
-            spv_map = _get_partner_spv_map()
-    except Exception:
-        spv_map = _get_partner_spv_map()
-    spv_id = spv_map.get(pid) or pid
-    pc, full_cache_updated, cache_exists = _get_producer_data_from_full_cache(spv_id)
-    producer_ids = [str(p["id"]).lower() for p in load_producers(json_only=cache_exists).values()]
+    producer_ids = list(valid_spv) if cache_exists else [str(p["id"]).lower() for p in load_producers(json_only=True).values()]
     has_manage = "manage_partners" in user.get("permissions", [])
     can_access = (
         pid in allowed
@@ -1388,7 +1537,8 @@ def partner_cashflow(partner_id):
     )
     if not can_access:
         return redirect(url_for("dashboard"))
-    partner = _get_partner_or_producer(pid, json_only=cache_exists)
+    pc, full_cache_updated, _ = _get_producer_data_from_full_cache(spv_id)
+    partner = _get_partner_from_cache_or_producer(pid, spv_id, cache_exists, pc)
     if not partner:
         return redirect(url_for("partner_manage"))
     if cache_exists:
@@ -1465,20 +1615,14 @@ def partner_cashflow(partner_id):
 @app.route("/partner/<partner_id>/revenue")
 @login_required
 def partner_revenue(partner_id):
-    user = session["user"]
+    user = _user_with_role_label(session["user"], _get_lang())
     pid = str(partner_id or "").strip()
+    spv_id, cache_exists, valid_spv = _get_spv_id_and_cache(pid)
+    if _cache_only_mode(user) and not cache_exists:
+        return redirect(url_for("partner_manage"))
     allowed = _allowed_partner_ids(user)
     allowed_lower = {str(x).lower() for x in allowed}
-    try:
-        from project_loader import get_partner_spv_map
-        spv_map = get_partner_spv_map(json_only=True)
-        if not spv_map:
-            spv_map = _get_partner_spv_map()
-    except Exception:
-        spv_map = _get_partner_spv_map()
-    spv_id = spv_map.get(pid) or pid
-    pc, full_cache_updated, cache_exists = _get_producer_data_from_full_cache(spv_id)
-    producer_ids = [str(p["id"]).lower() for p in load_producers(json_only=cache_exists).values()]
+    producer_ids = list(valid_spv) if cache_exists else [str(p["id"]).lower() for p in load_producers(json_only=True).values()]
     has_manage = "manage_partners" in user.get("permissions", [])
     can_access = (
         pid in allowed
@@ -1488,7 +1632,8 @@ def partner_revenue(partner_id):
     )
     if not can_access:
         return redirect(url_for("dashboard"))
-    partner = _get_partner_or_producer(pid, json_only=cache_exists)
+    pc, full_cache_updated, _ = _get_producer_data_from_full_cache(spv_id)
+    partner = _get_partner_from_cache_or_producer(pid, spv_id, cache_exists, pc)
     if not partner:
         return redirect(url_for("partner_manage"))
     cache_last_updated = None
@@ -1614,24 +1759,53 @@ def api_risk_query_loan(loan_id):
 @app.route("/api/partner/refresh-all-cache", methods=["POST"])
 @login_required
 def api_refresh_all_producer_cache():
-    """PM 强制刷新：从数据库重新加载所有生产商的风控、收益、现金流并写入统一缓存"""
-    if "manage_partners" not in session["user"].get("permissions", []) and session["user"].get("role") not in ("admin", "risk"):
+    """Admin 启动后台刷新：立即返回，刷新在后台执行，可通过 /api/partner/refresh-status 轮询"""
+    if not _is_admin():
         return jsonify({"error": "权限不足"}), 403
     try:
-        from kn_producer_cache import refresh_producer_full_cache
-        result = refresh_producer_full_cache()
-        if "error" in result:
-            return jsonify(result), 500
-        return jsonify({"success": True, "redirect": url_for("partner_manage"), **result})
+        from kn_producer_cache import refresh_producer_full_cache_async
+        refresh_producer_full_cache_async()
+        return jsonify({"started": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/partner/refresh-status")
+@login_required
+def api_refresh_status():
+    """轮询刷新状态与日志（Admin）"""
+    if not _is_admin():
+        return jsonify({"error": "权限不足"}), 403
+    try:
+        from kn_producer_cache import get_refresh_status, load_refresh_log, load_cache_meta
+        st = get_refresh_status()
+        logs = load_refresh_log()
+        meta = load_cache_meta()
+        logs_text = "".join(logs) if isinstance(logs, list) else (logs or "")
+        out = {
+            "running": st.get("running", False),
+            "logs": logs_text,
+            "last_updated": meta.get("last_updated") if meta else None,
+            "system_cutover_date": meta.get("system_cutover_date") if meta else None,
+        }
+        if st.get("result"):
+            r = st["result"]
+            if "error" in r:
+                out["error"] = r["error"]
+            if r.get("ok"):
+                out["last_updated"] = r.get("last_updated")
+                out["system_cutover_date"] = r.get("system_cutover_date")
+                out["producer_count"] = r.get("producer_count")
+        return jsonify(out)
+    except Exception as e:
+        return jsonify({"error": str(e), "running": False}), 500
 
 
 @app.route("/api/partner/<partner_id>/refresh-risk", methods=["POST"])
 @login_required
 def api_refresh_risk(partner_id):
-    """刷新生产商风控数据缓存：从数据库重新计算核心指标、DPD、Vintage 等并保存"""
-    if "manage_partners" not in session["user"].get("permissions", []) and session["user"].get("role") not in ("admin", "risk"):
+    """刷新生产商风控数据缓存：从数据库重新计算核心指标、DPD、Vintage 等并保存（仅 Admin）"""
+    if not _is_admin():
         return jsonify({"error": "权限不足"}), 403
     spv_map = _get_partner_spv_map()
     spv_id = spv_map.get(partner_id) or spv_map.get(str(partner_id).lower()) or partner_id
@@ -1658,8 +1832,8 @@ def api_refresh_risk(partner_id):
 @app.route("/api/partner/<partner_id>/refresh-revenue", methods=["POST"])
 @login_required
 def api_refresh_revenue(partner_id):
-    """刷新生产商收益数据缓存：从数据库重新计算并保存"""
-    if "manage_partners" not in session["user"].get("permissions", []) and session["user"].get("role") not in ("admin", "risk"):
+    """刷新生产商收益数据缓存：从数据库重新计算并保存（仅 Admin）"""
+    if not _is_admin():
         return jsonify({"error": "权限不足"}), 403
     spv_id = _get_partner_spv_map().get(partner_id) or partner_id
     valid_spv = set(_get_partner_spv_map().values() or []) | set(load_producers().keys() or [])
@@ -1683,8 +1857,8 @@ def api_refresh_revenue(partner_id):
 @app.route("/api/partner/<partner_id>/refresh-cashflow", methods=["POST"])
 @login_required
 def api_refresh_cashflow(partner_id):
-    """刷新生产商现金流数据缓存：从数据库重新计算并保存"""
-    if "manage_partners" not in session["user"].get("permissions", []) and session["user"].get("role") not in ("admin", "risk"):
+    """刷新生产商现金流数据缓存：从数据库重新计算并保存（仅 Admin）"""
+    if not _is_admin():
         return jsonify({"error": "权限不足"}), 403
     spv_id = _get_partner_spv_map().get(partner_id) or partner_id
     valid_spv = set(_get_partner_spv_map().values() or []) | set(load_producers().keys() or [])
@@ -1828,6 +2002,12 @@ def _flatten_priority_indicators(pi):
         b = cov.get("breakdown") or {}
         for k, v in b.items():
             flat["breakdown_" + k] = v
+    if pi.get("coverage_ratio_abs"):
+        cov = pi["coverage_ratio_abs"]
+        flat["coverage_ratio_abs_current"] = cov.get("current")
+        b = cov.get("breakdown") or {}
+        for k, v in b.items():
+            flat["breakdown_abs_" + k] = v
     return flat
 
 
@@ -1912,9 +2092,25 @@ def api_partner_download_excel(partner_id):
             for row in r2:
                 ws2.append(row)
 
-        # Tab 3: 现金流
+        # Tab 3: 现金流（补充回收率到每行，与 partner_cashflow 页面一致）
         ws3 = wb.create_sheet("现金流", 2)
-        h3, r3 = _json_to_excel_rows(cashflow_data)
+        collection_rate = 0.98
+        if revenue_data:
+            cr = revenue_data[-1].get("collection_rate", 0.98) or 0.98
+            collection_rate = cr if cr >= 0.5 else (revenue_data[-2].get("collection_rate", 0.98) or 0.98 if len(revenue_data) >= 2 else 0.98)
+        else:
+            try:
+                from kn_cashflow_cache import load_cashflow_cache
+                _, _, cr = load_cashflow_cache(spv_id)
+                collection_rate = cr if cr and cr >= 0.5 else 0.98
+            except Exception:
+                pass
+        cf_for_excel = []
+        for row in cashflow_data:
+            r = dict(row) if isinstance(row, dict) else {}
+            r["collection_rate"] = round(collection_rate * 100, 1)  # 以百分比形式存储，如 98.0
+            cf_for_excel.append(r)
+        h3, r3 = _json_to_excel_rows(cf_for_excel)
         if h3:
             ws3.append(h3)
             for row in r3:

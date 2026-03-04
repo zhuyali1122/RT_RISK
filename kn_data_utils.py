@@ -1,11 +1,30 @@
 """
 收益、现金流等模块共用的数据工具 - 统一使用数据库最新数据日
 """
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 
 
-def _get_calc_table(year: int, month: int) -> str:
-    return f"calc_overdue_y{year}m{month:02d}"
+def serialize_for_json(val):
+    """将 datetime/date/Decimal 转为 JSON 可序列化类型"""
+    if hasattr(val, "isoformat"):
+        return val.isoformat()
+    if isinstance(val, Decimal):
+        return float(val)
+    return val
+
+
+def get_calc_table(year_or_dt, month=None):
+    """
+    根据日期或年月返回 calc_overdue 表名。
+    用法: get_calc_table(dt) 或 get_calc_table(year, month)
+    """
+    if month is not None:
+        return f"calc_overdue_y{year_or_dt}m{month:02d}"
+    dt = year_or_dt
+    if isinstance(dt, str):
+        dt = datetime.strptime(dt[:10], "%Y-%m-%d")
+    return f"calc_overdue_y{dt.year}m{dt.month:02d}"
 
 
 def get_latest_data_date():
@@ -24,7 +43,7 @@ def get_latest_data_date():
     latest_dt = None
     for year in [2024, 2025, 2026, 2027]:
         for month in range(1, 13):
-            tbl = _get_calc_table(year, month)
+            tbl = get_calc_table(year, month)
             try:
                 cur.execute(
                     "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name = %s",

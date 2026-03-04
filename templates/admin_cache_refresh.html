@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="{{ 'en' if lang == 'en' else 'zh-CN' }}">
+<head>
+    {% include '_app_root.html' %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHUAN | {{ t('cache_refresh_title') }}</title>
+    <style>
+        :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", sans-serif; background: var(--light-pink); color: var(--dark-blue); }
+        .top-bar { background: var(--dark-blue); color: var(--white); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .top-bar .logo { font-size: 1.1rem; font-weight: 700; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
+        .page { max-width: 900px; margin: 0 auto; padding: 28px 24px 48px; }
+        .page-header { margin-bottom: 24px; }
+        .page-header h1 { font-size: 1.35rem; margin-bottom: 8px; }
+        .page-header p { font-size: 0.9rem; color: var(--text-muted); }
+        .meta-card {
+            background: var(--white); border-radius: 12px; border: 1px solid var(--border);
+            padding: 20px 24px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+        }
+        .meta-item label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+        .meta-item .value { font-size: 1rem; font-weight: 600; }
+        .btn-refresh {
+            display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 8px;
+            background: var(--dark-blue); color: var(--white); border: none; font-size: 0.95rem;
+            cursor: pointer; font-weight: 600; transition: opacity 0.2s;
+        }
+        .btn-refresh:hover { opacity: 0.9; }
+        .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-back {
+            display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px;
+            color: var(--dark-blue); text-decoration: none; border: 1px solid var(--border);
+            background: var(--white); font-size: 0.88rem; margin-bottom: 24px;
+        }
+        .btn-back:hover { background: #F8FAFC; }
+        .log-section { margin-top: 24px; }
+        .log-section h3 { font-size: 0.95rem; margin-bottom: 12px; }
+        .log-box {
+            background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 16px;
+            font-family: "SF Mono", "Consolas", monospace; font-size: 0.8rem;
+            line-height: 1.6; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+        }
+        .log-box.empty { color: var(--text-muted); }
+        .actions { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+    {% include '_top_bar.html' %}
+
+    <div class="page">
+        <a href="{{ app_root }}/dashboard" class="btn-back">← {{ t('btn_back_simple') }}</a>
+
+        <div class="page-header">
+            <h1>{{ t('cache_refresh_title') }}</h1>
+            <p>{{ t('cache_refresh_desc') }}</p>
+        </div>
+
+        <div class="meta-card">
+            <div class="meta-item">
+                <label>{{ t('cache_last_updated') }}</label>
+                <span class="value" id="lastUpdated">{{ cache_meta.last_updated_fmt if cache_meta else t('cache_no_data') }}</span>
+            </div>
+            <div class="meta-item">
+                <label>{{ t('cache_system_cutover') }}</label>
+                <span class="value" id="systemCutover">{{ cache_meta.system_cutover_date if cache_meta else t('cache_no_data') }}</span>
+            </div>
+        </div>
+        {% if not cache_meta %}
+        <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:16px;">{{ t('cache_no_data') }} — {{ t('cache_first_refresh_hint') }}</p>
+        {% endif %}
+
+        <div class="actions">
+            <button type="button" class="btn-refresh" id="btnRefresh">
+                <span id="btnIcon">🔄</span>
+                <span id="btnText">{{ t('btn_refresh_cache') }}</span>
+            </button>
+        </div>
+
+        <div class="log-section">
+            <h3>{{ t('cache_refresh_logs') }}</h3>
+            <div class="log-box {{ 'empty' if not refresh_logs }}" id="logBox">{{ refresh_logs_text if refresh_logs_text else (t('cache_no_data') + ' - ' + t('cache_logs_placeholder')) }}</div>
+        </div>
+    </div>
+
+    <script>
+        const appRoot = {{ app_root | tojson }};
+        const T = {{ translations_json | tojson }};
+        const langZh = {{ 'true' if lang == 'zh' else 'false' }};
+
+        document.getElementById('btnRefresh').addEventListener('click', async function() {
+            if (!confirm(T.cache_confirm_msg)) return;
+            const btn = this;
+            btn.disabled = true;
+            document.getElementById('btnIcon').textContent = '⏳';
+            document.getElementById('btnText').textContent = langZh ? '刷新中...' : 'Refreshing...';
+            const logBox = document.getElementById('logBox');
+            logBox.textContent = langZh ? '已启动后台刷新，正在获取日志...' : 'Background refresh started, fetching logs...';
+            logBox.classList.remove('empty');
+            try {
+                const postRes = await fetch(appRoot + '/api/partner/refresh-all-cache', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin'
+                });
+                const postData = await postRes.json();
+                if (postData.error) {
+                    logBox.textContent = (langZh ? '启动失败: ' : 'Start failed: ') + postData.error;
+                    btn.disabled = false;
+                    document.getElementById('btnIcon').textContent = '🔄';
+                    document.getElementById('btnText').textContent = T.btn_refresh_cache;
+                    return;
+                }
+                if (!postData.started) {
+                    logBox.textContent = langZh ? '未能启动刷新' : 'Failed to start refresh';
+                    btn.disabled = false;
+                    document.getElementById('btnIcon').textContent = '🔄';
+                    document.getElementById('btnText').textContent = T.btn_refresh_cache;
+                    return;
+                }
+                let pollId;
+                const doPoll = async () => {
+                    try {
+                        const r = await fetch(appRoot + '/api/partner/refresh-status', { credentials: 'same-origin' });
+                        const data = await r.json();
+                        if (data.logs) {
+                            logBox.textContent = typeof data.logs === 'string' ? data.logs : (data.logs.join ? data.logs.join('') : String(data.logs));
+                        }
+                        if (data.error) {
+                            logBox.textContent += '\n\n' + (langZh ? '错误: ' : 'Error: ') + data.error;
+                        }
+                        if (data.last_updated) {
+                            const d = new Date(data.last_updated);
+                            document.getElementById('lastUpdated').textContent = d.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'medium' });
+                        }
+                        if (data.system_cutover_date) {
+                            document.getElementById('systemCutover').textContent = data.system_cutover_date;
+                        }
+                        if (!data.running) {
+                            if (pollId) clearInterval(pollId);
+                            btn.disabled = false;
+                            document.getElementById('btnIcon').textContent = '🔄';
+                            document.getElementById('btnText').textContent = T.btn_refresh_cache;
+                            logBox.scrollTop = logBox.scrollHeight;
+                        }
+                    } catch (e) {
+                        if (pollId) clearInterval(pollId);
+                        logBox.textContent += '\n\n' + (e.message || 'Network error');
+                        btn.disabled = false;
+                        document.getElementById('btnIcon').textContent = '🔄';
+                        document.getElementById('btnText').textContent = T.btn_refresh_cache;
+                    }
+                };
+                doPoll();
+                pollId = setInterval(doPoll, 2000);
+            } catch (e) {
+                logBox.textContent = (e.message || 'Network error');
+                btn.disabled = false;
+                document.getElementById('btnIcon').textContent = '🔄';
+                document.getElementById('btnText').textContent = T.btn_refresh_cache;
+            }
+        });
+    </script>
+</body>
+</html>

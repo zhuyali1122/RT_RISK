@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ 'en' if lang == 'en' else 'zh-CN' }}">
 <head>
     {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHUAN | 资产商管理</title>
+    <title>CHUAN | {{ t('page_partners') }}</title>
     <style>
         :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,8 +18,8 @@
         .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
         .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
         .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
-        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
-        .btn-link:hover { background: rgba(255,255,255,0.1); }
+        .btn-link, .btn-logout { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover, .btn-logout:hover { background: rgba(255,255,255,0.1); }
 
         .page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
         .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
@@ -105,52 +105,45 @@
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div class="left">
-            <div class="logo">CHUAN</div>
-            <nav>
-                <a href="{{ app_root }}/dashboard">概览</a>
-                <a href="{{ app_root }}/partner/manage" class="active">资产商管理</a>
-                <a href="{{ app_root }}/help">Help</a>
-            </nav>
-        </div>
-        <div class="user-info">
-            <span>{{ user.display_name }}</span>
-            <span class="role-badge">{{ user.role_label }}</span>
-            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
-        </div>
-    </div>
+    {% include '_top_bar.html' %}
 
     <div class="page">
         <div class="page-header">
             <div class="left-group">
                 <a href="{{ app_root }}/dashboard" class="btn-back">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-                    返回
+                    {{ t('btn_back_simple') }}
                 </a>
-                <h1>资产商管理</h1>
+                <h1>{{ t('page_partners') }}</h1>
             </div>
             <div class="right-group">
-                <button type="button" class="btn-refresh" id="btnRefreshAll" title="从数据库强制重新加载所有生产商的风控、收益、现金流数据">
+                {% if show_refresh|default(true) %}
+                <button type="button" class="btn-refresh" id="btnRefreshAll" title="{{ t('refresh_all') }}">
                     <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                    刷新全部数据
+                    {{ t('refresh_all') }}
                 </button>
-                <span class="summary">共 {{ partners|length }} 个资产商</span>
+                {% endif %}
+                <span class="summary">{{ t('partners_count').replace('{n}', partners|length|string) }}</span>
             </div>
         </div>
 
+        {% if no_cache_hint %}
+        <div class="empty-state-banner" style="background:#FFF8E1;border:1px solid #FFE082;border-radius:10px;padding:24px;margin-bottom:24px;text-align:center;color:#5D4037;">
+            <p style="font-size:1rem;margin:0;">{{ t('no_cache_contact_admin') }}</p>
+        </div>
+        {% endif %}
         <div class="main-tabs">
             <div class="main-tab active" onclick="switchMainTab('risk')">
                 <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-                风险管理
+                {{ t('tab_risk_mgmt') }}
             </div>
             <div class="main-tab" onclick="switchMainTab('revenue')">
                 <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
-                收益规模
+                {{ t('tab_revenue_scale') }}
             </div>
             <div class="main-tab" onclick="switchMainTab('cashflow')">
                 <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-                现金流
+                {{ t('tab_cashflow') }}
             </div>
         </div>
 
@@ -164,7 +157,7 @@
                             <div class="p-card-name">{{ p.name }}</div>
                             <div class="p-card-sub">
                                 <span class="status-dot {{ 'active' if p.status == 'active' else 'inactive' }}"></span>
-                                {{ p.country }}{% if p.onboard_date and p.onboard_date != '-' %} · 入驻 {{ p.onboard_date }}{% else %} · 生产商{% endif %}
+                                {{ p.country }}{% if p.onboard_date and p.onboard_date != '-' %} · {{ t('onboard') }} {{ p.onboard_date }}{% else %} · {{ t('producer') }}{% endif %}
                             </div>
                         </div>
                         <span class="tag {{ 'tag-pl' if p.product_type == 'PL' else 'tag-mca' if p.product_type == 'MCA' else 'tag-pl' }}">{{ p.product_type or '-' }}</span>
@@ -172,7 +165,7 @@
                     <div class="p-card-body">
                         <div class="p-kpi-grid">
                             <div class="p-kpi">
-                                <div class="p-kpi-label">当前余额</div>
+                                <div class="p-kpi-label">{{ t('current_balance') }}</div>
                                 {% if p.is_usd %}
                                 <div class="p-kpi-value">{{ p.latest.current_balance_usd }}</div>
                                 {% else %}
@@ -180,15 +173,15 @@
                                 {% endif %}
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">M0 占比</div>
+                                <div class="p-kpi-label">{{ t('m0_ratio') }}</div>
                                 <div class="p-kpi-value {{ p.latest.m0_class }}">{{ p.latest.m0_ratio_fmt }}</div>
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">逾期 1+ 率</div>
+                                <div class="p-kpi-label">{{ t('overdue_1_plus') }}</div>
                                 <div class="p-kpi-value {{ p.latest.od1_class }}">{{ p.latest.od1_fmt }}</div>
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">累计放款</div>
+                                <div class="p-kpi-label">{{ t('cumulative_disbursement') }}</div>
                                 {% if p.is_usd %}
                                 <div class="p-kpi-value">{{ p.latest.cum_disb_usd }}</div>
                                 {% else %}
@@ -196,11 +189,11 @@
                                 {% endif %}
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">活跃借款人</div>
+                                <div class="p-kpi-label">{{ t('active_borrowers') }}</div>
                                 <div class="p-kpi-value">{{ p.latest.active_borrowers }}</div>
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">月放贷规模</div>
+                                <div class="p-kpi-label">{{ t('monthly_volume') }}</div>
                                 {% if p.is_usd %}
                                 <div class="p-kpi-value">{{ p.monthly_volume_usd }}</div>
                                 {% else %}
@@ -210,8 +203,8 @@
                         </div>
                     </div>
                     <div class="p-card-footer">
-                        <span>数据日期：{{ p.latest.stat_date }}</span>
-                        <span class="enter">进入风控面板 <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
+                        <span>{{ t('stat_date') }}：{{ p.latest.stat_date }}</span>
+                        <span class="enter">{{ t('enter_risk_panel') }} <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
                     </div>
                 </div>
                 {% endfor %}
@@ -228,6 +221,7 @@
     <script>
         const partnersRevenue = {{ partners_revenue | tojson }};
         const partnersCashflow = {{ partners_cashflow | tojson }};
+        const T = {{ translations_json | tojson }};
 
         function switchMainTab(tab) {
             const idx = { risk: 0, revenue: 1, cashflow: 2 }[tab] ?? 0;
@@ -317,29 +311,29 @@
                     <div class="rv-card-body">
                         <div class="p-kpi-grid">
                             <div class="p-kpi">
-                                <div class="p-kpi-label">在贷余额</div>
+                                <div class="p-kpi-label">${T.outstanding_balance}</div>
                                 ${isUsd ? `<div class="p-kpi-value">${balD.usd}</div>` : `<div class="p-kpi-value rv-dual-currency"><span class="rv-local">${balD.local}</span><span class="rv-usd">${balD.usd}</span></div>`}
                                 <div class="rv-delta ${balUp ? 'up' : 'down'}">${balUp ? '↑' : '↓'} ${isUsd ? balDeltaD.usd : balDeltaD.local + ' / ' + balDeltaD.usd}</div>
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">年化收益率</div>
+                                <div class="p-kpi-label">${T.annualized_yield}</div>
                                 <div class="p-kpi-value good">${(latest.avg_yield_annualized * 100).toFixed(1)}%</div>
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">回收率</div>
+                                <div class="p-kpi-label">${T.collection_rate}</div>
                                 <div class="p-kpi-value good">${(latest.collection_rate * 100).toFixed(1)}%</div>
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">累计放款</div>
+                                <div class="p-kpi-label">${T.cumulative_disbursement}</div>
                                 ${isUsd ? `<div class="p-kpi-value">${cumD.usd}</div>` : `<div class="p-kpi-value rv-dual-currency"><span class="rv-local">${cumD.local}</span><span class="rv-usd">${cumD.usd}</span></div>`}
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">当月净收益</div>
+                                <div class="p-kpi-label">${T.monthly_net_revenue_label}</div>
                                 ${isUsd ? `<div class="p-kpi-value good">${netD.usd}</div>` : `<div class="p-kpi-value good rv-dual-currency"><span class="rv-local">${netD.local}</span><span class="rv-usd">${netD.usd}</span></div>`}
                                 <div class="rv-delta ${revUp ? 'up' : 'down'}">${revUp ? '↑' : '↓'} ${isUsd ? revDeltaD.usd : revDeltaD.local + ' / ' + revDeltaD.usd}</div>
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">累计净收益</div>
+                                <div class="p-kpi-label">${T.cumulative_net_revenue}</div>
                                 ${isUsd ? `<div class="p-kpi-value good">${totD.usd}</div>` : `<div class="p-kpi-value good rv-dual-currency"><span class="rv-local">${totD.local}</span><span class="rv-usd">${totD.usd}</span></div>`}
                             </div>
                         </div>
@@ -351,13 +345,13 @@
                         </svg>
                         <div class="rv-spark-legend">
                             <span>${d[0].month}</span>
-                            <span style="font-size:0.58rem;color:var(--text-muted)">在贷余额趋势</span>
+                            <span style="font-size:0.58rem;color:var(--text-muted)">${T.ob_trend}</span>
                             <span>${latest.month}</span>
                         </div>
                     </div>
                     <div class="rv-card-footer">
-                        <span>数据截至 ${latest.month} · 运营 ${d.length} 个月</span>
-                        <span class="enter">查看详情 <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
+                        <span>${T.data_as_of} ${latest.month} · ${T.months_operating} ${d.length} ${T.months}</span>
+                        <span class="enter">${T.view_detail} <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
                     </div>
                 </div>
                 </a>`;
@@ -403,16 +397,16 @@
                     <div class="rv-card-body">
                         <div class="p-kpi-grid">
                             <div class="p-kpi">
-                                <div class="p-kpi-label">下月预期回收</div>
+                                <div class="p-kpi-label">${T.next_month_expected}</div>
                                 ${isUsd ? `<div class="p-kpi-value good">${nextD.usd}</div>` : `<div class="p-kpi-value good rv-dual-currency"><span class="rv-local">${nextD.local}</span><span class="rv-usd">${nextD.usd}</span></div>`}
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">12 个月预期</div>
+                                <div class="p-kpi-label">${T.expected_12m}</div>
                                 ${isUsd ? `<div class="p-kpi-value good">${totalD.usd}</div>` : `<div class="p-kpi-value good rv-dual-currency"><span class="rv-local">${totalD.local}</span><span class="rv-usd">${totalD.usd}</span></div>`}
                             </div>
                             <div class="p-kpi">
-                                <div class="p-kpi-label">预测期数</div>
-                                <div class="p-kpi-value">${d.length} 个月</div>
+                                <div class="p-kpi-label">${T.forecast_periods}</div>
+                                <div class="p-kpi-value">${d.length} ${T.months}</div>
                             </div>
                         </div>
                     </div>
@@ -424,14 +418,14 @@
                         </svg>
                         <div class="rv-spark-legend">
                             <span>${d[0].month}</span>
-                            <span style="font-size:0.58rem;color:var(--text-muted)">预期回收趋势</span>
+                            <span style="font-size:0.58rem;color:var(--text-muted)">${T.expected_recovery_trend}</span>
                             <span>${d[d.length-1].month}</span>
                         </div>
                     </div>
                     ` : ''}
                     <div class="rv-card-footer">
-                        <span>基于在贷还款计划预测 · 回收率 98%</span>
-                        <span class="enter">查看详情 <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
+                        <span>${T.based_on_repayment}</span>
+                        <span class="enter">${T.view_detail} <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></span>
                     </div>
                 </div>
                 </a>`;
@@ -441,7 +435,7 @@
         document.getElementById('btnRefreshAll')?.addEventListener('click', async function() {
             const btn = this;
             btn.disabled = true;
-            btn.textContent = '刷新中...';
+            btn.textContent = T.refresh_ing;
             const base = (window.APP_ROOT || '') || '';
             try {
                 const res = await fetch(base + '/api/partner/refresh-all-cache', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
@@ -450,12 +444,12 @@
                     window.location.reload();
                     return;
                 }
-                alert(data.error || '刷新失败');
+                alert(data.error || T.refresh_failed);
             } catch (e) {
-                alert('刷新失败：' + (e.message || '网络错误'));
+                alert(T.refresh_failed + '：' + (e.message || '网络错误'));
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> 刷新全部数据';
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> ' + T.refresh_all;
             }
         });
     </script>

@@ -126,6 +126,8 @@ def refresh_risk_cache(spv_id: str, exchange_rate: float = 1, currency: str = "U
         r["cash"] = _to_usd(r.get("cash"), rate)
         r["m0_balance"] = _to_usd(r.get("m0_balance"), rate)
         r["m0_accrued_interest"] = _to_usd(r.get("m0_accrued_interest"), rate)
+        r["all_accrued_interest"] = _to_usd(r.get("all_accrued_interest"), rate)
+        r["all_remaining_interest"] = _to_usd(r.get("all_remaining_interest"), rate)
         for d in r.get("dpd_distribution", []):
             d["balance"] = _to_usd(d.get("balance"), rate)
         for v in r.get("vintage_data", []):

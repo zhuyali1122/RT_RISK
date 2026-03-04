@@ -37,13 +37,14 @@ class _PooledConnWrapper:
 def _get_connect_kwargs():
     """获取 psycopg2.connect 的通用参数"""
     cfg = get_db_config()
+    timeout = int(os.getenv("DATABASE_CONNECT_TIMEOUT", "15"))
     kwargs = {
         "host": cfg["host"],
         "port": cfg["port"],
         "dbname": cfg["database"],
         "user": cfg["user"],
         "password": cfg["password"],
-        "connect_timeout": 15,
+        "connect_timeout": timeout,
     }
     if cfg.get("sslmode"):
         kwargs["sslmode"] = cfg["sslmode"]
@@ -54,7 +55,8 @@ def _get_connect_kwargs():
 
 def _connect_with_string():
     """使用连接字符串连接（与 DATABASE_URL 一致）"""
-    return psycopg2.connect(get_connection_string(), connect_timeout=15)
+    timeout = int(os.getenv("DATABASE_CONNECT_TIMEOUT", "15"))
+    return psycopg2.connect(get_connection_string(), connect_timeout=timeout)
 
 
 def _connect_with_retry(connect_fn):

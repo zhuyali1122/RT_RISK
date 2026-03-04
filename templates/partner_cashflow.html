@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ 'en' if lang == 'en' else 'zh-CN' }}">
 <head>
     {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHUAN | {{ partner.name }} - 现金流预测</title>
+    <title>CHUAN | {{ partner.name }} - {{ t('cashflow_forecast') }}</title>
     <style>
         :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -101,22 +101,7 @@
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div class="left">
-            <div class="logo">CHUAN</div>
-            <nav>
-                <a href="{{ app_root }}/dashboard">概览</a>
-                <a href="{{ app_root }}/partner/manage">资产商管理</a>
-                <a href="{{ app_root }}/help">Help</a>
-                <a class="active">{{ partner.name }}</a>
-            </nav>
-        </div>
-        <div class="user-info">
-            <span>{{ user.display_name }}</span>
-            <span class="role-badge">{{ user.role_label }}</span>
-            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
-        </div>
-    </div>
+    {% include '_top_bar.html' %}
 
     <div class="page">
         <div class="page-header">
@@ -124,39 +109,39 @@
                 <div class="left-group">
                     <a href="{{ app_root }}/partner/manage" class="btn-back">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-                        返回列表
+                        {{ t('btn_back') }}
                     </a>
-                    <h1>{{ partner.name }} · 现金流预测</h1>
+                    <h1>{{ partner.name }} · {{ t('cashflow_forecast') }}</h1>
                 </div>
-                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · 基于在贷还款计划</div>
+                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · {{ t('based_on_loans') }}</div>
                 <div class="no-pdf" style="margin-top:10px;display:flex;gap:16px;font-size:0.8rem;">
-                    <a href="{{ app_root }}/partner/{{ partner.id }}/risk" style="color:var(--text-muted);text-decoration:none;">风控监控</a>
-                    <a href="{{ app_root }}/partner/{{ partner.id }}/revenue" style="color:var(--text-muted);text-decoration:none;">收益规模</a>
-                    <span style="color:var(--teal);font-weight:600;">现金流</span>
+                    <a href="{{ app_root }}/partner/{{ partner.id }}/risk" style="color:var(--text-muted);text-decoration:none;">{{ t('tab_risk') }}</a>
+                    <a href="{{ app_root }}/partner/{{ partner.id }}/revenue" style="color:var(--text-muted);text-decoration:none;">{{ t('tab_revenue') }}</a>
+                    <span style="color:var(--teal);font-weight:600;">{{ t('tab_cashflow') }}</span>
                 </div>
             </div>
             <div class="header-right">
                 {% if use_cashflow_cache %}
                 <div class="cache-status">
                     {% if cache_last_updated %}
-                    <span class="cache-time" title="数据缓存时间">缓存于 {{ cache_last_updated or '-' }}</span>
+                    <span class="cache-time" title="{{ t('cached_at') }}">{{ t('cached_at') }} {{ cache_last_updated or '-' }}</span>
                     {% else %}
-                    <span class="cache-empty">暂无缓存，请点击刷新加载</span>
+                    <span class="cache-empty">{{ t('no_cache_hint') }}</span>
                     {% endif %}
                 </div>
-                <button class="btn-refresh" onclick="refreshCashflow()" title="从数据库重新拉取并缓存">
+                <button class="btn-refresh" onclick="refreshCashflow()" title="{{ t('btn_refresh') }}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                    刷新
+                    {{ t('btn_refresh') }}
                 </button>
                 {% endif %}
-                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="下载风控、收益、现金流数据为 Excel" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
+                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="{{ t('download_excel_title') }}" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    下载 Excel
+                    {{ t('btn_download_excel') }}
                 </a>
                 {% if local_currency != 'USD' %}
                 <div class="currency-selector">
                     <div class="currency-selector-row">
-                        <label>币种</label>
+                        <label>{{ t('currency') }}</label>
                         <div class="currency-toggle currency-toggle-header">
                             <button class="active" onclick="switchHeaderCurrency('usd',this)">USD</button>
                             <button onclick="switchHeaderCurrency('local',this)">{{ local_currency }}</button>
@@ -176,7 +161,8 @@
         const data = {{ cashflow_data | tojson }};
         const localCurrency = '{{ local_currency }}';
         const exchangeRate = {{ exchange_rate }};
-        const collectionRatePct = {{ (collection_rate * 100)|round(1) }};  // 回收率（来自收益规模最新月）
+        const collectionRatePct = {{ (collection_rate * 100)|round(1) }};
+        const T = {{ translations_json | tojson }};
 
         async function handleDownloadExcel(ev, pid) {
             ev.preventDefault();
@@ -185,7 +171,7 @@
                 const res = await fetch(url, { credentials: 'same-origin' });
                 if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
-                    alert('下载失败: ' + (data.error || res.statusText || '请先登录'));
+                    alert(T.download_failed + ': ' + (data.error || res.statusText || ''));
                     return false;
                 }
                 const blob = await res.blob();
@@ -198,7 +184,7 @@
                 a.click();
                 URL.revokeObjectURL(a.href);
             } catch (e) {
-                alert('下载失败: ' + (e.message || '网络错误'));
+                alert(T.download_failed + ': ' + (e.message || ''));
             }
             return false;
         }
@@ -216,10 +202,10 @@
                 if (result.ok) {
                     location.reload();
                 } else {
-                    alert('刷新失败: ' + (result.error || '未知错误'));
+                    alert(T.refresh_failed + ': ' + (result.error || ''));
                 }
             } catch (e) {
-                alert('刷新失败: ' + e.message);
+                alert(T.refresh_failed + ': ' + e.message);
             } finally {
                 if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
             }
@@ -249,7 +235,7 @@
 
         function render() {
             if (!data || data.length === 0) {
-                document.getElementById('content').innerHTML = '<p style="padding:40px;text-align:center;color:var(--text-muted)">暂无现金流预测数据（需有在贷 Loan 及还款计划）</p>';
+                document.getElementById('content').innerHTML = '<p style="padding:40px;text-align:center;color:var(--text-muted)">' + T.cf_no_data + '</p>';
                 return;
             }
             const total = data.reduce((s, r) => s + (r.expected_inflow || 0), 0);
@@ -258,27 +244,27 @@
             const barMaxH = 140;
 
             document.getElementById('content').innerHTML = `
-                <div class="section-title">现金流预测 · 未来 12 个月</div>
+                <div class="section-title">${T.cf_12m_title}</div>
                 <div class="kpi-grid">
                     <div class="kpi-card">
-                        <div class="kpi-label">12 个月预期回收</div>
+                        <div class="kpi-label">${T.expected_12m_recovery}</div>
                         <div class="kpi-value">${fmtK(total)}</div>
-                        <div class="kpi-sub">按 ${collectionRatePct}% 回收率估算</div>
+                        <div class="kpi-sub">${(T.at_rate_estimate || '按 {pct}% 回收率估算').replace('{pct}', collectionRatePct)}</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-label">下月预期回收</div>
+                        <div class="kpi-label">${T.next_month_expected}</div>
                         <div class="kpi-value">${fmtK(nextMonth.expected_inflow)}</div>
                         <div class="kpi-sub">${nextMonth.month}</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-label">预测期数</div>
-                        <div class="kpi-value">${data.length} 个月</div>
+                        <div class="kpi-label">${T.forecast_periods}</div>
+                        <div class="kpi-value">${data.length} ${T.months}</div>
                         <div class="kpi-sub">${data[0].month} ～ ${data[data.length-1].month}</div>
                     </div>
                 </div>
 
                 <div class="chart-panel">
-                    <div class="chart-title">月度预期回收</div>
+                    <div class="chart-title">${T.monthly_expected} ${T.expected_inflow}</div>
                     <div class="cf-bar-chart">
                         ${data.map(r => {
                             const h = Math.max(8, (r.expected_inflow / maxVal) * barMaxH);
@@ -289,15 +275,13 @@
                             '</div>';
                         }).join('')}
                     </div>
-                    <div class="cf-hint">
-                    <strong>计算公式：</strong>预期回收 = (应还本金 + 应还利息) × 回收率。数据来自 raw_loan.repayment_schedule 中未到期应还金额，按月份汇总；仅考虑 calc_overdue 中 loan_status 1/2 的活跃贷款。回收率取自收益规模最新月的实际回收÷应回收，无则默认 98%。
-                </div>
+                    <div class="cf-hint">${T.cf_formula_hint}</div>
                 </div>
 
                 <div class="table-panel">
-                    <div class="chart-title">月度明细</div>
+                    <div class="chart-title">${T.monthly_detail}</div>
                     <table class="cf-table">
-                        <thead><tr><th>月份</th><th>应还本金</th><th>应还利息</th><th>回收率</th><th>预期回收</th><th>涉及笔数</th></tr></thead>
+                        <thead><tr><th>${T.month}</th><th>${T.principal_due}</th><th>${T.interest_due}</th><th>${T.collection_rate}</th><th>${T.expected_inflow}</th><th>${T.loan_count}</th></tr></thead>
                         <tbody>
                             ${data.map(r => `<tr><td>${r.month}</td><td>${fmtK(r.principal)}</td><td>${fmtK(r.interest)}</td><td>${collectionRatePct}%</td><td>${fmtK(r.expected_inflow)}</td><td>${r.loan_count || '-'}</td></tr>`).join('')}
                         </tbody>

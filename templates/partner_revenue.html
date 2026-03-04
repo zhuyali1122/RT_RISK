@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ 'en' if lang == 'en' else 'zh-CN' }}">
 <head>
     {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHUAN | {{ partner.name }} - 收益规模</title>
+    <title>CHUAN | {{ partner.name }} - {{ t('tab_revenue') }}</title>
     <style>
         :root { --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF; --text-muted: #8A95A5; --border: #E2E8F0; --green: #2E7D6E; --red: #D8434F; --gold: #C9A96E; --teal: #4DB6AC; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -169,22 +169,7 @@
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div class="left">
-            <div class="logo">CHUAN</div>
-            <nav>
-                <a href="{{ app_root }}/dashboard">概览</a>
-                <a href="{{ app_root }}/partner/manage">资产商管理</a>
-                <a href="{{ app_root }}/help">Help</a>
-                <a class="active">{{ partner.name }}</a>
-            </nav>
-        </div>
-        <div class="user-info">
-            <span>{{ user.display_name }}</span>
-            <span class="role-badge">{{ user.role_label }}</span>
-            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
-        </div>
-    </div>
+    {% include '_top_bar.html' %}
 
     <div class="page">
         <div class="page-header">
@@ -192,39 +177,39 @@
                 <div class="left-group">
                     <a href="{{ app_root }}/partner/manage" class="btn-back">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-                        返回列表
+                        {{ t('btn_back') }}
                     </a>
-                    <h1>{{ partner.name }} · 收益规模</h1>
+                    <h1>{{ partner.name }} · {{ t('tab_revenue') }}</h1>
                 </div>
-                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · 联系人：{{ partner.contact }}</div>
+                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · {{ t('contact') }}：{{ partner.contact }}</div>
                 <div class="no-pdf" style="margin-top:10px;display:flex;gap:16px;font-size:0.8rem;">
-                    <a href="{{ app_root }}/partner/{{ partner.id }}/risk" style="color:var(--text-muted);text-decoration:none;">风控监控</a>
-                    <span style="color:var(--green);font-weight:600;">收益规模</span>
-                    <a href="{{ app_root }}/partner/{{ partner.id }}/cashflow" style="color:var(--text-muted);text-decoration:none;">现金流</a>
+                    <a href="{{ app_root }}/partner/{{ partner.id }}/risk" style="color:var(--text-muted);text-decoration:none;">{{ t('tab_risk') }}</a>
+                    <span style="color:var(--green);font-weight:600;">{{ t('tab_revenue') }}</span>
+                    <a href="{{ app_root }}/partner/{{ partner.id }}/cashflow" style="color:var(--text-muted);text-decoration:none;">{{ t('tab_cashflow') }}</a>
                 </div>
             </div>
             <div class="header-right">
                 {% if use_revenue_cache %}
                 <div class="cache-status">
                     {% if cache_last_updated %}
-                    <span class="cache-time" title="数据缓存时间">缓存于 {{ cache_last_updated or '-' }}</span>
+                    <span class="cache-time">{{ t('cached_at') }} {{ cache_last_updated or '-' }}</span>
                     {% else %}
-                    <span class="cache-empty">暂无缓存，请点击刷新加载</span>
+                    <span class="cache-empty">{{ t('no_cache_hint') }}</span>
                     {% endif %}
                 </div>
-                <button class="btn-refresh" onclick="refreshRevenue()" title="从数据库重新拉取并缓存">
+                <button class="btn-refresh" onclick="refreshRevenue()" title="{{ t('btn_refresh') }}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                    刷新
+                    {{ t('btn_refresh') }}
                 </button>
                 {% endif %}
-                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="下载风控、收益、现金流数据为 Excel" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
+                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="{{ t('btn_download_excel') }}" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    下载 Excel
+                    {{ t('btn_download_excel') }}
                 </a>
                 {% if local_currency != 'USD' %}
                 <div class="currency-selector">
                     <div class="currency-selector-row">
-                        <label>币种</label>
+                        <label>{{ t('currency') }}</label>
                         <div class="currency-toggle currency-toggle-header">
                             <button class="active" onclick="switchHeaderCurrency('usd',this)">USD</button>
                             <button onclick="switchHeaderCurrency('local',this)">{{ local_currency }}</button>
@@ -244,6 +229,7 @@
         const data = {{ revenue_data | tojson }};
         const localCurrency = '{{ local_currency }}';
         const exchangeRate = {{ exchange_rate }};
+        const T = {{ translations_json | tojson }};
 
         async function handleDownloadExcel(ev, pid) {
             ev.preventDefault();
@@ -252,20 +238,20 @@
                 const res = await fetch(url, { credentials: 'same-origin' });
                 if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
-                    alert('下载失败: ' + (data.error || res.statusText || '请先登录'));
+                    alert(T.download_failed + ': ' + (data.error || res.statusText || ''));
                     return false;
                 }
                 const blob = await res.blob();
                 const disposition = res.headers.get('Content-Disposition') || '';
                 const m = disposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i) || disposition.match(/filename="?([^";]+)/);
-                const filename = (m ? decodeURIComponent((m[1] || '').replace(/^"/, '').replace(/"$/, '')) : '').trim() || '数据导出.xlsx';
+                const filename = (m ? decodeURIComponent((m[1] || '').replace(/^"/, '').replace(/"$/, '')) : '').trim() || T.export_filename;
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
-                a.download = filename || '数据导出.xlsx';
+                a.download = filename || T.export_filename;
                 a.click();
                 URL.revokeObjectURL(a.href);
             } catch (e) {
-                alert('下载失败: ' + (e.message || '网络错误'));
+                alert(T.download_failed + ': ' + (e.message || ''));
             }
             return false;
         }
@@ -283,10 +269,10 @@
                 if (result.ok) {
                     location.reload();
                 } else {
-                    alert('刷新失败: ' + (result.error || '未知错误'));
+                    alert(T.refresh_failed + ': ' + (result.error || ''));
                 }
             } catch (e) {
-                alert('刷新失败: ' + e.message);
+                alert(T.refresh_failed + ': ' + e.message);
             } finally {
                 if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
             }
@@ -318,7 +304,7 @@
         }
 
         function render() {
-            if (!data || data.length === 0) { document.getElementById('content').innerHTML = '<p style="padding:40px;text-align:center;color:var(--text-muted)">暂无收益数据</p>'; return; }
+            if (!data || data.length === 0) { document.getElementById('content').innerHTML = '<p style="padding:40px;text-align:center;color:var(--text-muted)">' + T.revenue_no_data + '</p>'; return; }
 
             const latest = data[data.length - 1];
             const prev = data.length > 1 ? data[data.length - 2] : latest;
@@ -353,64 +339,64 @@
             const ap = pts => { let p = `M ${pts[0][0].toFixed(1)},${svgH - pad}`; pts.forEach(([x, y]) => p += ` L ${x.toFixed(1)},${y.toFixed(1)}`); return p + ` L ${pts[pts.length-1][0].toFixed(1)},${svgH - pad} Z`; };
 
             document.getElementById('content').innerHTML = `
-                <div class="section-title">收益概览 · 截至 ${latest.month}</div>
+                <div class="section-title">${T.revenue_overview} · ${T.as_of} ${latest.month}</div>
                 <div class="kpi-grid">
-                    <div class="kpi-card"><div class="kpi-label">在贷余额</div><div class="kpi-value">${fmtK(latest.outstanding_balance)}</div><div class="kpi-sub ${balD >= 0 ? 'up' : 'down'}">${balD >= 0 ? '↑' : '↓'} ${fmtK(Math.abs(balD))} vs 上月</div></div>
-                    <div class="kpi-card"><div class="kpi-label">累计放款</div><div class="kpi-value">${fmtK(latest.cumulative_disbursement)}</div><div class="kpi-sub">运营 ${data.length} 个月</div></div>
-                    <div class="kpi-card green"><div class="kpi-label">累计净收益</div><div class="kpi-value" style="color:var(--green)">${fmtK(totalRev)}</div><div class="kpi-sub">利息 ${fmtK(totalInt)} + 手续费 ${fmtK(totalFee)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.outstanding_balance}</div><div class="kpi-value">${fmtK(latest.outstanding_balance)}</div><div class="kpi-sub ${balD >= 0 ? 'up' : 'down'}">${balD >= 0 ? '↑' : '↓'} ${fmtK(Math.abs(balD))} ${T.vs_last_month}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.cumulative_disbursement}</div><div class="kpi-value">${fmtK(latest.cumulative_disbursement)}</div><div class="kpi-sub">${T.months_operating} ${data.length} ${T.months}</div></div>
+                    <div class="kpi-card green"><div class="kpi-label">${T.cumulative_net_revenue}</div><div class="kpi-value" style="color:var(--green)">${fmtK(totalRev)}</div><div class="kpi-sub">${T.interest} ${fmtK(totalInt)} + ${T.fee} ${fmtK(totalFee)}</div></div>
                     <div class="kpi-card green yield-card">
                         <div class="kpi-label-with-help">
-                            <span>年化收益率</span>
-                            <span class="help-icon" title="点击查看计算公式" onclick="this.nextElementSibling.classList.toggle('show'); event.stopPropagation();">?</span>
+                            <span>${T.annualized_yield}</span>
+                            <span class="help-icon" title="${T.click_for_formula}" onclick="this.nextElementSibling.classList.toggle('show'); event.stopPropagation();">?</span>
                             <div class="yield-breakdown" onclick="event.stopPropagation();">
-                                <div class="yield-breakdown-title">年化收益率计算公式</div>
-                                <div class="yield-breakdown-formula">年化收益率 = 单月利息 ÷ ((期初余额 + 期末余额) ÷ 2) × 12</div>
+                                <div class="yield-breakdown-title">${T.yield_formula_title}</div>
+                                <div class="yield-breakdown-formula">${T.yield_formula}</div>
                                 <table class="yield-breakdown-table">
-                                    <tr><td>期初余额（上月月末）</td><td>${fmtK(beginBal)}</td></tr>
-                                    <tr><td>期末余额（当月月末）</td><td>${fmtK(endBal)}</td></tr>
-                                    <tr><td>月均余额</td><td>${fmtK(avgBal)}</td></tr>
-                                    <tr><td>单月利息（${latest.month}）</td><td>${fmtK(yieldInterest)}</td></tr>
-                                    <tr><td>年化收益率</td><td style="color:var(--green)">${(latest.avg_yield_annualized * 100).toFixed(1)}%</td></tr>
+                                    <tr><td>${T.opening_balance_desc}</td><td>${fmtK(beginBal)}</td></tr>
+                                    <tr><td>${T.closing_balance_desc}</td><td>${fmtK(endBal)}</td></tr>
+                                    <tr><td>${T.avg_balance}</td><td>${fmtK(avgBal)}</td></tr>
+                                    <tr><td>${T.monthly_interest}（${latest.month}）</td><td>${fmtK(yieldInterest)}</td></tr>
+                                    <tr><td>${T.annualized_yield}</td><td style="color:var(--green)">${(latest.avg_yield_annualized * 100).toFixed(1)}%</td></tr>
                                 </table>
                             </div>
                         </div>
                         <div class="kpi-value" style="color:var(--green)">${(latest.avg_yield_annualized * 100).toFixed(1)}%</div>
-                        <div class="kpi-sub">目标 ≥ 15%</div>
+                        <div class="kpi-sub">${T.target_ge}</div>
                     </div>
                     <div class="kpi-card gold collection-card">
                         <div class="kpi-label-with-help">
-                            <span>回收率</span>
-                            <span class="help-icon" title="点击查看计算公式" onclick="this.nextElementSibling.classList.toggle('show'); event.stopPropagation();">?</span>
+                            <span>${T.collection_rate}</span>
+                            <span class="help-icon" title="?" onclick="this.nextElementSibling.classList.toggle('show'); event.stopPropagation();">?</span>
                             <div class="collection-breakdown" onclick="event.stopPropagation();">
-                                <div class="yield-breakdown-title">回收率计算公式</div>
-                                <div class="yield-breakdown-formula">回收率 = 回收金额 ÷ 应收金额</div>
+                                <div class="yield-breakdown-title">${T.collection_rate_formula}</div>
+                                <div class="yield-breakdown-formula">${T.collection_rate_formula}</div>
                                 <table class="yield-breakdown-table">
-                                    <tr><td>回收金额（${latest.month}）</td><td>${fmtK(latest.collection)}</td></tr>
-                                    <tr><td>应收金额（${latest.month}）</td><td>${fmtK(latest.expected_due != null ? latest.expected_due : (latest.collection_rate > 0 ? Math.round(latest.collection / latest.collection_rate) : 0))}</td></tr>
-                                    <tr><td>回收率</td><td style="color:var(--gold)">${(latest.collection_rate * 100).toFixed(1)}%</td></tr>
+                                    <tr><td>${T.collection_amount} (${latest.month})</td><td>${fmtK(latest.collection)}</td></tr>
+                                    <tr><td>${T.expected_due} (${latest.month})</td><td>${fmtK(latest.expected_due != null ? latest.expected_due : (latest.collection_rate > 0 ? Math.round(latest.collection / latest.collection_rate) : 0))}</td></tr>
+                                    <tr><td>${T.collection_rate}</td><td style="color:var(--gold)">${(latest.collection_rate * 100).toFixed(1)}%</td></tr>
                                 </table>
                             </div>
                         </div>
                         <div class="kpi-value" style="color:var(--gold)">${(latest.collection_rate * 100).toFixed(1)}%</div>
-                        <div class="kpi-sub">当月回收 ${fmtK(latest.collection)}</div>
+                        <div class="kpi-sub">${T.current_month_collection} ${fmtK(latest.collection)}</div>
                     </div>
                 </div>
 
                 <div class="charts-row">
                     <div class="chart-panel">
-                        <div class="chart-title">月度放款 vs 回收</div>
+                        <div class="chart-title">${T.monthly_disbursement_vs_collection}</div>
                         <div class="bar-chart">
                             ${data.map(r => {
                                 const barMaxH = 120;
                                 const hD = Math.max(4, (r.disbursement / maxBarVal) * barMaxH);
                                 const hC = Math.max(4, (r.collection / maxBarVal) * barMaxH);
-                                return `<div class="bar-group" title="${r.month}: 放款 ${fmtK(r.disbursement)}, 回收 ${fmtK(r.collection)}"><div class="bar-pair"><div><div class="bar-seg disb" style="height:${hD}px"></div></div><div><div class="bar-seg coll" style="height:${hC}px"></div></div></div><div class="bar-month">${r.month.slice(5)}</div><div class="bar-values"><span class="disb">${fmtK(r.disbursement)}</span><span class="coll">${fmtK(r.collection)}</span></div></div>`;
+                                return `<div class="bar-group" title="${r.month}: ${T.disbursement} ${fmtK(r.disbursement)}, ${T.collection} ${fmtK(r.collection)}"><div class="bar-pair"><div><div class="bar-seg disb" style="height:${hD}px"></div></div><div><div class="bar-seg coll" style="height:${hC}px"></div></div></div><div class="bar-month">${r.month.slice(5)}</div><div class="bar-values"><span class="disb">${fmtK(r.disbursement)}</span><span class="coll">${fmtK(r.collection)}</span></div></div>`;
                             }).join('')}
                         </div>
-                        <div class="legend"><span><div class="sw" style="background:var(--dark-blue)"></div>放款</span><span><div class="sw" style="background:var(--teal)"></div>回收</span></div>
+                        <div class="legend"><span><div class="sw" style="background:var(--dark-blue)"></div>${T.disbursement}</span><span><div class="sw" style="background:var(--teal)"></div>${T.collection}</span></div>
                     </div>
                     <div class="chart-panel">
-                        <div class="chart-title">在贷余额 & 年化收益率</div>
+                        <div class="chart-title">${T.outstanding_and_yield}</div>
                         <div class="dual-axis-chart">
                             ${(() => {
                                 const pad = 24, chartW = 460, chartH = 120, topPad = 12, n = data.length;
@@ -445,13 +431,13 @@
                                 '</svg>';
                             })()}
                         </div>
-                        <div class="legend" style="margin-top:10px"><span><div class="sw" style="background:var(--dark-blue)"></div>在贷余额</span><span><div class="sw" style="background:var(--gold);border-radius:50%"></div>年化收益率</span></div>
+                        <div class="legend" style="margin-top:10px"><span><div class="sw" style="background:var(--dark-blue)"></div>${T.outstanding_balance}</span><span><div class="sw" style="background:var(--gold);border-radius:50%"></div>${T.annualized_yield}</span></div>
                     </div>
                 </div>
 
                 <div class="charts-row">
                     <div class="chart-panel">
-                        <div class="chart-title">月度净收益</div>
+                        <div class="chart-title">${T.monthly_net_revenue}</div>
                         <div class="stacked-bar-chart">
                             ${(() => {
                                 const maxNet = Math.max(...data.map(r => r.net_revenue), 1);
@@ -470,10 +456,10 @@
                                 }).join('');
                             })()}
                         </div>
-                        <div class="legend"><span><div class="sw" style="background:var(--green)"></div>利息</span><span><div class="sw" style="background:var(--teal)"></div>手续费</span></div>
+                        <div class="legend"><span><div class="sw" style="background:var(--green)"></div>${T.interest}</span><span><div class="sw" style="background:var(--teal)"></div>${T.fee}</span></div>
                     </div>
                     <div class="chart-panel">
-                        <div class="chart-title">回收率走势</div>
+                        <div class="chart-title">${T.collection_rate_trend}</div>
                         <div class="line-wrap cr-chart-wrap">
                             <svg viewBox="0 0 520 140" preserveAspectRatio="xMidYMid meet">
                                 ${(() => {
@@ -504,14 +490,14 @@
                             </svg>
                         </div>
                         <div class="lc-x" style="padding:0 24px">${data.map(r => `<span>${r.month.slice(5)}</span>`).join('')}</div>
-                        <div class="legend"><span><div class="sw" style="background:var(--gold)"></div>回收率</span></div>
+                        <div class="legend"><span><div class="sw" style="background:var(--gold)"></div>${T.collection_rate}</span></div>
                     </div>
                 </div>
 
                 <div class="table-panel">
-                    <div class="chart-title">月度明细</div>
+                    <div class="chart-title">${T.monthly_detail}</div>
                     <table class="rev-table">
-                        <thead><tr><th>月份</th><th>放款金额</th><th>在贷余额</th><th>应收金额</th><th>回收金额</th><th>回收率</th><th>利息收入</th><th>手续费</th><th>净收益</th><th>年化收益</th></tr></thead>
+                        <thead><tr><th>${T.month}</th><th>${T.disbursement_amount}</th><th>${T.outstanding_balance}</th><th>${T.expected_due}</th><th>${T.collection_amount}</th><th>${T.collection_rate}</th><th>${T.interest_income}</th><th>${T.fee_income}</th><th>${T.net_revenue}</th><th>${T.annualized_yield_pct}</th></tr></thead>
                         <tbody>
                             ${[...data].reverse().map((r, i, arr) => {
                                 const p = i < arr.length - 1 ? arr[i + 1] : null;

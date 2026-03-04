@@ -6,17 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 
 
-def _get_calc_table(dt):
-    """根据日期返回 calc_overdue 表名"""
-    return f"calc_overdue_y{dt.year}m{dt.month:02d}"
-
-
-def _serialize(val):
-    if isinstance(val, Decimal):
-        return float(val)
-    if hasattr(val, "isoformat"):
-        return val.isoformat()
-    return val
+from kn_data_utils import get_calc_table
 
 
 def _dpd_bucket_into_collection(dpd):
@@ -75,7 +65,7 @@ def compute_collection_report(spv_id: str, stat_date: str):
     except ValueError:
         return []
 
-    calc_table = _get_calc_table(dt)
+    calc_table = get_calc_table(dt)
     cur = conn.cursor()
 
     # 检查 calc_overdue 表存在

@@ -11,21 +11,7 @@ CACHE_DIR = os.path.join(BASE_DIR, "config", "cache")
 CACHE_FILE_PREFIX = "vintage_cache_"
 
 
-def _get_calc_table(stat_date):
-    """根据 stat_date 返回 calc_overdue 表名"""
-    try:
-        dt = datetime.strptime(stat_date[:10], "%Y-%m-%d")
-        return f"calc_overdue_y{dt.year}m{dt.month:02d}"
-    except (ValueError, TypeError):
-        return None
-
-
-def _serialize(val):
-    if isinstance(val, Decimal):
-        return float(val)
-    if isinstance(val, (datetime,)):
-        return val.isoformat()
-    return val
+from kn_data_utils import get_calc_table
 
 
 def compute_vintage_data(spv_id: str, stat_date: str):
@@ -39,8 +25,9 @@ def compute_vintage_data(spv_id: str, stat_date: str):
     except Exception as e:
         return {"error": str(e)}
 
-    table = _get_calc_table(stat_date)
-    if not table:
+    try:
+        table = get_calc_table(stat_date)
+    except (ValueError, TypeError):
         return {"error": f"无效 stat_date: {stat_date}"}
 
     cur = conn.cursor()

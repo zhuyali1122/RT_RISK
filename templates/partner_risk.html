@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ 'en' if lang == 'en' else 'zh-CN' }}">
 <head>
     {% include '_app_root.html' %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHUAN | {{ partner.name }} - 风控监控</title>
+    <title>CHUAN | {{ partner.name }} - {{ t('page_risk') }}</title>
     <style>
         :root {
             --light-pink: #FFF1EE; --dark-blue: #3B4A6A; --white: #FFFFFF;
@@ -28,7 +28,8 @@
         .top-bar nav a.active { color: var(--white); background: rgba(255,241,238,0.15); font-weight: 600; }
         .top-bar .user-info { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; }
         .role-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(255,241,238,0.15); color: var(--light-pink); }
-        .btn-link { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link, .btn-logout { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: var(--white); background: none; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+        .btn-link:hover, .btn-logout:hover { background: rgba(255,255,255,0.1); }
 
         .page { max-width: 1400px; margin: 0 auto; padding: 24px; }
 
@@ -222,22 +223,7 @@
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div class="left">
-            <div class="logo">CHUAN</div>
-            <nav>
-                <a href="{{ app_root }}/dashboard">概览</a>
-                <a href="{{ app_root }}/partner/manage">资产商管理</a>
-                <a href="{{ app_root }}/help">Help</a>
-                <a class="active">{{ partner.name }}</a>
-            </nav>
-        </div>
-        <div class="user-info">
-            <span>{{ user.display_name }}</span>
-            <span class="role-badge">{{ user.role_label }}</span>
-            <a href="{{ app_root }}/logout" class="btn-link">退出</a>
-        </div>
-    </div>
+    {% include '_top_bar.html' %}
 
     <div class="page">
         <div class="page-header">
@@ -245,37 +231,37 @@
                 <div class="left-group">
                     <a href="{{ app_root }}/partner/manage" class="btn-back">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-                        返回列表
+                        {{ t('btn_back') }}
                     </a>
-                    <h1>{{ partner.name }} · 风控监控</h1>
+                    <h1>{{ partner.name }} · {{ t('page_risk') }}</h1>
                 </div>
-                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · 联系人：{{ partner.contact }}</div>
+                <div class="sub" style="margin-left:100px;">{{ partner.country }} · {{ partner.product_type }} · {{ t('contact') }}：{{ partner.contact }}</div>
             </div>
             <div class="header-right">
                 {% if use_risk_cache %}
                 <div class="cache-status">
                     {% if cache_last_updated %}
-                    <span class="cache-time" title="数据缓存时间">缓存于 {{ cache_last_updated or '-' }}</span>
+                    <span class="cache-time">{{ t('cached_at') }} {{ cache_last_updated or '-' }}</span>
                     {% else %}
-                    <span class="cache-empty">暂无缓存，请点击刷新加载</span>
+                    <span class="cache-empty">{{ t('no_cache_hint') }}</span>
                     {% endif %}
                 </div>
-                <button class="btn-refresh-risk" onclick="refreshRisk()" title="从数据库重新拉取并缓存全部数据">
+                <button class="btn-refresh-risk" onclick="refreshRisk()" title="{{ t('btn_refresh') }}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                    刷新
+                    {{ t('btn_refresh') }}
                 </button>
                 {% endif %}
-                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="下载风控、收益、现金流数据为 Excel" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
+                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="{{ t('btn_download_excel') }}" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    下载 Excel
+                    {{ t('btn_download_excel') }}
                 </a>
                 <div class="date-selector">
-                    <label>数据日期：</label>
+                    <label>{{ t('data_date') }}：</label>
                     <select id="dateSelect"></select>
                 </div>
                 <div class="currency-selector">
                     <div class="currency-selector-row">
-                        <label>货币：</label>
+                        <label>{{ t('currency') }}：</label>
                         <div class="currency-toggle currency-toggle-header">
                             <button class="active" onclick="switchHeaderCurrency('usd',this)">USD</button>
                             <button onclick="switchHeaderCurrency('local',this)">{{ local_currency }}</button>
@@ -292,10 +278,12 @@
     <script>
         const partnerId = '{{ partner.id }}';
         const riskData = {{ risk_data | tojson }};
+        const systemCutoverDate = {{ (cache_meta.system_cutover_date if cache_meta else None) | tojson }};
         const alerts = {{ alerts | tojson }};
         const priorityIndicators = {{ priority_indicators | tojson }};
         const localCurrency = '{{ local_currency }}';
         const exchangeRate = {{ exchange_rate }};
+        const T = {{ translations_json | tojson }};
 
         // 缓存含 localCurrency（如 MXN）和 USD 两部分，从 row 或 row._usd 取
         function _fmtNum(x) {
@@ -378,8 +366,8 @@
                     <div class="alert-panel-header">
                         <div class="alert-panel-title">
                             <svg viewBox="0 0 24 24" fill="var(--accent-coral)"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-                            对账预警
-                            ${open.length > 0 ? `<span class="alert-badge">${open.length} 项待处理</span>` : ''}
+                            ${T.reconciliation_alert}
+                            ${open.length > 0 ? `<span class="alert-badge">${open.length} ${T.pending_items}</span>` : ''}
                         </div>
                     </div>
                     ${alerts.map(a => `
@@ -389,7 +377,7 @@
                                 <div class="alert-head">
                                     <span>
                                         <span class="alert-title">${a.title}</span>
-                                        <span class="alert-tag ${a.status}">${a.status === 'open' ? '待处理' : '已解决'}</span>
+                                        <span class="alert-tag ${a.status}">${a.status === 'open' ? T.status_open : T.status_resolved}</span>
                                     </span>
                                     <span class="alert-date">${a.date}</span>
                                 </div>
@@ -409,7 +397,7 @@
 
         function renderPriority() {
             const pi = priorityIndicators;
-            if (!pi || !pi.leverage_ratio || !pi.coverage_ratio) return '';
+            if (!pi || !pi.leverage_ratio) return '';
 
             const lev = pi.leverage_ratio;
             const mg = pi.margin_deposit;
@@ -420,9 +408,13 @@
             const py = pi.priority_yield;
             const pyMissing = !py || !py.target;
 
-            const cov = pi.coverage_ratio;
-            const covClass = cov.current <= cov.liquidation ? 'danger' : cov.current <= cov.margin_call ? 'danger' : cov.current <= cov.baseline ? 'warn' : 'safe';
-            const gaugeMax = Math.max(cov.baseline * 1.5, cov.current * 1.2);
+            const cov = pi.coverage_ratio || {};
+            const covAbs = pi.coverage_ratio_abs || {};
+            const covVal = cov.current != null ? cov.current : (cov.baseline || 1.43);
+            const covAbsVal = covAbs.current != null ? covAbs.current : (covAbs.baseline || 1.43);
+            const covClass = covVal <= (cov.liquidation || 1.02) ? 'danger' : covVal <= (cov.margin_call || 1.15) ? 'danger' : covVal <= (cov.baseline || 1.43) ? 'warn' : 'safe';
+            const covAbsClass = covAbsVal <= (covAbs.liquidation || 1.02) ? 'danger' : covAbsVal <= (covAbs.margin_call || 1.15) ? 'danger' : covAbsVal <= (covAbs.baseline || 1.43) ? 'warn' : 'safe';
+            const gaugeMax = Math.max((cov.baseline || 1.43) * 1.5, covVal * 1.2, covAbsVal * 1.2);
             const toPercent = v => Math.min((v / gaugeMax) * 100, 100);
 
             const mgPct = mg && mg.required ? Math.min((mg.current / mg.required) * 100, 100) : 0;
@@ -433,25 +425,25 @@
 
             const mgCard = mg ? `
                         <div class="pri-card ${mgClass}">
-                            <div class="pri-label">保证金</div>
+                            <div class="pri-label">${T.margin_deposit}</div>
                             <div class="pri-value ${mgClass}">$${(mg.current / 1e6).toFixed(2)}M</div>
                             <div class="pri-bar-bg"><div class="pri-bar ${mgClass}" style="width:${mgPct}%"></div></div>
-                            <div class="pri-sub">最低要求 <strong>$${(mg.required / 1e6).toFixed(2)}M</strong>　${mgPct >= 100 ? '✓ 充足' : '⚠ 不足'}</div>
+                            <div class="pri-sub">${T.min_required} <strong>$${(mg.required / 1e6).toFixed(2)}M</strong>　${mgPct >= 100 ? '✓ ' + T.sufficient : '⚠ ' + T.insufficient}</div>
                         </div>` : `
                         <div class="pri-card pri-card-empty">
-                            <div class="pri-label">保证金</div>
+                            <div class="pri-label">${T.margin_deposit}</div>
                             <div class="pri-value pri-value-empty">-</div>
                             <div class="pri-sub"></div>
                         </div>`;
             const gtCard = gt ? `
                         <div class="pri-card ${gtClass}">
-                            <div class="pri-label">担保金</div>
+                            <div class="pri-label">${T.guarantee_deposit}</div>
                             <div class="pri-value ${gtClass}">$${(gt.current / 1e6).toFixed(2)}M</div>
                             <div class="pri-bar-bg"><div class="pri-bar ${gtClass}" style="width:${gtPct}%"></div></div>
-                            <div class="pri-sub">最低要求 <strong>$${(gt.required / 1e6).toFixed(2)}M</strong>　${gtPct >= 100 ? '✓ 充足' : '⚠ 不足'}</div>
+                            <div class="pri-sub">${T.min_required} <strong>$${(gt.required / 1e6).toFixed(2)}M</strong>　${gtPct >= 100 ? '✓ ' + T.sufficient : '⚠ ' + T.insufficient}</div>
                         </div>` : `
                         <div class="pri-card pri-card-empty">
-                            <div class="pri-label">担保金</div>
+                            <div class="pri-label">${T.guarantee_deposit}</div>
                             <div class="pri-value pri-value-empty">-</div>
                             <div class="pri-sub"></div>
                         </div>`;
@@ -459,14 +451,14 @@
             const pp = pi.priority_principal;  // 优先本金=合作本金=principal_amount（spv_internal_params 中已是 USD）
             const ppCard = pp != null && pp > 0 ? `
                         <div class="pri-card">
-                            <div class="pri-label">优先本金</div>
+                            <div class="pri-label">${T.priority_principal}</div>
                             <div class="pri-value">$${(pp / 1e6).toFixed(2)}M</div>
-                            <div class="pri-sub">= 合作本金</div>
+                            <div class="pri-sub">= ${T.coop_principal}</div>
                         </div>` : `
                         <div class="pri-card pri-card-empty">
-                            <div class="pri-label">优先本金</div>
-                            <div class="pri-value pri-value-empty">缺失</div>
-                            <div class="pri-sub">仅从 spv_internal_params 获取</div>
+                            <div class="pri-label">${T.priority_principal}</div>
+                            <div class="pri-value pri-value-empty">${T.missing}</div>
+                            <div class="pri-sub">${T.from_spv_params}</div>
                         </div>`;
             return `
                 <div class="section-title">优先级指标</div>
@@ -475,44 +467,65 @@
                     <div class="priority-grid">
                         ${ppCard}
                         <div class="pri-card ${levClass}">
-                            <div class="pri-label">杠杆比例</div>
+                            <div class="pri-label">${T.leverage_ratio}</div>
                             <div class="pri-value ${levClass}">${lev.current.toFixed(1)}x</div>
                             <div class="pri-bar-bg"><div class="pri-bar ${levClass}" style="width:${levPct}%"></div></div>
-                            <div class="pri-sub">上限 <strong>${lev.limit.toFixed(1)}x</strong>　使用率 <strong>${levPct.toFixed(0)}%</strong></div>
+                            <div class="pri-sub">${T.limit} <strong>${lev.limit.toFixed(1)}x</strong>　${T.usage_rate} <strong>${levPct.toFixed(0)}%</strong></div>
                         </div>
 
                         ${pyMissing ? `
                         <div class="pri-card pri-card-empty">
-                            <div class="pri-label">优先收益率</div>
-                            <div class="pri-value pri-value-empty">缺失</div>
-                            <div class="pri-sub">仅从 spv_internal_params 获取</div>
+                            <div class="pri-label">${T.priority_yield}</div>
+                            <div class="pri-value pri-value-empty">${T.missing}</div>
+                            <div class="pri-sub">${T.from_spv_params}</div>
                         </div>` : `
                         <div class="pri-card ${py.current >= py.target ? 'safe' : 'warn'}">
-                            <div class="pri-label">优先收益率</div>
+                            <div class="pri-label">${T.priority_yield}</div>
                             <div class="pri-value ${py.current >= py.target ? 'safe' : 'warn'}">${(py.current * 100).toFixed(2)}%</div>
                             <div class="pri-bar-bg"><div class="pri-bar ${py.current >= py.target ? 'safe' : 'warn'}" style="width:${Math.min((py.current / py.target) * 100, 100)}%"></div></div>
-                            <div class="pri-sub">目标 <strong>${(py.target * 100).toFixed(2)}%</strong>　${py.current >= py.target ? '✓ 达标' : '⚠ 未达标'}</div>
+                            <div class="pri-sub">${T.target} <strong>${(py.target * 100).toFixed(2)}%</strong>　${py.current >= py.target ? '✓ ' + T.met_target : '⚠ ' + T.not_met_target}</div>
                         </div>`}
 
                         <div class="pri-card ${covClass}">
-                            <div class="pri-label">覆盖倍数</div>
-                            <div class="pri-value ${covClass}">${cov.current.toFixed(2)}x</div>
+                            <div class="pri-label">${T.coverage_ratio_m0 || T.coverage_ratio}</div>
+                            <div class="pri-value ${covClass}">${covVal.toFixed(2)}x</div>
                             <div class="coverage-gauge">
                                 <div class="gauge-track">
-                                    <div class="gauge-zone danger-zone" style="left:0;width:${toPercent(cov.liquidation)}%"></div>
-                                    <div class="gauge-zone warn-zone" style="left:${toPercent(cov.liquidation)}%;width:${toPercent(cov.margin_call) - toPercent(cov.liquidation)}%"></div>
-                                    <div class="gauge-zone warn-zone" style="left:${toPercent(cov.margin_call)}%;width:${toPercent(cov.baseline) - toPercent(cov.margin_call)}%"></div>
-                                    <div class="gauge-zone safe-zone" style="left:${toPercent(cov.baseline)}%;width:${100 - toPercent(cov.baseline)}%"></div>
-                                    <div class="gauge-marker" style="left:${toPercent(cov.liquidation)}%;background:var(--accent-coral)"></div>
-                                    <div class="gauge-marker" style="left:${toPercent(cov.margin_call)}%;background:var(--accent-amber)"></div>
-                                    <div class="gauge-marker" style="left:${toPercent(cov.baseline)}%;background:var(--accent-teal)"></div>
-                                    <div class="gauge-pointer" style="left:${toPercent(cov.current)}%;background:${covClass === 'safe' ? 'var(--accent-teal)' : covClass === 'warn' ? 'var(--accent-amber)' : 'var(--accent-coral)'}"></div>
+                                    <div class="gauge-zone danger-zone" style="left:0;width:${toPercent(cov.liquidation || 1.02)}%"></div>
+                                    <div class="gauge-zone warn-zone" style="left:${toPercent(cov.liquidation || 1.02)}%;width:${toPercent(cov.margin_call || 1.15) - toPercent(cov.liquidation || 1.02)}%"></div>
+                                    <div class="gauge-zone warn-zone" style="left:${toPercent(cov.margin_call || 1.15)}%;width:${toPercent(cov.baseline || 1.43) - toPercent(cov.margin_call || 1.15)}%"></div>
+                                    <div class="gauge-zone safe-zone" style="left:${toPercent(cov.baseline || 1.43)}%;width:${100 - toPercent(cov.baseline || 1.43)}%"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(cov.liquidation || 1.02)}%;background:var(--accent-coral)"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(cov.margin_call || 1.15)}%;background:var(--accent-amber)"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(cov.baseline || 1.43)}%;background:var(--accent-teal)"></div>
+                                    <div class="gauge-pointer" style="left:${toPercent(covVal)}%;background:${covClass === 'safe' ? 'var(--accent-teal)' : covClass === 'warn' ? 'var(--accent-amber)' : 'var(--accent-coral)'}"></div>
                                 </div>
                             </div>
                             <div class="pri-sub" style="margin-top:10px;line-height:1.7;">
-                                <span style="color:var(--accent-coral)">■</span> 平仓 <strong>${cov.liquidation.toFixed(2)}x</strong>
-                                <span style="color:var(--accent-amber)">■</span> 补仓 <strong>${cov.margin_call.toFixed(2)}x</strong>
-                                <span style="color:var(--accent-teal)">■</span> 基准 <strong>${cov.baseline.toFixed(2)}x</strong>
+                                <span style="color:var(--accent-coral)">■</span> ${T.liquidation} <strong>${(cov.liquidation || 1.02).toFixed(2)}x</strong>
+                                <span style="color:var(--accent-amber)">■</span> ${T.margin_call} <strong>${(cov.margin_call || 1.15).toFixed(2)}x</strong>
+                                <span style="color:var(--accent-teal)">■</span> ${T.baseline} <strong>${(cov.baseline || 1.43).toFixed(2)}x</strong>
+                            </div>
+                        </div>
+                        <div class="pri-card ${covAbsClass}">
+                            <div class="pri-label">${T.coverage_ratio_abs || '覆盖倍数（方案二 ABS）'}</div>
+                            <div class="pri-value ${covAbsClass}">${covAbsVal.toFixed(2)}x</div>
+                            <div class="coverage-gauge">
+                                <div class="gauge-track">
+                                    <div class="gauge-zone danger-zone" style="left:0;width:${toPercent(covAbs.liquidation || 1.02)}%"></div>
+                                    <div class="gauge-zone warn-zone" style="left:${toPercent(covAbs.liquidation || 1.02)}%;width:${toPercent(covAbs.margin_call || 1.15) - toPercent(covAbs.liquidation || 1.02)}%"></div>
+                                    <div class="gauge-zone warn-zone" style="left:${toPercent(covAbs.margin_call || 1.15)}%;width:${toPercent(covAbs.baseline || 1.43) - toPercent(covAbs.margin_call || 1.15)}%"></div>
+                                    <div class="gauge-zone safe-zone" style="left:${toPercent(covAbs.baseline || 1.43)}%;width:${100 - toPercent(covAbs.baseline || 1.43)}%"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(covAbs.liquidation || 1.02)}%;background:var(--accent-coral)"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(covAbs.margin_call || 1.15)}%;background:var(--accent-amber)"></div>
+                                    <div class="gauge-marker" style="left:${toPercent(covAbs.baseline || 1.43)}%;background:var(--accent-teal)"></div>
+                                    <div class="gauge-pointer" style="left:${toPercent(covAbsVal)}%;background:${covAbsClass === 'safe' ? 'var(--accent-teal)' : covAbsClass === 'warn' ? 'var(--accent-amber)' : 'var(--accent-coral)'}"></div>
+                                </div>
+                            </div>
+                            <div class="pri-sub" style="margin-top:10px;line-height:1.7;">
+                                <span style="color:var(--accent-coral)">■</span> ${T.liquidation} <strong>${(covAbs.liquidation || 1.02).toFixed(2)}x</strong>
+                                <span style="color:var(--accent-amber)">■</span> ${T.margin_call} <strong>${(covAbs.margin_call || 1.15).toFixed(2)}x</strong>
+                                <span style="color:var(--accent-teal)">■</span> ${T.baseline} <strong>${(covAbs.baseline || 1.43).toFixed(2)}x</strong>
                             </div>
                         </div>
                         ${mgCard}
@@ -521,14 +534,14 @@
                     </div>
                     ${cov.breakdown ? `
                     <details class="coverage-breakdown">
-                        <summary>覆盖倍数公式拆解</summary>
+                        <summary>${T.coverage_breakdown}（方案一 M0）</summary>
                         <div class="coverage-breakdown-content">
                             <p class="breakdown-sub">数据日期: ${cov.breakdown.stat_date || '-'} | 汇率: 1 USD = ${cov.breakdown.exchange_rate} ${localCurrency || '本币'}</p>
                             <table class="breakdown-table">
                                 <thead><tr><th>项</th><th>值</th><th>说明</th></tr></thead>
                                 <tbody>
                                     <tr><td>M0 本金</td><td>${formatBreakdownNum(cov.breakdown.m0_balance)}</td><td>本币，来自 risk_data 最新行</td></tr>
-                                    <tr><td>M0 应收利息</td><td>${formatBreakdownNum(cov.breakdown.m0_accrued_interest)}</td><td>本币，每笔 M0 loan 的（应还利息 - 已还利息）之和</td></tr>
+                                    <tr><td>M0 应收利息</td><td>${formatBreakdownNum(cov.breakdown.m0_accrued_interest)}</td><td>本币，每笔 M0 loan 的剩余全量应收利息（已到期未还 + 未来应还）</td></tr>
                                     <tr><td>早偿逾期折损</td><td>${cov.breakdown.early_repayment_overdue_discount}</td><td>spv_internal_params.early_repayment_loss_rate</td></tr>
                                     <tr><td>M0 应收利息 × 折损</td><td>${formatBreakdownNum(cov.breakdown.m0_interest_discounted)}</td><td>本币</td></tr>
                                     <tr><td>Vtg30 预估 default rate</td><td>${cov.breakdown.vtg30_predicted_default_rate}%</td><td>spv_internal_params.vtg_30_plus_predicted</td></tr>
@@ -545,6 +558,32 @@
                         </div>
                     </details>
                     ` : ''}
+                    ${covAbs.breakdown ? `
+                    <details class="coverage-breakdown">
+                        <summary>${T.coverage_breakdown}（方案二 ABS）</summary>
+                        <div class="coverage-breakdown-content">
+                            <p class="breakdown-sub">数据日期: ${covAbs.breakdown.stat_date || '-'} | 汇率: 1 USD = ${covAbs.breakdown.exchange_rate} ${localCurrency || '本币'}</p>
+                            <table class="breakdown-table">
+                                <thead><tr><th>项</th><th>值</th><th>说明</th></tr></thead>
+                                <tbody>
+                                    <tr><td>全量本金</td><td>${formatBreakdownNum(covAbs.breakdown.full_balance)}</td><td>本币，current_balance 来自 risk_data</td></tr>
+                                    <tr><td>剩余全量应收利息</td><td>${formatBreakdownNum(covAbs.breakdown.all_remaining_interest || covAbs.breakdown.all_accrued_interest)}</td><td>本币，已到期未还 + 未来应还（与加权久期×利率量级一致）</td></tr>
+                                    <tr><td>早偿逾期折损</td><td>${covAbs.breakdown.early_repayment_overdue_discount}</td><td>spv_internal_params.early_repayment_loss_rate</td></tr>
+                                    <tr><td>全量应收利息 × 折损</td><td>${formatBreakdownNum(covAbs.breakdown.all_interest_discounted)}</td><td>本币</td></tr>
+                                    <tr><td>Vtg30 预估 default rate</td><td>${covAbs.breakdown.vtg30_predicted_default_rate}%</td><td>spv_internal_params.vtg_30_plus_predicted</td></tr>
+                                    <tr><td>核心价值 (1 - default)</td><td>${formatBreakdownNum(covAbs.breakdown.after_default_local)}</td><td>本币 = (全量本金 + 全量利息×折损) × (1 - default)</td></tr>
+                                    <tr><td>现金余额</td><td>${formatBreakdownNum(covAbs.breakdown.cash)}</td><td>本币，来自 risk_data</td></tr>
+                                    <tr><td class="breakdown-row-value"><strong>Value (本币)</strong></td><td><strong>${formatBreakdownNum(covAbs.breakdown.value_local)}</strong></td><td><strong>核心价值 + 现金</strong></td></tr>
+                                    <tr><td>Value (USD)</td><td>${formatBreakdownNum(covAbs.breakdown.value_usd)}</td><td>value_local / 汇率</td></tr>
+                                    <tr><td>合作本金</td><td>${formatBreakdownNum(covAbs.breakdown.coop_principal)} USD</td><td>spv_internal_params.principal_amount</td></tr>
+                                    <tr><td>未分配收益</td><td>${formatBreakdownNum(covAbs.breakdown.unallocated)} USD</td><td>principal × product_term / 12</td></tr>
+                                    <tr><td class="breakdown-row-loan"><strong>Loan (USD)</strong></td><td><strong>${formatBreakdownNum(covAbs.breakdown.loan_usd)} USD</strong></td><td><strong>合作本金 + 未分配收益</strong></td></tr>
+                                    <tr><td class="breakdown-row-result"><strong>覆盖倍数 V/L</strong></td><td><strong>${covAbs.breakdown.coverage_ratio}x</strong></td><td><strong>Value / Loan</strong></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                    ` : ''}
                 </div>
             `;
         }
@@ -556,33 +595,33 @@
             return `
                 ${renderAlerts()}
 
-                <div class="section-title">核心指标 · ${row.stat_date}</div>
+                <div class="section-title">${T.core_metrics} · ${row.stat_date}</div>
                 <div class="kpi-grid">
-                    <div class="kpi-card highlight"><div class="kpi-label">累计放款</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal(row, 'cumulative_disbursement'))}" data-local="${fmtDisplayLocal(getLocalVal(row, 'cumulative_disbursement'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal(row, 'cumulative_disbursement') : getLocalVal(row, 'cumulative_disbursement'))}</div></div>
-                    <div class="kpi-card highlight"><div class="kpi-label">当前余额</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal(row, 'current_balance'))}" data-local="${fmtDisplayLocal(getLocalVal(row, 'current_balance'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal(row, 'current_balance') : getLocalVal(row, 'current_balance'))}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">现金</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal({...row, cash: row.cash ?? '0'}, 'cash'))}" data-local="${fmtDisplayLocal(getLocalVal({...row, cash: row.cash ?? '0'}, 'cash'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal({...row, cash: row.cash ?? '0'}, 'cash') : getLocalVal({...row, cash: row.cash ?? '0'}, 'cash'))}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">平均久期</div><div class="kpi-value">${(row.avg_duration != null && row.avg_duration !== undefined && row.avg_duration !== '') ? parseFloat(row.avg_duration).toFixed(1) + ' 月' : '-'}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">M0 占比</div><div class="kpi-value rate">${fmtPct(row.m0_ratio)}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">日均利率</div><div class="kpi-value rate">${fmtPct(row.avg_daily_rate)}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">放款加权利率</div><div class="kpi-value rate">${fmtPct(row.disbursement_weighted_rate)}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">活跃借款笔数</div><div class="kpi-value">${fmtNum(row.active_loans)}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">活跃借款人数</div><div class="kpi-value">${fmtNum(row.active_borrowers)}</div></div>
-                    <div class="kpi-card ${parseFloat(row.overdue_1_plus_ratio) >= 0.05 ? 'danger' : parseFloat(row.overdue_1_plus_ratio) >= 0.02 ? 'warning' : ''}"><div class="kpi-label">逾期 1+ 率</div><div class="kpi-value rate">${fmtPct(row.overdue_1_plus_ratio)}</div></div>
-                    <div class="kpi-card ${parseFloat(row.overdue_3_plus_ratio) >= 0.03 ? 'danger' : parseFloat(row.overdue_3_plus_ratio) >= 0.01 ? 'warning' : ''}"><div class="kpi-label">逾期 3+ 率</div><div class="kpi-value rate">${fmtPct(row.overdue_3_plus_ratio)}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">逾期 7+ 率</div><div class="kpi-value rate">${fmtPct(row.overdue_7_plus_ratio)}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">逾期 30+ 率</div><div class="kpi-value rate">${fmtPct(row.overdue_30_plus_ratio)}</div></div>
+                    <div class="kpi-card highlight"><div class="kpi-label">${T.cumulative_disbursement}</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal(row, 'cumulative_disbursement'))}" data-local="${fmtDisplayLocal(getLocalVal(row, 'cumulative_disbursement'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal(row, 'cumulative_disbursement') : getLocalVal(row, 'cumulative_disbursement'))}</div></div>
+                    <div class="kpi-card highlight"><div class="kpi-label">${T.current_balance}</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal(row, 'current_balance'))}" data-local="${fmtDisplayLocal(getLocalVal(row, 'current_balance'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal(row, 'current_balance') : getLocalVal(row, 'current_balance'))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.cash}</div><div class="kpi-value amount-cell" data-usd="${fmtDisplayUSD(getUsdVal({...row, cash: row.cash ?? '0'}, 'cash'))}" data-local="${fmtDisplayLocal(getLocalVal({...row, cash: row.cash ?? '0'}, 'cash'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdVal({...row, cash: row.cash ?? '0'}, 'cash') : getLocalVal({...row, cash: row.cash ?? '0'}, 'cash'))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.avg_duration}</div><div class="kpi-value">${(row.avg_duration != null && row.avg_duration !== undefined && row.avg_duration !== '') ? parseFloat(row.avg_duration).toFixed(1) + ' 月' : '-'}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.m0_ratio}</div><div class="kpi-value rate">${fmtPct(row.m0_ratio)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.avg_daily_rate}</div><div class="kpi-value rate">${fmtPct(row.avg_daily_rate)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.disbursement_weighted_rate}</div><div class="kpi-value rate">${fmtPct(row.disbursement_weighted_rate)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.active_loans}</div><div class="kpi-value">${fmtNum(row.active_loans)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.active_borrowers}</div><div class="kpi-value">${fmtNum(row.active_borrowers)}</div></div>
+                    <div class="kpi-card ${parseFloat(row.overdue_1_plus_ratio) >= 0.05 ? 'danger' : parseFloat(row.overdue_1_plus_ratio) >= 0.02 ? 'warning' : ''}"><div class="kpi-label">${T.overdue_1_plus}</div><div class="kpi-value rate">${fmtPct(row.overdue_1_plus_ratio)}</div></div>
+                    <div class="kpi-card ${parseFloat(row.overdue_3_plus_ratio) >= 0.03 ? 'danger' : parseFloat(row.overdue_3_plus_ratio) >= 0.01 ? 'warning' : ''}"><div class="kpi-label">${T.overdue_3_plus}</div><div class="kpi-value rate">${fmtPct(row.overdue_3_plus_ratio)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.overdue_7_plus}</div><div class="kpi-value rate">${fmtPct(row.overdue_7_plus_ratio)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">${T.overdue_30_plus}</div><div class="kpi-value rate">${fmtPct(row.overdue_30_plus_ratio)}</div></div>
                 </div>
 
                 ${renderPriority()}
 
                 <div class="section-header">
-                    <div class="section-title">DPD 逾期账龄分布</div>
+                    <div class="section-title">${T.dpd_distribution}</div>
                 </div>
                 <div class="dpd-section">
                     <div class="dpd-layout">
                         <div class="dpd-pies-row">
                             <div class="dpd-pie-wrap">
-                                <div class="dpd-pie-title">DPD 账龄</div>
+                                <div class="dpd-pie-title">${T.dpd_age}</div>
                                 <div class="dpd-pie" style="background: conic-gradient(${dpd.length ? dpd.map((d, i) => {
                                     const pct = (parseFloat(d.balance_ratio) || 0) * 100;
                                     const colors = ['#4DB6AC','#E8A838','#F5A623','#E67E22','#D8434F','#D8434F','#D8434F'];
@@ -598,7 +637,7 @@
                                 </div>
                             </div>
                             <div class="dpd-pie-wrap">
-                                <div class="dpd-pie-title">客户信用评级</div>
+                                <div class="dpd-pie-title">${T.credit_rating}</div>
                                 <div class="dpd-pie" style="background: conic-gradient(${(row.credit_rating_distribution || []).length ? (row.credit_rating_distribution || []).map((d, i) => {
                                     const pct = (parseFloat(d.ratio) || 0) * 100;
                                     const colors = ['#2E7D6E','#4DB6AC','#E8A838','#D8434F'];
@@ -616,7 +655,7 @@
                         </div>
                         <div class="dpd-table-wrap">
                             <table class="dpd-table">
-                                <thead><tr><th>账龄</th><th class="dpd-col-amount">余额</th><th>余额占比</th><th>借款笔数</th><th>借款人数</th></tr></thead>
+                                <thead><tr><th>${T.age}</th><th class="dpd-col-amount">${T.balance}</th><th>${T.balance_ratio}</th><th>${T.loan_count}</th><th>${T.borrower_count}</th></tr></thead>
                                 <tbody>${dpd.map((d, i) => `<tr><td><a href="${(window.APP_ROOT||'')}/partner/${partnerId}/dpd/${d.bucket}?stat_date=${encodeURIComponent(row.stat_date || '')}" class="vintage-month-link"><strong>${d.bucket}</strong></a></td><td class="dpd-col-amount amount-cell" data-usd="${fmtDisplayUSD(getUsdValFromDpd(row, i, 'balance'))}" data-local="${fmtDisplayLocal(getLocalValFromDpd(row, i, 'balance'))}">${fmtAmount((window.currencyMode || 'usd') === 'usd' ? getUsdValFromDpd(row, i, 'balance') : getLocalValFromDpd(row, i, 'balance'))}</td><td>${fmtPct(d.balance_ratio)}</td><td>${fmtNum(d.loan_count)}</td><td>${fmtNum(d.borrower_count)}</td></tr>`).join('')}</tbody>
                             </table>
                         </div>
@@ -624,7 +663,7 @@
                 </div>
 
                 <div class="section-header">
-                    <div class="section-title">Vintage 账龄分析</div>
+                    <div class="section-title">${T.vint_age_analysis}</div>
                     <div class="vintage-mode-toggle">
                         <button class="${(window.vintageMode || 'dpd') === 'dpd' ? 'active' : ''}" onclick="switchVintageMode('dpd', this)">DPD</button>
                         <button class="${(window.vintageMode || 'dpd') === 'mob' ? 'active' : ''}" onclick="switchVintageMode('mob', this)">MOB</button>
@@ -633,8 +672,8 @@
                 <div class="vintage-section">
                     <table class="vintage-table">
                         <thead><tr>${(window.vintageMode || 'dpd') === 'dpd'
-                            ? '<th class="text-left">放款月</th><th class="vnt-col-amount">放款金额</th><th class="vnt-col-amount">当前余额</th><th>DPD1</th><th>DPD3</th><th>DPD7</th><th>DPD15</th><th>DPD30</th>'
-                            : '<th class="text-left">放款月</th><th class="vnt-col-amount">放款金额</th><th class="vnt-col-amount">当前余额</th><th>MOB1</th><th>MOB2</th><th>MOB3</th><th>MOB4</th><th>MOB5</th><th>MOB6</th><th>MOB7</th><th>MOB8</th><th>MOB9</th><th>MOB10</th><th>MOB11</th><th>MOB12</th>'
+                            ? '<th class="text-left">'+T.disbursement_month+'</th><th class="vnt-col-amount">'+T.disbursement_amount+'</th><th class="vnt-col-amount">'+T.current_balance+'</th><th>DPD1</th><th>DPD3</th><th>DPD7</th><th>DPD15</th><th>DPD30</th>'
+                            : '<th class="text-left">'+T.disbursement_month+'</th><th class="vnt-col-amount">'+T.disbursement_amount+'</th><th class="vnt-col-amount">'+T.current_balance+'</th><th>MOB1</th><th>MOB2</th><th>MOB3</th><th>MOB4</th><th>MOB5</th><th>MOB6</th><th>MOB7</th><th>MOB8</th><th>MOB9</th><th>MOB10</th><th>MOB11</th><th>MOB12</th>'
                         }</tr></thead>
                         <tbody>${(window.vintageMode || 'dpd') === 'dpd'
                             ? vintage.map((v, i) => `<tr>
@@ -661,13 +700,13 @@
                 </div>
 
                 <div class="section-header">
-                    <div class="section-title">回收报表</div>
+                    <div class="section-title">${T.collection_report}</div>
                 </div>
                 <div class="collection-section">
                     <table class="collection-table">
                         <thead><tr>
-                            <th class="text-left">到期月</th>
-                            <th class="collection-col-amount">到期金额</th>
+                            <th class="text-left">${T.maturity_month}</th>
+                            <th class="collection-col-amount">${T.due_amount}</th>
                             <th class="collection-col-amount">d0入催</th><th class="collection-col-amount">d1入催</th><th class="collection-col-amount">d3入催</th><th class="collection-col-amount">d7入催</th><th class="collection-col-amount">d30入催</th><th class="collection-col-amount">d60入催</th><th class="collection-col-amount">d90入催</th>
                             <th class="collection-col-amount">d1回收</th><th class="collection-col-amount">d3回收</th><th class="collection-col-amount">d7回收</th><th class="collection-col-amount">d30回收</th><th class="collection-col-amount">d60回收</th><th class="collection-col-amount">d90回收</th>
                         </tr></thead>
@@ -713,7 +752,7 @@
                 const res = await fetch(url, { credentials: 'same-origin' });
                 if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
-                    alert('下载失败: ' + (data.error || res.statusText || '请先登录'));
+                    alert(T.download_failed + ': ' + (data.error || res.statusText || ''));
                     return false;
                 }
                 const blob = await res.blob();
@@ -726,7 +765,7 @@
                 a.click();
                 URL.revokeObjectURL(a.href);
             } catch (e) {
-                alert('下载失败: ' + (e.message || '网络错误'));
+                alert(T.download_failed + ': ' + (e.message || ''));
             }
             return false;
         }
@@ -744,10 +783,10 @@
                 if (data.ok) {
                     location.reload();
                 } else {
-                    alert('刷新失败: ' + (data.error || '未知错误'));
+                    alert(T.refresh_failed + ': ' + (data.error || ''));
                 }
             } catch (e) {
-                alert('刷新失败: ' + e.message);
+                alert(T.refresh_failed + ': ' + e.message);
             } finally {
                 if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
             }
@@ -768,12 +807,14 @@
             const dateSelect = document.getElementById('dateSelect');
             const sorted = [...riskData].sort((a,b) => b.stat_date.localeCompare(a.stat_date));
             const dataByDate = {};
+            sorted.forEach((r) => { dataByDate[r.stat_date] = r; });
+            const dateSet = new Set(Object.keys(dataByDate));
+            const defaultDate = (systemCutoverDate && dateSet.has(systemCutoverDate)) ? systemCutoverDate : (sorted[0]?.stat_date);
             sorted.forEach((r, i) => {
-                dataByDate[r.stat_date] = r;
                 const opt = document.createElement('option');
                 opt.value = r.stat_date;
-                opt.textContent = r.stat_date + (i === 0 ? ' (最新)' : '');
-                if (i === 0) opt.selected = true;
+                opt.textContent = r.stat_date + (i === 0 ? ' (' + T.latest + ')' : '');
+                if (r.stat_date === defaultDate) opt.selected = true;
                 dateSelect.appendChild(opt);
             });
             function update() { content.innerHTML = render(dataByDate[dateSelect.value]); }

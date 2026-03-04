@@ -5,9 +5,7 @@
 """
 from datetime import datetime, date
 
-
-def _get_calc_table(year: int, month: int) -> str:
-    return f"calc_overdue_y{year}m{month:02d}"
+from kn_data_utils import get_calc_table
 
 
 def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collection_rate: float = 0.98):
@@ -45,7 +43,7 @@ def compute_cashflow_forecast(spv_id: str = "kn", months_ahead: int = 12, collec
     latest_dt = None
     for year in [2024, 2025, 2026, 2027]:
         for month in range(1, 13):
-            tbl = _get_calc_table(year, month)
+            tbl = get_calc_table(year, month)
             try:
                 cur.execute(
                     "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name = %s",

@@ -7,17 +7,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-
-def _get_calc_table(year: int, month: int) -> str:
-    return f"calc_overdue_y{year}m{month:02d}"
-
-
-def _serialize(val):
-    if isinstance(val, Decimal):
-        return float(val)
-    if hasattr(val, "isoformat"):
-        return val.isoformat()
-    return val
+from kn_data_utils import get_calc_table
 
 
 def _get_months_with_data(spv_id: str = "kn"):
@@ -57,7 +47,7 @@ def _get_months_with_data(spv_id: str = "kn"):
     # 从 calc_overdue 表（遍历可能存在的表）
     for year in [2024, 2025, 2026, 2027]:
         for month in range(1, 13):
-            tbl = _get_calc_table(year, month)
+            tbl = get_calc_table(year, month)
             try:
                 cur.execute(
                     "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name = %s",
@@ -141,7 +131,7 @@ def compute_revenue_data(spv_id: str = "kn"):
         cumulative_disbursement = float(cur.fetchone()[0] or 0)
 
         # 3. 月底在贷余额（calc_overdue 当月最后一天或最后可用日）
-        calc_tbl = _get_calc_table(y, m)
+        calc_tbl = get_calc_table(y, m)
         outstanding_balance = 0
         try:
             cur.execute(

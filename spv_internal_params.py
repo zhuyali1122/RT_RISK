@@ -8,13 +8,7 @@
 """
 from decimal import Decimal
 
-
-def _serialize(val):
-    if hasattr(val, "isoformat"):
-        return val.isoformat()
-    if isinstance(val, Decimal):
-        return float(val)
-    return val
+from kn_data_utils import serialize_for_json
 
 
 def _num(rec, k, *alts, default=0):
@@ -22,7 +16,7 @@ def _num(rec, k, *alts, default=0):
         v = rec.get(key)
         if v is not None and v != "":
             try:
-                return float(_serialize(v))
+                return float(serialize_for_json(v))
             except (ValueError, TypeError):
                 pass
     return default
@@ -86,6 +80,85 @@ def _compute_coverage_ratio(rec, spv_cfg, risk_data, exchange_rate, base_default
         m0_bal, m0_interest, early_discount, vtg30_default, coop_principal, unallocated,
         cash, value_part, value_usd, loan_usd, ratio, rate, stat_date
     )
+
+
+def _compute_coverage_ratio_abs(rec, spv_cfg, risk_data, exchange_rate, base_default=1.43):
+    """
+    方案二（ABS）覆盖倍数：与 M0 类似，但用全量 Loan（current_balance + all_remaining_interest）
+    Value = (全量本金 + 全量应收利息 * 早偿逾期折损) * (1 - Vtg30) + 现金
+    Loan = 合作本金 + 未分配收益（与 M0 相同）
+    返回: (ratio, breakdown_dict)
+    """
+    early_discount = _num(rec, "early_repayment_loss_rate", "early_repayment_overdue_discount")
+    if early_discount <= 0:
+        early_discount = 1.0
+    vtg30_default = _num(rec, "vtg_30_plus_predicted", "vtg30_predicted_default_rate", "vtg30_plus_predicted")
+    vtg30_default = vtg30_default / 100 if vtg30_default > 1 else vtg30_default
+    principal_amount = _num(rec, "principal_amount")
+    product_term = _num(rec, "product_term")
+    coop_principal = principal_amount
+    unallocated = principal_amount * product_term / 12 if product_term > 0 else 0
+    rate = exchange_rate or 1
+    if rate <= 0:
+        rate = 1
+
+    # 从 risk_data 取最新一行的 全量本金、剩余全量应收利息、现金
+    # 方案二用 all_remaining_interest（已到期未还+未来应还），与加权久期×利率量级一致
+    full_bal = 0
+    all_interest = 0
+    cash = 0
+    stat_date = ""
+    if risk_data:
+        latest = sorted(risk_data, key=lambda r: r.get("stat_date", ""), reverse=True)[0]
+        stat_date = latest.get("stat_date", "")
+        full_bal = float(latest.get("current_balance") or 0)
+        all_interest = float(latest.get("all_remaining_interest") or latest.get("all_accrued_interest") or 0)
+        cash = float(latest.get("cash") or 0)
+
+    all_interest_discounted = all_interest * early_discount
+    core_value_local = full_bal + all_interest_discounted
+    after_default_local = core_value_local * (1 - vtg30_default)
+    value_part = after_default_local + cash
+
+    loan_usd = coop_principal + unallocated
+    if loan_usd <= 0:
+        return base_default, _coverage_breakdown_abs(
+            full_bal, all_interest, early_discount, vtg30_default, coop_principal, unallocated,
+            cash, value_part, 0, loan_usd, base_default, rate, stat_date
+        )
+    value_usd = value_part / rate if rate > 0 else value_part
+    ratio = value_usd / loan_usd
+    return ratio, _coverage_breakdown_abs(
+        full_bal, all_interest, early_discount, vtg30_default, coop_principal, unallocated,
+        cash, value_part, value_usd, loan_usd, ratio, rate, stat_date
+    )
+
+
+def _coverage_breakdown_abs(full_bal, all_interest, early_discount, vtg30_default, coop_principal, unallocated,
+                           cash, value_part, value_usd, loan_usd, ratio, rate, stat_date):
+    """方案二（ABS）覆盖倍数拆解"""
+    all_interest_discounted = all_interest * early_discount
+    core_value_local = full_bal + all_interest_discounted
+    after_default_local = core_value_local * (1 - vtg30_default)
+    return {
+        "stat_date": stat_date,
+        "full_balance": round(full_bal, 2),
+        "all_remaining_interest": round(all_interest, 2),
+        "all_accrued_interest": round(all_interest, 2),  # 兼容前端，与 all_remaining_interest 同值
+        "early_repayment_overdue_discount": round(early_discount, 4),
+        "all_interest_discounted": round(all_interest_discounted, 2),
+        "vtg30_predicted_default_rate": round(vtg30_default * 100, 2) if vtg30_default <= 1 else round(vtg30_default, 2),
+        "core_value_local": round(core_value_local, 2),
+        "after_default_local": round(after_default_local, 2),
+        "cash": round(cash, 2),
+        "value_local": round(value_part, 2),
+        "exchange_rate": round(rate, 4),
+        "value_usd": round(value_usd, 2),
+        "coop_principal": round(coop_principal, 2),
+        "unallocated": round(unallocated, 2),
+        "loan_usd": round(loan_usd, 2),
+        "coverage_ratio": round(ratio, 2),
+    }
 
 
 def _coverage_breakdown(m0_bal, m0_interest, early_discount, vtg30_default, coop_principal, unallocated,
@@ -303,6 +376,18 @@ def load_priority_indicators_for_spv(spv_id, risk_data=None, exchange_rate=1):
             "unit": "x",
             "breakdown": cov_breakdown,
         }
+        # 方案二（ABS）：全量 Loan，与 M0 公式结构相同
+        cov_abs_current, cov_abs_breakdown = _compute_coverage_ratio_abs(
+            rec, spv_cfg, risk_data, exchange_rate, base
+        )
+        coverage_ratio_abs = {
+            "current": round(cov_abs_current, 2),
+            "liquidation": liq,
+            "margin_call": mc,
+            "baseline": base,
+            "unit": "x",
+            "breakdown": cov_abs_breakdown,
+        }
 
         # 优先本金：KN Risk 页面中 优先本金 = 合作本金 = principal_amount
         priority_principal = _num(rec, "principal_amount")
@@ -325,6 +410,7 @@ def load_priority_indicators_for_spv(spv_id, risk_data=None, exchange_rate=1):
             "leverage_ratio": leverage_ratio,
             "priority_yield": priority_yield,
             "coverage_ratio": coverage_ratio,
+            "coverage_ratio_abs": coverage_ratio_abs,
             "margin_deposit": margin_deposit,
             "guarantee_deposit": guarantee_deposit,
         }
@@ -444,6 +530,7 @@ def compute_priority_from_risk_data(spv_id, risk_data, exchange_rate=1):
 
     # 覆盖倍数：使用 V/L 公式计算
     cov_current, cov_breakdown = _compute_coverage_ratio({}, spv_cfg, risk_data, exchange_rate, base)
+    cov_abs_current, cov_abs_breakdown = _compute_coverage_ratio_abs({}, spv_cfg, risk_data, exchange_rate, base)
 
     # 杠杆：Senior:Junior 从 spv_config.config 读取
     lev_str = spv_cfg.get("senior_junior_ratio") or spv_cfg.get("leverage_ratio") or "5:1"
@@ -455,6 +542,14 @@ def compute_priority_from_risk_data(spv_id, risk_data, exchange_rate=1):
         "priority_principal": None,
         "leverage_ratio": {"current": round(lev_current, 1), "limit": lev_limit, "unit": "x"},
         "priority_yield": None,
+        "coverage_ratio_abs": {
+            "current": round(cov_abs_current, 2),
+            "liquidation": liq,
+            "margin_call": mc,
+            "baseline": base,
+            "unit": "x",
+            "breakdown": cov_abs_breakdown,
+        },
         "coverage_ratio": {
             "current": round(cov_current, 2) if cov_current else base,
             "liquidation": liq,

@@ -7,16 +7,9 @@ from datetime import datetime, date
 from decimal import Decimal
 
 BASE_DIR = os.path.dirname(__file__)
-
-
-def _serialize(obj):
-    """将 datetime/Decimal 转为 JSON 可序列化类型"""
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    if isinstance(obj, Decimal):
-        return float(obj)
-    return obj
 SCHEMA_PATH = os.path.join(BASE_DIR, "config", "query_schema.json")
+
+from kn_data_utils import serialize_for_json
 
 
 def load_schema():
@@ -81,7 +74,7 @@ def _get_schedule_for_loan(cur, loan_id, schema):
                 total_periods = 1
             for i in range(1, total_periods + 1):
                 rec = sched_by_term.get(i) or {"period_no": i, "due_date": None, "principal_due": None, "interest_due": None, "total_due": None}
-                schedule.append({k: _serialize(rec.get(k)) for k in sched_cols})
+                schedule.append({k: serialize_for_json(rec.get(k)) for k in sched_cols})
     else:
         sched_table = sched_cfg.get("table", "loan_repayment_schedule")
         sched_loan_col = sched_cfg.get("loan_id_column", "loan_id")
@@ -92,7 +85,7 @@ def _get_schedule_for_loan(cur, loan_id, schema):
             (loan_id,)
         )
         for r in cur.fetchall():
-            schedule.append({k: _serialize(v) for k, v in zip(sched_cols, r)})
+            schedule.append({k: serialize_for_json(v) for k, v in zip(sched_cols, r)})
     return schedule
 
 
@@ -108,7 +101,7 @@ def _get_records_for_loan(cur, loan_id, schema):
         f'SELECT {rec_col_list} FROM {rec_table} WHERE {rec_loan_col} = %s ORDER BY {order_col}, repayment_term',
         (loan_id,)
     )
-    return [{k: _serialize(v) for k, v in zip(rec_cols, r)} for r in cur.fetchall()]
+    return [{k: serialize_for_json(v) for k, v in zip(rec_cols, r)} for r in cur.fetchall()]
 
 
 def query_loan_detail(loan_id: str, spv_id: str = None):
@@ -148,7 +141,7 @@ def query_loan_detail(loan_id: str, spv_id: str = None):
             conn.close()
             return {"error": f"未找到 Loan ID: {loan_id}"}
 
-        first_status = {k: _serialize(v) for k, v in zip(cols, row)}
+        first_status = {k: serialize_for_json(v) for k, v in zip(cols, row)}
         contract_no = first_status.get("contract_no")
         if contract_no is None or contract_no == "":
             contract_no = "-"
@@ -168,7 +161,7 @@ def query_loan_detail(loan_id: str, spv_id: str = None):
         for lid in loan_ids:
             cur.execute(f'SELECT {col_list} FROM {loan_table} WHERE {id_col} = %s{spv_filter}', (lid,) + spv_params)
             r = cur.fetchone()
-            status = {k: _serialize(v) for k, v in zip(cols, r)} if r else {}
+            status = {k: serialize_for_json(v) for k, v in zip(cols, r)} if r else {}
             schedule = _get_schedule_for_loan(cur, lid, schema)
             records = _get_records_for_loan(cur, lid, schema)
             loans.append({"loan_id": lid, "status": status, "schedule": schedule, "records": records})
@@ -215,7 +208,7 @@ def query_daily_disbursements(query_date: str):
             amount_col_idx = -1
 
         for r in rows:
-            row_dict = {k: _serialize(v) for k, v in zip(cols, r)}
+            row_dict = {k: serialize_for_json(v) for k, v in zip(cols, r)}
             result["disbursements"].append(row_dict)
             if amount_col_idx >= 0:
                 try:

@@ -34,7 +34,12 @@
 - Vercel Serverless 单次执行有超时（Hobby 10s，Pro 60s）
 - 建议在 Vercel 环境变量中设置：
   - `DATABASE_POOL_SIZE=1`（Serverless 不宜用大连接池）
-  - `DATABASE_CONNECT_TIMEOUT=8`（缩短连接超时，避免长时间等待）
+  - `DATABASE_CONNECT_TIMEOUT=8`（缩短连接超时，避免长时间等待，**强烈建议**）
+
+### 5.1 加载速度优化（已内置）
+
+- **登录页**：未登录用户不再调用 Redis 加载 cache_meta，减少首屏延迟
+- **Redis cache_meta**：热实例 60 秒内复用内存缓存，减少重复 Redis 调用
 
 ### 6. 检查 Vercel 环境变量
 

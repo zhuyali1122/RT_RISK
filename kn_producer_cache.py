@@ -8,6 +8,7 @@
 import json
 import os
 import threading
+import time
 from datetime import datetime, timedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -149,40 +150,40 @@ def load_producer_full_cache():
 
 _cache_meta_memory = None
 _cache_meta_mtime = 0
+_cache_meta_redis_at = 0  # Redis 模式下内存缓存时间戳
+CACHE_META_TTL = 60  # Redis 模式下内存缓存 TTL（秒）
 
 
 def load_cache_meta():
     """
     加载缓存元数据（轻量，供全局展示）
-    进程内复用，保存时失效
+    进程内复用，保存时失效。Redis 模式下 60 秒内复用内存缓存，减少热实例的 Redis 调用
     """
     import logging
     log = logging.getLogger("kn_producer_cache")
-    global _cache_meta_memory, _cache_meta_mtime
-    log.info("[load_cache_meta] 开始加载，路径=%s", CACHE_META_FILE)
+    global _cache_meta_memory, _cache_meta_mtime, _cache_meta_redis_at
     try:
         from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_META
         if _use_redis():
+            if _cache_meta_memory is not None and (time.time() - _cache_meta_redis_at) < CACHE_META_TTL:
+                return _cache_meta_memory
             out = cache_get_json(REDIS_KEY_META)
             if out:
                 _cache_meta_memory = out
-                log.info("[load_cache_meta] Redis 加载成功 last_updated=%s", (out.get("last_updated") or "")[:19])
+                _cache_meta_redis_at = time.time()
             return out
     except Exception as e:
         log.warning("[load_cache_meta] Redis 加载失败: %s", e)
     if not os.path.isfile(CACHE_META_FILE):
-        log.info("[load_cache_meta] 文件不存在，返回 None")
         return None
     try:
         mtime = os.path.getmtime(CACHE_META_FILE)
         if _cache_meta_memory is not None and mtime == _cache_meta_mtime:
-            log.info("[load_cache_meta] 使用进程内缓存，last_updated=%s", (_cache_meta_memory.get("last_updated") or "")[:19])
             return _cache_meta_memory
         with open(CACHE_META_FILE, "r", encoding="utf-8") as f:
             out = json.load(f)
         _cache_meta_memory = out
         _cache_meta_mtime = mtime
-        log.info("[load_cache_meta] 加载成功 last_updated=%s", (out.get("last_updated") or "")[:19])
         return out
     except Exception as e:
         log.warning("[load_cache_meta] 加载失败: %s", e)
@@ -195,11 +196,12 @@ def save_producer_full_cache(payload: dict):
     同时写入 cache_meta 供全局展示
     payload: { producers, portfolio_cumulative_stats?, allocation_by_platform?, system_cutover_date? }
     """
-    global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime
+    global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime, _cache_meta_redis_at
     _producer_cache_memory = None
     _producer_cache_mtime = 0
     _cache_meta_memory = None
     _cache_meta_mtime = 0
+    _cache_meta_redis_at = 0
     now = datetime.now()
     last_updated = now.isoformat()
     system_cutover_date = payload.get("system_cutover_date")

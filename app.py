@@ -71,19 +71,21 @@ def _inject_app_root():
     def t(key, default=""):
         return trans.get(key, default or key)
 
+    # 仅登录用户需要 cache_meta（用于 _top_bar），登录页跳过 Redis 调用以加速
     cache_meta = None
-    try:
-        from kn_producer_cache import load_cache_meta
-        raw = load_cache_meta()
-        if raw:
-            lu = raw.get("last_updated") or ""
-            cache_meta = {
-                "last_updated": lu,
-                "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
-                "system_cutover_date": raw.get("system_cutover_date") or "",
-            }
-    except Exception:
-        pass
+    if "user" in session:
+        try:
+            from kn_producer_cache import load_cache_meta
+            raw = load_cache_meta()
+            if raw:
+                lu = raw.get("last_updated") or ""
+                cache_meta = {
+                    "last_updated": lu,
+                    "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
+                    "system_cutover_date": raw.get("system_cutover_date") or "",
+                }
+        except Exception:
+            pass
 
     u = session.get("user", {})
     can_refresh_cache = u.get("role") == "admin" or "manage_system" in (u.get("permissions") or []) or "manage_partners" in (u.get("permissions") or [])

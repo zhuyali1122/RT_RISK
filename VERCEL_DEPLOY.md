@@ -38,9 +38,9 @@
 
 ### 5.1 缓存策略
 
-- **Admin 刷新**：保存到 Redis（跨实例共享）+ 文件，可被其他 login 共享，不删除
+- **Admin 刷新**：保存到 Vercel Blob（跨实例文件存储）+ 本地文件，可被其他 login 共享，不删除
 - **PM/Investor**：仅读取，不修改
-- **Vercel**：需配置 Redis（Vercel KV）实现跨实例共享；未配置时仅当前实例 /tmp 可用
+- **Vercel**：需配置 Blob 实现跨实例共享；未配置时仅当前实例 /tmp 可用
 
 ### 6. 检查 Vercel 环境变量
 
@@ -48,25 +48,25 @@
 |------|------|------|
 | `DATABASE_URL` | 必填，含外网 host | host 不要用内网 IP |
 | `DB_HOST_IP` | **建议删除** | 本地 VPN 解析的 IP 在 Vercel 不可达 |
-| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Redis 共享缓存 | Storage 创建 KV 后自动注入 |
+| `BLOB_READ_WRITE_TOKEN` | Blob 跨实例存储 | Storage 创建 Blob 后自动注入 |
 | `DATABASE_POOL_SIZE` | 可选，建议 `1` | Serverless 场景 |
 | `APP_ROOT` | 若子路径部署则设置 | 如 `/rtrisk` |
 
 ---
 
-## 共享缓存（Admin 刷新后其他用户可访问）
+## 跨实例文件存储（Admin 刷新后其他用户可访问）
 
-### 1. 添加 Vercel KV
+### 1. 添加 Vercel Blob
 
-1. 项目 → **Storage** → **Create Database** → 选择 **KV**
-2. 创建后自动注入 `KV_REST_API_URL`、`KV_REST_API_TOKEN`
+1. 项目 → **Storage** → **Create Database** → 选择 **Blob**
+2. 创建后自动注入 `BLOB_READ_WRITE_TOKEN`
 
 ### 2. 工作流程
 
 - **Admin** 登录 → 「缓存管理」→ 「刷新全量缓存」
-- 缓存写入 **Redis**，所有实例共享；同时写入当前实例 `/tmp`
-- **PM/Investor** 登录后从 Redis 读取
-- **日志**：写入 Redis + 文件，loading 时在服务器端显示，可被所有实例读取
+- 缓存写入 **Blob**（跨实例文件系统），所有实例共享；同时写入当前实例 `/tmp`
+- **PM/Investor** 登录后从 Blob 读取
+- **日志**：写入 Blob + 文件，loading 时在服务器端显示
 
 ### 3. 每日自动刷新（Cron）
 

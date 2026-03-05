@@ -1,8 +1,8 @@
 """
 生产商全量数据统一缓存 - 风控、收益、现金流一次性加载
-- Admin 刷新全量数据，保存到服务器（Redis 共享 / 文件），可被其他 login 共享，不删除
+- Admin 刷新全量数据，保存到跨实例文件系统（Vercel Blob / 本地文件），可被其他 login 共享，不删除
 - PM/Investor 仅读取，不修改
-- Vercel：需 Redis 实现跨实例共享；本地：文件即可
+- Vercel：需 Blob 实现跨实例共享；本地：文件即可
 """
 import json
 import os
@@ -71,7 +71,7 @@ _cache_meta_mtime = 0
 
 def load_producer_full_cache():
     """
-    从缓存加载（Redis 优先实现跨实例共享，否则文件）
+    从缓存加载（Blob 优先实现跨实例共享，否则文件）
     1. 请求内复用（Flask g）
     2. 进程内复用
     返回: (data, last_updated) 或 (None, None)
@@ -87,9 +87,9 @@ def load_producer_full_cache():
         pass
 
     try:
-        from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_CACHE
-        if _use_redis():
-            d = cache_get_json(REDIS_KEY_CACHE)
+        from kn_cache_storage import _use_blob, cache_get_json, BLOB_PATH_CACHE
+        if _use_blob():
+            d = cache_get_json(BLOB_PATH_CACHE)
             if d:
                 producers = d.get("producers", {})
                 last_updated = d.get("last_updated")
@@ -149,13 +149,13 @@ _cache_meta_mtime = 0
 
 def load_cache_meta():
     """
-    从缓存加载元数据（Redis 优先，否则文件）
+    从缓存加载元数据（Blob 优先，否则文件）
     """
     global _cache_meta_memory, _cache_meta_mtime
     try:
-        from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_META
-        if _use_redis():
-            out = cache_get_json(REDIS_KEY_META)
+        from kn_cache_storage import _use_blob, cache_get_json, BLOB_PATH_META
+        if _use_blob():
+            out = cache_get_json(BLOB_PATH_META)
             if out:
                 return out
     except Exception:
@@ -177,7 +177,7 @@ def load_cache_meta():
 
 def save_producer_full_cache(payload: dict):
     """
-    保存全量缓存（仅 admin/cron 调用）。写入 Redis（共享）+ 文件，不删除。
+    保存全量缓存（仅 admin/cron 调用）。写入 Blob（跨实例共享）+ 文件，不删除。
     payload: { producers, portfolio_cumulative_stats?, allocation_by_platform?, system_cutover_date? }
     """
     global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime
@@ -197,13 +197,13 @@ def save_producer_full_cache(payload: dict):
     }
     meta = {"last_updated": last_updated, "system_cutover_date": system_cutover_date or ""}
     try:
-        from kn_cache_storage import _use_redis, cache_set_json, REDIS_KEY_CACHE, REDIS_KEY_META
-        if _use_redis():
-            cache_set_json(REDIS_KEY_CACHE, data)
-            cache_set_json(REDIS_KEY_META, meta)
+        from kn_cache_storage import _use_blob, cache_set_json, BLOB_PATH_CACHE, BLOB_PATH_META
+        if _use_blob():
+            cache_set_json(BLOB_PATH_CACHE, data)
+            cache_set_json(BLOB_PATH_META, meta)
     except Exception as e:
         import logging
-        logging.getLogger("kn_producer_cache").error("[save_producer_full_cache] Redis 写入异常: %s", e)
+        logging.getLogger("kn_producer_cache").error("[save_producer_full_cache] Blob 写入异常: %s", e)
         raise
     _ensure_cache_dir()
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
@@ -223,18 +223,18 @@ def save_producer_full_cache(payload: dict):
 
 
 def _append_log(logs: list, msg: str, truncate_first: bool = False):
-    """追加日志到 Redis（共享）+ 文件。truncate_first=True 时写入分隔符（每次刷新开始）"""
+    """追加日志到 Blob（共享）+ 文件。truncate_first=True 时写入分隔符（每次刷新开始）"""
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{ts}] {msg}\n"
     logs.append(line.rstrip())
     try:
-        from kn_cache_storage import _use_redis, cache_append, REDIS_KEY_LOG
-        if _use_redis():
+        from kn_cache_storage import _use_blob, cache_append, BLOB_PATH_LOG
+        if _use_blob():
             if truncate_first:
                 sep = f"\n{'='*60}\n[{ts}] ===== 新刷新开始 =====\n"
-                cache_append(REDIS_KEY_LOG, sep + line)
+                cache_append(BLOB_PATH_LOG, sep + line, truncate_first=False)
             else:
-                cache_append(REDIS_KEY_LOG, line)
+                cache_append(BLOB_PATH_LOG, line, truncate_first=False)
     except Exception:
         pass
     try:
@@ -271,8 +271,8 @@ def refresh_producer_full_cache():
     try:
         _append_log(logs, "开始刷新全量缓存...", truncate_first=True)
         try:
-            from kn_cache_storage import _use_redis
-            _append_log(logs, f"缓存后端: {'Redis（跨实例共享）' if _use_redis() else '文件'}")
+            from kn_cache_storage import _use_blob
+            _append_log(logs, f"缓存后端: {'Blob（跨实例共享）' if _use_blob() else '文件'}")
         except Exception:
             _append_log(logs, "缓存后端: 文件")
 
@@ -611,11 +611,11 @@ def update_producer_cashflow_in_full_cache(spv_id: str, exchange_rate: float = 1
 
 
 def load_refresh_log():
-    """从 Redis 或文件读取刷新日志（最后 2000 行，Redis 优先实现跨实例共享）"""
+    """从 Blob 或文件读取刷新日志（最后 2000 行，Blob 优先实现跨实例共享）"""
     try:
-        from kn_cache_storage import _use_redis, cache_get, REDIS_KEY_LOG
-        if _use_redis():
-            raw = cache_get(REDIS_KEY_LOG)
+        from kn_cache_storage import _use_blob, cache_get, BLOB_PATH_LOG
+        if _use_blob():
+            raw = cache_get(BLOB_PATH_LOG)
             if raw:
                 lines = raw.strip().split("\n")
                 lines = [ln + "\n" for ln in lines]

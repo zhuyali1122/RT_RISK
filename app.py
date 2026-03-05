@@ -488,8 +488,8 @@ def admin_cache_refresh():
     cache_backend = "file"
     if os.getenv("VERCEL"):
         try:
-            from kn_cache_storage import _use_redis
-            cache_backend = "redis" if _use_redis() else "file"
+            from kn_cache_storage import _use_blob
+            cache_backend = "blob" if _use_blob() else "file"
         except Exception:
             pass
     app.logger.info("[admin_cache_refresh] 渲染完成，准备返回页面")

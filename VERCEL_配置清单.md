@@ -50,7 +50,7 @@ RT_RISK 部署到 Vercel 的完整配置说明。
 
 ---
 
-## 三、缓存（纯文件，无 Redis）
+## 三、缓存（Blob 跨实例文件存储）
 
 - **Admin/Cron** 刷新时写入 `/tmp/rt_risk_cache/` 下的 `producer_full_cache.json`、`cache_meta.json`
 - **其他页面** 只读，不修改缓存文件

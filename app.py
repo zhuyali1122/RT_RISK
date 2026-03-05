@@ -485,6 +485,13 @@ def admin_cache_refresh():
         refresh_logs = []
         refresh_logs_text = ""
 
+    cache_backend = "file"
+    if os.getenv("VERCEL"):
+        try:
+            from kn_cache_storage import _use_redis
+            cache_backend = "redis" if _use_redis() else "file"
+        except Exception:
+            pass
     app.logger.info("[admin_cache_refresh] 渲染完成，准备返回页面")
     return render_template(
         "admin_cache_refresh.html",
@@ -492,6 +499,8 @@ def admin_cache_refresh():
         cache_meta=cache_meta,
         refresh_logs=refresh_logs,
         refresh_logs_text=refresh_logs_text,
+        cache_backend=cache_backend,
+        is_vercel=bool(os.getenv("VERCEL")),
     )
 
 

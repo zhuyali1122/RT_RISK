@@ -67,6 +67,11 @@
                 <span class="value" id="systemCutover">{{ cache_meta.system_cutover_date if cache_meta else t('cache_no_data') }}</span>
             </div>
         </div>
+        {% if cache_backend == 'file' and is_vercel %}
+        <p style="font-size:0.85rem;color:#B45309;background:#FEF3C7;padding:10px 14px;border-radius:8px;margin-bottom:16px;">
+            ⚠️ Vercel 上未配置 Redis：缓存仅写入当前实例 /tmp，其他用户可能看不到数据。请在 Storage 中创建 KV 并链接项目。
+        </p>
+        {% endif %}
         {% if not cache_meta %}
         <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:16px;">{{ t('cache_no_data') }} — {{ t('cache_first_refresh_hint') }}</p>
         {% endif %}
@@ -110,6 +115,23 @@
                     btn.disabled = false;
                     document.getElementById('btnIcon').textContent = '🔄';
                     document.getElementById('btnText').textContent = T.btn_refresh_cache;
+                    return;
+                }
+                if (!postData.started && postData.ok) {
+                    // Vercel 同步执行完成，直接展示结果
+                    const logs = postData.logs || [];
+                    logBox.textContent = Array.isArray(logs) ? logs.join('\n') : String(logs);
+                    if (postData.last_updated) {
+                        const d = new Date(postData.last_updated);
+                        document.getElementById('lastUpdated').textContent = d.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'medium' });
+                    }
+                    if (postData.system_cutover_date) {
+                        document.getElementById('systemCutover').textContent = postData.system_cutover_date;
+                    }
+                    btn.disabled = false;
+                    document.getElementById('btnIcon').textContent = '🔄';
+                    document.getElementById('btnText').textContent = T.btn_refresh_cache;
+                    logBox.scrollTop = logBox.scrollHeight;
                     return;
                 }
                 if (!postData.started) {

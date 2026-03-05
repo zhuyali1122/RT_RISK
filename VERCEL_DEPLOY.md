@@ -36,47 +36,45 @@
   - `DATABASE_POOL_SIZE=1`（Serverless 不宜用大连接池）
   - `DATABASE_CONNECT_TIMEOUT=8`（缩短连接超时，避免长时间等待，**强烈建议**）
 
-### 5.1 缓存策略（纯文件，无 Redis）
+### 5.1 缓存策略
 
-- **只读**：PM/Investor 等所有页面仅从缓存文件读取，不修改
-- **仅 admin/cron 可写**：Admin 手动刷新或 Cron 定时刷新时，才写入 `producer_full_cache.json` 和 `cache_meta.json`
-- **不删除主缓存**：主缓存文件不会被代码删除，仅每日归档超 30 天会清理
+- **Admin 刷新**：保存到 Redis（跨实例共享）+ 文件，可被其他 login 共享，不删除
+- **PM/Investor**：仅读取，不修改
+- **Vercel**：需配置 Redis（Vercel KV）实现跨实例共享；未配置时仅当前实例 /tmp 可用
 
 ### 6. 检查 Vercel 环境变量
-
-确认以下变量正确且**仅包含必要项**：
 
 | 变量 | 说明 | 注意 |
 |------|------|------|
 | `DATABASE_URL` | 必填，含外网 host | host 不要用内网 IP |
 | `DB_HOST_IP` | **建议删除** | 本地 VPN 解析的 IP 在 Vercel 不可达 |
-| `DB_SSLMODE` | 可选，`require` 或 `disable` | 阿里云公网通常需 `require` |
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Redis 共享缓存 | Storage 创建 KV 后自动注入 |
 | `DATABASE_POOL_SIZE` | 可选，建议 `1` | Serverless 场景 |
 | `APP_ROOT` | 若子路径部署则设置 | 如 `/rtrisk` |
 
 ---
 
-## 缓存文件（Admin 刷新后写入）
+## 共享缓存（Admin 刷新后其他用户可访问）
 
-缓存使用**纯文件存储**，无 Redis 依赖。Admin 刷新或 Cron 定时刷新时写入 `/tmp/rt_risk_cache/` 下的 `producer_full_cache.json` 和 `cache_meta.json`，其他页面只读。
+### 1. 添加 Vercel KV
 
-### 1. 工作流程
+1. 项目 → **Storage** → **Create Database** → 选择 **KV**
+2. 创建后自动注入 `KV_REST_API_URL`、`KV_REST_API_TOKEN`
 
-- **Admin** 登录 → 进入「缓存管理」→ 点击「刷新全量缓存」
-- 缓存写入文件，当前实例的 `/tmp` 立即可用
-- **PM/Investor** 登录后从缓存文件读取
+### 2. 工作流程
 
-### 2. 每日自动刷新（Cron）
+- **Admin** 登录 → 「缓存管理」→ 「刷新全量缓存」
+- 缓存写入 **Redis**，所有实例共享；同时写入当前实例 `/tmp`
+- **PM/Investor** 登录后从 Redis 读取
+- **日志**：写入 Redis + 文件，loading 时在服务器端显示，可被所有实例读取
 
-Vercel Cron 每天 **UTC 00:00**（北京时间 08:00）自动执行全量缓存刷新。
+### 3. 每日自动刷新（Cron）
 
-**环境变量**：在 Vercel 添加 `CRON_SECRET`（至少 16 字符，随机字符串），Vercel 会将其作为 `Authorization: Bearer <CRON_SECRET>` 注入到 cron 请求中用于鉴权。
+Vercel Cron 每天 **UTC 00:00**（北京时间 08:00）执行。需配置 `CRON_SECRET`。
 
-**Admin 手动刷新**：仍可随时在「缓存管理」页面点击「刷新全量缓存」。
+### 4. 同步刷新
 
-### 3. 为何 Vercel 上需同步刷新
-
-Vercel Serverless 在 **HTTP 响应返回后立即终止函数**，后台线程会被杀死。因此 Vercel 上改为**同步执行**刷新。若生产商较多导致超时，可在项目 **Settings → Functions** 将 **Function Max Duration** 调高（Hobby 最高 60 秒，Pro 最高 300 秒）。
+Vercel Serverless 在响应返回后终止，因此刷新为**同步执行**。若超时，可在 **Settings → Functions** 调高 **Function Max Duration**。
 
 ---
 

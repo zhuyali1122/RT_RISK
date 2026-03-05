@@ -1,8 +1,8 @@
 """
 生产商全量数据统一缓存 - 风控、收益、现金流一次性加载
-- PM/Investor 仅从缓存文件读取，不访问数据库
-- Admin 手动刷新或 Cron 定时刷新时写入缓存文件，其他页面只读
-- 主缓存文件（producer_full_cache.json、cache_meta.json）仅由 admin/cron 修改，代码中不删除
+- Admin 刷新全量数据，保存到服务器（Redis 共享 / 文件），可被其他 login 共享，不删除
+- PM/Investor 仅读取，不修改
+- Vercel：需 Redis 实现跨实例共享；本地：文件即可
 """
 import json
 import os
@@ -71,9 +71,9 @@ _cache_meta_mtime = 0
 
 def load_producer_full_cache():
     """
-    从缓存文件加载所有生产商数据及投资组合数据（只读，不修改文件）
+    从缓存加载（Redis 优先实现跨实例共享，否则文件）
     1. 请求内复用（Flask g）
-    2. 进程内复用（文件未变更时）
+    2. 进程内复用
     返回: (data, last_updated) 或 (None, None)
     """
     global _producer_cache_memory, _producer_cache_mtime
@@ -82,7 +82,32 @@ def load_producer_full_cache():
         if hasattr(g, "_rt_producer_full_cache"):
             return g._rt_producer_full_cache
     except RuntimeError:
-        pass  # 非请求上下文（如后台刷新线程）
+        pass
+    except Exception:
+        pass
+
+    try:
+        from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_CACHE
+        if _use_redis():
+            d = cache_get_json(REDIS_KEY_CACHE)
+            if d:
+                producers = d.get("producers", {})
+                last_updated = d.get("last_updated")
+                result = (
+                    {
+                        "producers": producers,
+                        "portfolio_cumulative_stats": d.get("portfolio_cumulative_stats"),
+                        "allocation_by_platform": d.get("allocation_by_platform"),
+                        "system_cutover_date": d.get("system_cutover_date"),
+                    },
+                    last_updated,
+                )
+                try:
+                    from flask import g
+                    g._rt_producer_full_cache = result
+                except (RuntimeError, Exception):
+                    pass
+                return result
     except Exception:
         pass
 
@@ -124,9 +149,17 @@ _cache_meta_mtime = 0
 
 def load_cache_meta():
     """
-    从缓存文件加载元数据（只读，供全局展示）
+    从缓存加载元数据（Redis 优先，否则文件）
     """
     global _cache_meta_memory, _cache_meta_mtime
+    try:
+        from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_META
+        if _use_redis():
+            out = cache_get_json(REDIS_KEY_META)
+            if out:
+                return out
+    except Exception:
+        pass
     if not os.path.isfile(CACHE_META_FILE):
         return None
     try:
@@ -144,8 +177,7 @@ def load_cache_meta():
 
 def save_producer_full_cache(payload: dict):
     """
-    保存全量缓存到主文件（仅 admin 刷新和 cron 调用，其他代码不修改此文件）
-    同时写入 cache_meta 供全局展示。主缓存文件不会被删除。
+    保存全量缓存（仅 admin/cron 调用）。写入 Redis（共享）+ 文件，不删除。
     payload: { producers, portfolio_cumulative_stats?, allocation_by_platform?, system_cutover_date? }
     """
     global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime
@@ -164,6 +196,15 @@ def save_producer_full_cache(payload: dict):
         "allocation_by_platform": payload.get("allocation_by_platform"),
     }
     meta = {"last_updated": last_updated, "system_cutover_date": system_cutover_date or ""}
+    try:
+        from kn_cache_storage import _use_redis, cache_set_json, REDIS_KEY_CACHE, REDIS_KEY_META
+        if _use_redis():
+            cache_set_json(REDIS_KEY_CACHE, data)
+            cache_set_json(REDIS_KEY_META, meta)
+    except Exception as e:
+        import logging
+        logging.getLogger("kn_producer_cache").error("[save_producer_full_cache] Redis 写入异常: %s", e)
+        raise
     _ensure_cache_dir()
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -182,15 +223,29 @@ def save_producer_full_cache(payload: dict):
 
 
 def _append_log(logs: list, msg: str, truncate_first: bool = False):
-    """追加日志到文件。truncate_first=True 时先清空（每次刷新开始时调用）"""
+    """追加日志到 Redis（共享）+ 文件。truncate_first=True 时写入分隔符（每次刷新开始）"""
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{ts}] {msg}\n"
     logs.append(line.rstrip())
     try:
+        from kn_cache_storage import _use_redis, cache_append, REDIS_KEY_LOG
+        if _use_redis():
+            if truncate_first:
+                sep = f"\n{'='*60}\n[{ts}] ===== 新刷新开始 =====\n"
+                cache_append(REDIS_KEY_LOG, sep + line)
+            else:
+                cache_append(REDIS_KEY_LOG, line)
+    except Exception:
+        pass
+    try:
         _ensure_cache_dir()
-        mode = "w" if truncate_first else "a"
-        with open(REFRESH_LOG_FILE, mode, encoding="utf-8") as f:
-            f.write(line)
+        if truncate_first:
+            sep = f"\n{'='*60}\n[{ts}] ===== 新刷新开始 =====\n"
+            with open(REFRESH_LOG_FILE, "a", encoding="utf-8") as f:
+                f.write(sep + line)
+        else:
+            with open(REFRESH_LOG_FILE, "a", encoding="utf-8") as f:
+                f.write(line)
     except Exception:
         pass
 
@@ -215,7 +270,11 @@ def refresh_producer_full_cache():
     logs = []
     try:
         _append_log(logs, "开始刷新全量缓存...", truncate_first=True)
-        _append_log(logs, "缓存后端: 文件（仅 admin/cron 可写，其他页面只读）")
+        try:
+            from kn_cache_storage import _use_redis
+            _append_log(logs, f"缓存后端: {'Redis（跨实例共享）' if _use_redis() else '文件'}")
+        except Exception:
+            _append_log(logs, "缓存后端: 文件")
 
         # 0) 缓存最新数据日，供 kn_revenue/kn_cashflow 等复用，避免重复查询
         from kn_data_utils import get_latest_data_date, set_refresh_latest_date, clear_refresh_latest_date
@@ -552,13 +611,24 @@ def update_producer_cashflow_in_full_cache(spv_id: str, exchange_rate: float = 1
 
 
 def load_refresh_log():
-    """从文件读取最近一次刷新的日志（最后 500 行）"""
+    """从 Redis 或文件读取刷新日志（最后 2000 行，Redis 优先实现跨实例共享）"""
+    try:
+        from kn_cache_storage import _use_redis, cache_get, REDIS_KEY_LOG
+        if _use_redis():
+            raw = cache_get(REDIS_KEY_LOG)
+            if raw:
+                lines = raw.strip().split("\n")
+                lines = [ln + "\n" for ln in lines]
+                result = lines[-2000:] if len(lines) > 2000 else lines
+                return result
+    except Exception:
+        pass
     if not os.path.isfile(REFRESH_LOG_FILE):
         return []
     try:
         with open(REFRESH_LOG_FILE, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        result = lines[-500:] if len(lines) > 500 else lines
+        result = lines[-2000:] if len(lines) > 2000 else lines
         return result
     except Exception:
         return []

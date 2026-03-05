@@ -87,7 +87,7 @@ Vercel Cron 每天 **UTC 00:00**（北京时间 08:00）自动执行全量缓存
 
 ### 5. 为何 Vercel 上需同步刷新
 
-Vercel Serverless 在 **HTTP 响应返回后立即终止函数**，后台线程会被杀死。若使用异步刷新，缓存尚未写入 Redis 时函数已结束，导致缓存「很快消失」。因此 Vercel 上改为**同步执行**刷新，请求会阻塞直至完成（最多 60 秒，Hobby 计划限制）。若生产商较多导致超时，可在项目 Settings → Functions 将 `maxDuration` 调高（Pro 计划最高 300 秒）。
+Vercel Serverless 在 **HTTP 响应返回后立即终止函数**，后台线程会被杀死。若使用异步刷新，缓存尚未写入 Redis 时函数已结束，导致缓存「很快消失」。因此 Vercel 上改为**同步执行**刷新。若生产商较多导致超时，可在项目 **Settings → Functions** 将 **Function Max Duration** 调高（Hobby 最高 60 秒，Pro 最高 300 秒）。
 
 ---
 

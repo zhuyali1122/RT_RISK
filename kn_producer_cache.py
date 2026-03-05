@@ -657,17 +657,35 @@ def get_refresh_status():
 
 
 def refresh_producer_full_cache_async():
-    """后台线程刷新缓存，不阻塞主流程；状态可通过 get_refresh_status() 轮询"""
+    """
+    刷新全量缓存。
+    - 本地：后台线程执行，立即返回，可轮询状态
+    - Vercel：同步执行。Serverless 在响应返回后立即终止，后台线程会被杀死，
+      导致刷新无法完成、Redis 无法写入。必须同步执行才能保证缓存写入成功。
+    """
     global _refresh_status
     if _refresh_status.get("running"):
         return
+
+    if os.getenv("VERCEL"):
+        # Vercel Serverless：同步执行，否则响应返回后函数终止，后台线程被杀死
+        _refresh_status["running"] = True
+        _refresh_status["result"] = None
+        try:
+            result = refresh_producer_full_cache()
+            _refresh_status["running"] = False
+            _refresh_status["result"] = result
+        except Exception as e:
+            _refresh_status["running"] = False
+            _refresh_status["result"] = {"error": str(e), "logs": []}
+        return
+
     _refresh_status["running"] = True
     _refresh_status["result"] = None
 
     def _run():
         global _refresh_status
         try:
-            # 后台线程需推入 Flask app context，否则 DB/扩展可能异常
             from app import app
             with app.app_context():
                 result = refresh_producer_full_cache()

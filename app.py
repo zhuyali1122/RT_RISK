@@ -1782,12 +1782,23 @@ def api_risk_query_loan(loan_id):
 @app.route("/api/partner/refresh-all-cache", methods=["POST"])
 @login_required
 def api_refresh_all_producer_cache():
-    """Admin/项目经理 启动后台刷新：立即返回，刷新在后台执行，可通过 /api/partner/refresh-status 轮询"""
+    """
+    Admin/项目经理 刷新全量缓存。
+    - 本地：后台执行，立即返回 started=True，可轮询 /api/partner/refresh-status
+    - Vercel：同步执行（Serverless 响应返回后函数终止，后台线程会被杀），返回刷新结果
+    """
     if not _can_refresh_cache():
         return jsonify({"error": "权限不足"}), 403
     try:
-        from kn_producer_cache import refresh_producer_full_cache_async
+        from kn_producer_cache import refresh_producer_full_cache_async, get_refresh_status
         refresh_producer_full_cache_async()
+        st = get_refresh_status()
+        if st.get("result") is not None:
+            # Vercel 同步执行完成，直接返回结果
+            r = st["result"]
+            if "error" in r:
+                return jsonify(r), 500
+            return jsonify({"ok": True, "started": False, "last_updated": r.get("last_updated"), "producer_count": r.get("producer_count"), "logs": r.get("logs", [])})
         return jsonify({"started": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

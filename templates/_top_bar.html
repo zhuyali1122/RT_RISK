@@ -15,14 +15,26 @@
         </nav>
     </div>
     <div class="user-info" style="display:flex;align-items:center;gap:20px;">
-        {% if cache_meta and (cache_meta.last_updated_fmt or cache_meta.system_cutover_date) %}
-        <span style="font-size:0.72rem;opacity:0.9;">
-            {{ t('cache_last_updated') }}: {{ cache_meta.last_updated_fmt or '-' }}
-            {% if cache_meta.system_cutover_date %} · {{ t('cache_system_cutover') }}: {{ cache_meta.system_cutover_date }}{% endif %}
-        </span>
-        {% endif %}
+        <span id="cache-meta-display" style="font-size:0.72rem;opacity:0.9;"></span>
         <span>{{ user.display_name }}</span>
         <span class="role-badge role-{{ user.role }}">{{ user.role_label }}</span>
         <a href="{{ app_root }}/logout" class="btn-logout">{{ t('nav_logout') }}</a>
     </div>
 </div>
+<script>
+(function(){
+  var appRoot = {{ app_root | tojson }};
+  var tUpdated = {{ translations_json.get('cache_last_updated', '') | tojson }};
+  var tCutover = {{ translations_json.get('cache_system_cutover', '') | tojson }};
+  fetch((appRoot || '') + '/api/cache-meta', {credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
+    if(d && (d.last_updated_fmt || d.system_cutover_date)){
+      var el = document.getElementById('cache-meta-display');
+      if(el){
+        var s = tUpdated + ': ' + (d.last_updated_fmt || '-');
+        if(d.system_cutover_date) s += ' · ' + tCutover + ': ' + d.system_cutover_date;
+        el.textContent = s;
+      }
+    }
+  }).catch(function(){});
+})();
+</script>

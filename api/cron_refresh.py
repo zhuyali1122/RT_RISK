@@ -1,6 +1,6 @@
 """
 Vercel Cron 定时刷新全量缓存 - 独立函数，maxDuration 300 秒
-每天 UTC 00:00（北京时间 08:00）执行，加载全量数据并写入 Redis
+每天 UTC 00:00（北京时间 08:00）执行，加载全量数据并写入缓存文件
 """
 import json
 import os

@@ -1,9 +1,8 @@
 """
 生产商全量数据统一缓存 - 风控、收益、现金流一次性加载
-- PM/Investor 仅从缓存读取，不访问数据库
-- Admin 通过 Dashboard「管理」按钮每日刷新全量缓存
-- 缓存保留最多 30 天历史
-- Vercel 部署：使用 Vercel KV (Redis) 共享缓存，Admin 刷新后所有用户实例可访问
+- PM/Investor 仅从缓存文件读取，不访问数据库
+- Admin 手动刷新或 Cron 定时刷新时写入缓存文件，其他页面只读
+- 主缓存文件（producer_full_cache.json、cache_meta.json）仅由 admin/cron 修改，代码中不删除
 """
 import json
 import os
@@ -28,7 +27,7 @@ def _ensure_cache_dir():
 
 
 def _purge_old_daily_cache():
-    """删除超过 30 天的每日缓存文件"""
+    """删除超过 30 天的每日归档文件（不影响主缓存 producer_full_cache.json）"""
     if not os.path.isdir(DAILY_CACHE_DIR):
         return
     cutoff = datetime.now() - timedelta(days=CACHE_RETENTION_DAYS)
@@ -72,11 +71,9 @@ _cache_meta_mtime = 0
 
 def load_producer_full_cache():
     """
-    从缓存加载所有生产商数据及投资组合数据
-    - Vercel + KV：从 Redis 读取，所有实例共享
-    - 本地：从文件读取
+    从缓存文件加载所有生产商数据及投资组合数据（只读，不修改文件）
     1. 请求内复用（Flask g）
-    2. 进程内复用（文件/Redis 未变更时）
+    2. 进程内复用（文件未变更时）
     返回: (data, last_updated) 或 (None, None)
     """
     global _producer_cache_memory, _producer_cache_mtime
@@ -86,55 +83,6 @@ def load_producer_full_cache():
             return g._rt_producer_full_cache
     except RuntimeError:
         pass  # 非请求上下文（如后台刷新线程）
-    except Exception:
-        pass
-
-    try:
-        from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_CACHE
-        if _use_redis():
-            # 所有人只从 /tmp 读取；仅当 /tmp 为空（冷实例）时从 Redis 拉取一次并回写
-            result = None
-            d = None
-            if os.path.isfile(CACHE_FILE):
-                mtime = os.path.getmtime(CACHE_FILE)
-                if _producer_cache_memory is not None and mtime == _producer_cache_mtime:
-                    result = _producer_cache_memory
-                else:
-                    try:
-                        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                            d = json.load(f)
-                    except Exception:
-                        d = None
-            if result is None and d is None:
-                d = cache_get_json(REDIS_KEY_CACHE)
-                if d:
-                    _ensure_cache_dir()
-                    try:
-                        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-                            json.dump(d, f, ensure_ascii=False, indent=2)
-                    except Exception:
-                        pass
-            if result is None and d is not None:
-                producers = d.get("producers", {})
-                last_updated = d.get("last_updated")
-                result = (
-                    {
-                        "producers": producers,
-                        "portfolio_cumulative_stats": d.get("portfolio_cumulative_stats"),
-                        "allocation_by_platform": d.get("allocation_by_platform"),
-                        "system_cutover_date": d.get("system_cutover_date"),
-                    },
-                    last_updated,
-                )
-                _producer_cache_memory = result
-                _producer_cache_mtime = os.path.getmtime(CACHE_FILE) if os.path.isfile(CACHE_FILE) else 0
-            if result is not None:
-                try:
-                    from flask import g
-                    g._rt_producer_full_cache = result
-                except (RuntimeError, Exception):
-                    pass
-                return result
     except Exception:
         pass
 
@@ -176,40 +124,9 @@ _cache_meta_mtime = 0
 
 def load_cache_meta():
     """
-    加载缓存元数据（轻量，供全局展示）
-    Redis 模式下只从 /tmp 读取；仅当 /tmp 为空时从 Redis 拉取一次并回写
+    从缓存文件加载元数据（只读，供全局展示）
     """
-    import logging
-    log = logging.getLogger("kn_producer_cache")
     global _cache_meta_memory, _cache_meta_mtime
-    try:
-        from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_META
-        if _use_redis():
-            out = None
-            if os.path.isfile(CACHE_META_FILE):
-                mtime = os.path.getmtime(CACHE_META_FILE)
-                if _cache_meta_memory is not None and mtime == _cache_meta_mtime:
-                    return _cache_meta_memory
-                try:
-                    with open(CACHE_META_FILE, "r", encoding="utf-8") as f:
-                        out = json.load(f)
-                except Exception:
-                    out = None
-            if out is None:
-                out = cache_get_json(REDIS_KEY_META)
-                if out:
-                    _ensure_cache_dir()
-                    try:
-                        with open(CACHE_META_FILE, "w", encoding="utf-8") as f:
-                            json.dump(out, f, ensure_ascii=False)
-                    except Exception:
-                        pass
-            if out:
-                _cache_meta_memory = out
-                _cache_meta_mtime = os.path.getmtime(CACHE_META_FILE) if os.path.isfile(CACHE_META_FILE) else 0
-            return out
-    except Exception as e:
-        log.warning("[load_cache_meta] Redis 加载失败: %s", e)
     if not os.path.isfile(CACHE_META_FILE):
         return None
     try:
@@ -221,15 +138,14 @@ def load_cache_meta():
         _cache_meta_memory = out
         _cache_meta_mtime = mtime
         return out
-    except Exception as e:
-        log.warning("[load_cache_meta] 加载失败: %s", e)
+    except Exception:
         return None
 
 
 def save_producer_full_cache(payload: dict):
     """
-    保存全量缓存到主文件或 Redis，并归档到每日目录（保留 30 天，仅文件模式）
-    同时写入 cache_meta 供全局展示
+    保存全量缓存到主文件（仅 admin 刷新和 cron 调用，其他代码不修改此文件）
+    同时写入 cache_meta 供全局展示。主缓存文件不会被删除。
     payload: { producers, portfolio_cumulative_stats?, allocation_by_platform?, system_cutover_date? }
     """
     global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime
@@ -248,26 +164,6 @@ def save_producer_full_cache(payload: dict):
         "allocation_by_platform": payload.get("allocation_by_platform"),
     }
     meta = {"last_updated": last_updated, "system_cutover_date": system_cutover_date or ""}
-    try:
-        from kn_cache_storage import _use_redis, cache_set_json, REDIS_KEY_CACHE, REDIS_KEY_META
-        if _use_redis():
-            ok1 = cache_set_json(REDIS_KEY_CACHE, data)
-            ok2 = cache_set_json(REDIS_KEY_META, meta)
-            if ok1 and ok2:
-                _ensure_cache_dir()
-                try:
-                    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-                        json.dump(data, f, ensure_ascii=False, indent=2)
-                    with open(CACHE_META_FILE, "w", encoding="utf-8") as f:
-                        json.dump(meta, f, ensure_ascii=False)
-                except Exception:
-                    pass
-                return
-            raise RuntimeError("Redis 写入失败，请检查 KV_REST_API_TOKEN 或 UPSTASH_REDIS_REST_TOKEN 是否为可写 token")
-    except Exception as e:
-        import logging
-        logging.getLogger("kn_producer_cache").error("[save_producer_full_cache] Redis 写入异常: %s", e)
-        raise
     _ensure_cache_dir()
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -286,20 +182,10 @@ def save_producer_full_cache(payload: dict):
 
 
 def _append_log(logs: list, msg: str, truncate_first: bool = False):
-    """追加日志并写入文件或 Redis。truncate_first=True 时先清空（每次刷新开始时调用）"""
+    """追加日志到文件。truncate_first=True 时先清空（每次刷新开始时调用）"""
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{ts}] {msg}\n"
     logs.append(line.rstrip())
-    try:
-        from kn_cache_storage import _use_redis, cache_append, cache_set, REDIS_KEY_LOG
-        if _use_redis():
-            if truncate_first:
-                cache_set(REDIS_KEY_LOG, line)
-            else:
-                cache_append(REDIS_KEY_LOG, line)
-            return
-    except Exception:
-        pass
     try:
         _ensure_cache_dir()
         mode = "w" if truncate_first else "a"
@@ -329,11 +215,7 @@ def refresh_producer_full_cache():
     logs = []
     try:
         _append_log(logs, "开始刷新全量缓存...", truncate_first=True)
-        try:
-            from kn_cache_storage import _use_redis
-            _append_log(logs, f"缓存后端: {'Redis (共享)' if _use_redis() else '文件 (/tmp，Vercel 上实例间不共享)'}")
-        except Exception:
-            _append_log(logs, "缓存后端: 未知")
+        _append_log(logs, "缓存后端: 文件（仅 admin/cron 可写，其他页面只读）")
 
         # 0) 缓存最新数据日，供 kn_revenue/kn_cashflow 等复用，避免重复查询
         from kn_data_utils import get_latest_data_date, set_refresh_latest_date, clear_refresh_latest_date
@@ -670,34 +552,15 @@ def update_producer_cashflow_in_full_cache(spv_id: str, exchange_rate: float = 1
 
 
 def load_refresh_log():
-    """读取最近一次刷新的日志（最后 500 行）"""
-    import logging
-    log = logging.getLogger("kn_producer_cache")
-    log.info("[load_refresh_log] 开始加载，路径=%s", REFRESH_LOG_FILE)
-    try:
-        from kn_cache_storage import _use_redis, cache_get, REDIS_KEY_LOG
-        if _use_redis():
-            raw = cache_get(REDIS_KEY_LOG)
-            if not raw:
-                log.info("[load_refresh_log] Redis 无数据，返回空列表")
-                return []
-            lines = raw.strip().split("\n") if raw else []
-            result = lines[-500:] if len(lines) > 500 else lines
-            log.info("[load_refresh_log] Redis 加载成功，总行数=%d，返回行数=%d", len(lines), len(result))
-            return [ln + "\n" for ln in result] if result else []
-    except Exception as e:
-        log.warning("[load_refresh_log] Redis 加载失败: %s", e)
+    """从文件读取最近一次刷新的日志（最后 500 行）"""
     if not os.path.isfile(REFRESH_LOG_FILE):
-        log.info("[load_refresh_log] 文件不存在，返回空列表")
         return []
     try:
         with open(REFRESH_LOG_FILE, "r", encoding="utf-8") as f:
             lines = f.readlines()
         result = lines[-500:] if len(lines) > 500 else lines
-        log.info("[load_refresh_log] 加载成功，总行数=%d，返回行数=%d", len(lines), len(result))
         return result
-    except Exception as e:
-        log.warning("[load_refresh_log] 加载失败: %s", e)
+    except Exception:
         return []
 
 
@@ -715,7 +578,7 @@ def refresh_producer_full_cache_async():
     刷新全量缓存。
     - 本地：后台线程执行，立即返回，可轮询状态
     - Vercel：同步执行。Serverless 在响应返回后立即终止，后台线程会被杀死，
-      导致刷新无法完成、Redis 无法写入。必须同步执行才能保证缓存写入成功。
+      必须同步执行才能保证缓存文件写入成功。
     """
     global _refresh_status
     if _refresh_status.get("running"):

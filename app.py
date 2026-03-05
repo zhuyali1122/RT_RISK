@@ -11,7 +11,8 @@ if not logging.getLogger().handlers:
 from functools import wraps
 from flask import (
     Flask, render_template, jsonify, request,
-    session, redirect, url_for, send_from_directory, send_file
+    session, redirect, url_for, send_from_directory, send_file,
+    make_response,
 )
 from werkzeug.utils import secure_filename
 
@@ -71,21 +72,8 @@ def _inject_app_root():
     def t(key, default=""):
         return trans.get(key, default or key)
 
-    # 仅登录用户需要 cache_meta（用于 _top_bar），登录页跳过 Redis 调用以加速
+    # cache_meta 改为客户端异步加载，不阻塞首屏渲染（见 /api/cache-meta）
     cache_meta = None
-    if "user" in session:
-        try:
-            from kn_producer_cache import load_cache_meta
-            raw = load_cache_meta()
-            if raw:
-                lu = raw.get("last_updated") or ""
-                cache_meta = {
-                    "last_updated": lu,
-                    "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
-                    "system_cutover_date": raw.get("system_cutover_date") or "",
-                }
-        except Exception:
-            pass
 
     u = session.get("user", {})
     can_refresh_cache = u.get("role") == "admin" or "manage_system" in (u.get("permissions") or []) or "manage_partners" in (u.get("permissions") or [])
@@ -387,7 +375,9 @@ def index():
 def login_page():
     if "user" in session:
         return redirect(url_for("dashboard"))
-    return render_template("login.html")
+    resp = make_response(render_template("login.html"))
+    resp.headers["Cache-Control"] = "public, max-age=60"
+    return resp
 
 
 @app.route("/api/login", methods=["POST"])
@@ -422,6 +412,24 @@ def api_login():
 
     err_msg = "Invalid username or password" if lang == "en" else "用户名或密码错误"
     return jsonify({"success": False, "message": err_msg})
+
+
+@app.route("/api/cache-meta")
+@login_required
+def api_cache_meta():
+    """异步获取 cache_meta，供 _top_bar 客户端加载，不阻塞首屏"""
+    try:
+        from kn_producer_cache import load_cache_meta
+        raw = load_cache_meta()
+        if not raw:
+            return jsonify({})
+        lu = raw.get("last_updated") or ""
+        return jsonify({
+            "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
+            "system_cutover_date": raw.get("system_cutover_date") or "",
+        })
+    except Exception:
+        return jsonify({})
 
 
 def _user_with_role_label(user, lang):
@@ -477,15 +485,6 @@ def admin_cache_refresh():
         refresh_logs = []
         refresh_logs_text = ""
 
-    cache_backend = "unknown"
-    is_vercel = bool(os.getenv("VERCEL"))
-    if is_vercel:
-        try:
-            from kn_cache_storage import _use_redis
-            cache_backend = "redis" if _use_redis() else "file"
-        except Exception:
-            pass
-
     app.logger.info("[admin_cache_refresh] 渲染完成，准备返回页面")
     return render_template(
         "admin_cache_refresh.html",
@@ -493,8 +492,6 @@ def admin_cache_refresh():
         cache_meta=cache_meta,
         refresh_logs=refresh_logs,
         refresh_logs_text=refresh_logs_text,
-        cache_backend=cache_backend,
-        is_vercel=is_vercel,
     )
 
 

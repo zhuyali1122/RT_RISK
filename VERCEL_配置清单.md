@@ -36,8 +36,12 @@ RT_RISK 部署到 Vercel 的完整配置说明。
 
 | 变量 | 来源 | 说明 |
 |------|------|------|
-| `KV_REST_API_URL` | 添加 Vercel KV 后**自动注入** | Redis REST API 地址 |
-| `KV_REST_API_TOKEN` | 添加 Vercel KV 后**自动注入** | 认证 Token |
+| `KV_REST_API_URL` | Storage 创建 Redis 后**自动注入** | Redis REST API 地址 |
+| `KV_REST_API_TOKEN` | 同上 | **可写** Token（勿用 READ_ONLY_TOKEN） |
+| 或 `UPSTASH_REDIS_REST_URL` | Upstash 集成 | 同上 |
+| 或 `UPSTASH_REDIS_REST_TOKEN` | 同上 | **可写** Token |
+
+**重要**：创建 Redis 后需在 Storage 中**链接到项目**，变量才会注入。若缓存管理页显示「未检测到 Redis」警告，请检查 Settings → Environment Variables 中是否有上述变量。
 
 ### 可选
 

@@ -4,7 +4,10 @@
 - Vercel + KV：使用 Vercel KV (Upstash Redis)，所有实例共享，Admin 刷新后其他用户可直接访问
 """
 import json
+import logging
 import os
+
+log = logging.getLogger("kn_cache_storage")
 
 # Redis 键前缀
 REDIS_KEY_CACHE = "rt_risk:producer_full_cache"
@@ -15,9 +18,10 @@ _redis_client = None
 
 
 def _use_redis():
-    """是否使用 Redis 作为缓存后端（Vercel 上需配置 KV）"""
+    """是否使用 Redis 作为缓存后端（Vercel 上需配置 Redis，且必须用可写 token）"""
     if not os.getenv("VERCEL"):
         return False
+    # 必须用可写 token，不能用 KV_REST_API_READ_ONLY_TOKEN
     url = os.getenv("KV_REST_API_URL") or os.getenv("UPSTASH_REDIS_REST_URL")
     token = os.getenv("KV_REST_API_TOKEN") or os.getenv("UPSTASH_REDIS_REST_TOKEN")
     return bool(url and token)
@@ -52,15 +56,16 @@ def cache_get(key: str) -> str | None:
 
 
 def cache_set(key: str, value: str) -> bool:
-    """写入 Redis"""
+    """写入 Redis，失败时记录日志"""
     r = _get_redis()
     if not r:
         return False
     try:
         r.set(key, value)
         return True
-    except Exception:
-        return False
+    except Exception as e:
+        log.error("[cache_set] Redis 写入失败 key=%s: %s", key, e)
+        raise
 
 
 def cache_append(key: str, value: str, truncate_first: bool = False) -> bool:
@@ -93,5 +98,6 @@ def cache_set_json(key: str, data: dict) -> bool:
     """写入 JSON 到 Redis"""
     try:
         return cache_set(key, json.dumps(data, ensure_ascii=False))
-    except Exception:
+    except Exception as e:
+        log.error("[cache_set_json] Redis 写入失败 key=%s: %s", key, e)
         return False

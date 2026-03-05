@@ -67,6 +67,11 @@
                 <span class="value" id="systemCutover">{{ cache_meta.system_cutover_date if cache_meta else t('cache_no_data') }}</span>
             </div>
         </div>
+        {% if cache_backend == 'file' and is_vercel %}
+        <p style="font-size:0.85rem;color:#B45309;background:#FEF3C7;padding:10px 14px;border-radius:8px;margin-bottom:16px;">
+            ⚠️ Vercel 上未检测到 Redis：缓存将写入 /tmp，实例间不共享，其他用户可能看不到数据。请在 Storage 中创建 Redis 并链接到项目，配置 KV_REST_API_URL + KV_REST_API_TOKEN 或 UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN。
+        </p>
+        {% endif %}
         {% if not cache_meta %}
         <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:16px;">{{ t('cache_no_data') }} — {{ t('cache_first_refresh_hint') }}</p>
         {% endif %}

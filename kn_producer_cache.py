@@ -214,11 +214,15 @@ def save_producer_full_cache(payload: dict):
     try:
         from kn_cache_storage import _use_redis, cache_set_json, REDIS_KEY_CACHE, REDIS_KEY_META
         if _use_redis():
-            cache_set_json(REDIS_KEY_CACHE, data)
-            cache_set_json(REDIS_KEY_META, meta)
-            return
-    except Exception:
-        pass
+            ok1 = cache_set_json(REDIS_KEY_CACHE, data)
+            ok2 = cache_set_json(REDIS_KEY_META, meta)
+            if ok1 and ok2:
+                return
+            raise RuntimeError("Redis 写入失败，请检查 KV_REST_API_TOKEN 或 UPSTASH_REDIS_REST_TOKEN 是否为可写 token")
+    except Exception as e:
+        import logging
+        logging.getLogger("kn_producer_cache").error("[save_producer_full_cache] Redis 写入异常: %s", e)
+        raise
     _ensure_cache_dir()
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -280,6 +284,11 @@ def refresh_producer_full_cache():
     logs = []
     try:
         _append_log(logs, "开始刷新全量缓存...", truncate_first=True)
+        try:
+            from kn_cache_storage import _use_redis
+            _append_log(logs, f"缓存后端: {'Redis (共享)' if _use_redis() else '文件 (/tmp，Vercel 上实例间不共享)'}")
+        except Exception:
+            _append_log(logs, "缓存后端: 未知")
 
         # 0) 缓存最新数据日，供 kn_revenue/kn_cashflow 等复用，避免重复查询
         from kn_data_utils import get_latest_data_date, set_refresh_latest_date, clear_refresh_latest_date

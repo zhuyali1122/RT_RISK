@@ -60,7 +60,7 @@ def _blob_get(path: str) -> str | None:
         import requests
         r = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=60)
         r.raise_for_status()
-        return r.text
+        return r.content.decode("utf-8", errors="replace")
     except Exception as e:
         log.warning("[blob_get] 失败 path=%s: %s", path, e)
         return None

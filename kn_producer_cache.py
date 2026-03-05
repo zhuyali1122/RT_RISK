@@ -222,17 +222,33 @@ def save_producer_full_cache(payload: dict):
         pass
 
 
+def clear_refresh_log():
+    """清空刷新日志（Blob + 本地文件），每次刷新开始时调用"""
+    try:
+        from kn_cache_storage import _use_blob, cache_set, BLOB_PATH_LOG
+        if _use_blob():
+            cache_set(BLOB_PATH_LOG, "")
+    except Exception:
+        pass
+    try:
+        _ensure_cache_dir()
+        with open(REFRESH_LOG_FILE, "w", encoding="utf-8") as f:
+            f.write("")
+    except Exception:
+        pass
+
+
 def _append_log(logs: list, msg: str, truncate_first: bool = False):
-    """追加日志到 Blob（共享）+ 文件。truncate_first=True 时写入分隔符（每次刷新开始）"""
+    """追加日志到 Blob（共享）+ 文件。truncate_first=True 时先清空再写入（每次刷新开始）"""
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{ts}] {msg}\n"
     logs.append(line.rstrip())
     try:
-        from kn_cache_storage import _use_blob, cache_append, BLOB_PATH_LOG
+        from kn_cache_storage import _use_blob, cache_append, cache_set, BLOB_PATH_LOG
         if _use_blob():
             if truncate_first:
-                sep = f"\n{'='*60}\n[{ts}] ===== 新刷新开始 =====\n"
-                cache_append(BLOB_PATH_LOG, sep + line, truncate_first=False)
+                sep = f"{'='*60}\n[{ts}] ===== 新刷新开始 =====\n"
+                cache_set(BLOB_PATH_LOG, sep + line)
             else:
                 cache_append(BLOB_PATH_LOG, line, truncate_first=False)
     except Exception:
@@ -240,8 +256,8 @@ def _append_log(logs: list, msg: str, truncate_first: bool = False):
     try:
         _ensure_cache_dir()
         if truncate_first:
-            sep = f"\n{'='*60}\n[{ts}] ===== 新刷新开始 =====\n"
-            with open(REFRESH_LOG_FILE, "a", encoding="utf-8") as f:
+            sep = f"{'='*60}\n[{ts}] ===== 新刷新开始 =====\n"
+            with open(REFRESH_LOG_FILE, "w", encoding="utf-8") as f:
                 f.write(sep + line)
         else:
             with open(REFRESH_LOG_FILE, "a", encoding="utf-8") as f:
@@ -269,6 +285,7 @@ def refresh_producer_full_cache():
     """
     logs = []
     try:
+        clear_refresh_log()
         _append_log(logs, "开始刷新全量缓存...", truncate_first=True)
         try:
             from kn_cache_storage import _use_blob

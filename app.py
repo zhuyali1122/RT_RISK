@@ -19,6 +19,7 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 # Vercel 等 serverless 需固定 secret_key，否则 session 无法跨请求
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-me-in-production")
+app.config["JSON_AS_ASCII"] = False  # JSON 输出中文不转义，避免乱码
 # 子路径部署，如 chuanx.xyz/rtrisk，设置 APP_ROOT=/rtrisk
 APP_ROOT = (os.getenv("APP_ROOT") or "").rstrip("/")
 

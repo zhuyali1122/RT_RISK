@@ -39,7 +39,9 @@
 ### 5.1 加载速度优化（已内置）
 
 - **登录页**：未登录用户不再调用 Redis 加载 cache_meta，减少首屏延迟
-- **Redis cache_meta**：热实例 60 秒内复用内存缓存，减少重复 Redis 调用
+- **只读 /tmp**：所有人（PM/Investor/Admin）登录后只从 `/tmp` 读取缓存，不访问 Redis
+- **仅 Admin 刷新时写入**：Admin 手动刷新或 Cron 定时刷新时，才写入 Redis 和 `/tmp`；冷实例首次请求时从 Redis 拉取一次并回写 `/tmp`，之后只读 `/tmp`
+- **不清理 /tmp**：主缓存文件常驻 `/tmp`，不删除
 
 ### 6. 检查 Vercel 环境变量
 

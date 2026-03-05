@@ -8,7 +8,6 @@
 import json
 import os
 import threading
-import time
 from datetime import datetime, timedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -93,26 +92,49 @@ def load_producer_full_cache():
     try:
         from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_CACHE
         if _use_redis():
-            d = cache_get_json(REDIS_KEY_CACHE)
-            if not d:
-                return None, None
-            producers = d.get("producers", {})
-            last_updated = d.get("last_updated")
-            result = (
-                {
-                    "producers": producers,
-                    "portfolio_cumulative_stats": d.get("portfolio_cumulative_stats"),
-                    "allocation_by_platform": d.get("allocation_by_platform"),
-                    "system_cutover_date": d.get("system_cutover_date"),
-                },
-                last_updated,
-            )
-            try:
-                from flask import g
-                g._rt_producer_full_cache = result
-            except (RuntimeError, Exception):
-                pass
-            return result
+            # 所有人只从 /tmp 读取；仅当 /tmp 为空（冷实例）时从 Redis 拉取一次并回写
+            result = None
+            d = None
+            if os.path.isfile(CACHE_FILE):
+                mtime = os.path.getmtime(CACHE_FILE)
+                if _producer_cache_memory is not None and mtime == _producer_cache_mtime:
+                    result = _producer_cache_memory
+                else:
+                    try:
+                        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                            d = json.load(f)
+                    except Exception:
+                        d = None
+            if result is None and d is None:
+                d = cache_get_json(REDIS_KEY_CACHE)
+                if d:
+                    _ensure_cache_dir()
+                    try:
+                        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                            json.dump(d, f, ensure_ascii=False, indent=2)
+                    except Exception:
+                        pass
+            if result is None and d is not None:
+                producers = d.get("producers", {})
+                last_updated = d.get("last_updated")
+                result = (
+                    {
+                        "producers": producers,
+                        "portfolio_cumulative_stats": d.get("portfolio_cumulative_stats"),
+                        "allocation_by_platform": d.get("allocation_by_platform"),
+                        "system_cutover_date": d.get("system_cutover_date"),
+                    },
+                    last_updated,
+                )
+                _producer_cache_memory = result
+                _producer_cache_mtime = os.path.getmtime(CACHE_FILE) if os.path.isfile(CACHE_FILE) else 0
+            if result is not None:
+                try:
+                    from flask import g
+                    g._rt_producer_full_cache = result
+                except (RuntimeError, Exception):
+                    pass
+                return result
     except Exception:
         pass
 
@@ -150,27 +172,41 @@ def load_producer_full_cache():
 
 _cache_meta_memory = None
 _cache_meta_mtime = 0
-_cache_meta_redis_at = 0  # Redis 模式下内存缓存时间戳
-CACHE_META_TTL = 60  # Redis 模式下内存缓存 TTL（秒）
 
 
 def load_cache_meta():
     """
     加载缓存元数据（轻量，供全局展示）
-    进程内复用，保存时失效。Redis 模式下 60 秒内复用内存缓存，减少热实例的 Redis 调用
+    Redis 模式下只从 /tmp 读取；仅当 /tmp 为空时从 Redis 拉取一次并回写
     """
     import logging
     log = logging.getLogger("kn_producer_cache")
-    global _cache_meta_memory, _cache_meta_mtime, _cache_meta_redis_at
+    global _cache_meta_memory, _cache_meta_mtime
     try:
         from kn_cache_storage import _use_redis, cache_get_json, REDIS_KEY_META
         if _use_redis():
-            if _cache_meta_memory is not None and (time.time() - _cache_meta_redis_at) < CACHE_META_TTL:
-                return _cache_meta_memory
-            out = cache_get_json(REDIS_KEY_META)
+            out = None
+            if os.path.isfile(CACHE_META_FILE):
+                mtime = os.path.getmtime(CACHE_META_FILE)
+                if _cache_meta_memory is not None and mtime == _cache_meta_mtime:
+                    return _cache_meta_memory
+                try:
+                    with open(CACHE_META_FILE, "r", encoding="utf-8") as f:
+                        out = json.load(f)
+                except Exception:
+                    out = None
+            if out is None:
+                out = cache_get_json(REDIS_KEY_META)
+                if out:
+                    _ensure_cache_dir()
+                    try:
+                        with open(CACHE_META_FILE, "w", encoding="utf-8") as f:
+                            json.dump(out, f, ensure_ascii=False)
+                    except Exception:
+                        pass
             if out:
                 _cache_meta_memory = out
-                _cache_meta_redis_at = time.time()
+                _cache_meta_mtime = os.path.getmtime(CACHE_META_FILE) if os.path.isfile(CACHE_META_FILE) else 0
             return out
     except Exception as e:
         log.warning("[load_cache_meta] Redis 加载失败: %s", e)
@@ -196,12 +232,11 @@ def save_producer_full_cache(payload: dict):
     同时写入 cache_meta 供全局展示
     payload: { producers, portfolio_cumulative_stats?, allocation_by_platform?, system_cutover_date? }
     """
-    global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime, _cache_meta_redis_at
+    global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime
     _producer_cache_memory = None
     _producer_cache_mtime = 0
     _cache_meta_memory = None
     _cache_meta_mtime = 0
-    _cache_meta_redis_at = 0
     now = datetime.now()
     last_updated = now.isoformat()
     system_cutover_date = payload.get("system_cutover_date")
@@ -219,6 +254,14 @@ def save_producer_full_cache(payload: dict):
             ok1 = cache_set_json(REDIS_KEY_CACHE, data)
             ok2 = cache_set_json(REDIS_KEY_META, meta)
             if ok1 and ok2:
+                _ensure_cache_dir()
+                try:
+                    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                    with open(CACHE_META_FILE, "w", encoding="utf-8") as f:
+                        json.dump(meta, f, ensure_ascii=False)
+                except Exception:
+                    pass
                 return
             raise RuntimeError("Redis 写入失败，请检查 KV_REST_API_TOKEN 或 UPSTASH_REDIS_REST_TOKEN 是否为可写 token")
     except Exception as e:

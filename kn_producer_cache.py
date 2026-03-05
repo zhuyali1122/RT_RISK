@@ -244,6 +244,10 @@ def _append_log(logs: list, msg: str, truncate_first: bool = False):
     line = f"[{ts}] {msg}\n"
     logs.append(line.rstrip())
     try:
+        _refresh_status["logs"] = list(logs)  # 供轮询实时获取
+    except Exception:
+        pass
+    try:
         from kn_cache_storage import _use_blob, cache_append, cache_set, BLOB_PATH_LOG
         if _use_blob():
             if truncate_first:
@@ -652,7 +656,7 @@ def load_refresh_log():
 
 
 # 后台刷新状态：供 GET /api/partner/refresh-status 轮询
-_refresh_status = {"running": False, "result": None}
+_refresh_status = {"running": False, "result": None, "logs": []}
 
 
 def get_refresh_status():
@@ -664,7 +668,7 @@ def refresh_producer_full_cache_async():
     """
     刷新全量缓存。
     - 本地：后台线程执行，立即返回，可轮询状态
-    - Vercel：同步执行。Serverless 在响应返回后立即终止，后台线程会被杀死，
+    - Vercel：同步执行。Serverless 在响应返回后函数终止，后台线程会被杀死，
       必须同步执行才能保证缓存文件写入成功。
     """
     global _refresh_status
@@ -675,17 +679,21 @@ def refresh_producer_full_cache_async():
         # Vercel Serverless：同步执行，否则响应返回后函数终止，后台线程被杀死
         _refresh_status["running"] = True
         _refresh_status["result"] = None
+        _refresh_status["logs"] = []
         try:
             result = refresh_producer_full_cache()
             _refresh_status["running"] = False
             _refresh_status["result"] = result
+            _refresh_status["logs"] = result.get("logs", [])
         except Exception as e:
             _refresh_status["running"] = False
             _refresh_status["result"] = {"error": str(e), "logs": []}
+            _refresh_status["logs"] = []
         return
 
     _refresh_status["running"] = True
     _refresh_status["result"] = None
+    _refresh_status["logs"] = []
 
     def _run():
         global _refresh_status
@@ -695,9 +703,11 @@ def refresh_producer_full_cache_async():
                 result = refresh_producer_full_cache()
             _refresh_status["running"] = False
             _refresh_status["result"] = result
+            _refresh_status["logs"] = result.get("logs", [])
         except Exception as e:
             _refresh_status["running"] = False
             _refresh_status["result"] = {"error": str(e), "logs": []}
+            _refresh_status["logs"] = []
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()

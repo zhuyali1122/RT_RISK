@@ -1827,9 +1827,18 @@ def api_refresh_status():
     try:
         from kn_producer_cache import get_refresh_status, load_refresh_log, load_cache_meta
         st = get_refresh_status()
-        logs = load_refresh_log()
         meta = load_cache_meta()
-        logs_text = "".join(logs) if isinstance(logs, list) else (logs or "")
+        # 优先用 refresh 内存中的 logs（实时），否则从 Blob/文件读取
+        logs_text = ""
+        if st.get("result") and st["result"].get("logs"):
+            rlogs = st["result"]["logs"]
+            logs_text = "\n".join(rlogs) if isinstance(rlogs, list) else str(rlogs)
+        elif st.get("running") and st.get("logs"):
+            rlogs = st["logs"]
+            logs_text = "\n".join(rlogs) if isinstance(rlogs, list) else str(rlogs)
+        else:
+            logs = load_refresh_log()
+            logs_text = "".join(logs) if isinstance(logs, list) else (logs or "")
         out = {
             "running": st.get("running", False),
             "logs": logs_text,

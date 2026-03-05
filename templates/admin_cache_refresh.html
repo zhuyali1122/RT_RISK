@@ -101,7 +101,7 @@
             document.getElementById('btnIcon').textContent = '⏳';
             document.getElementById('btnText').textContent = langZh ? '刷新中...' : 'Refreshing...';
             const logBox = document.getElementById('logBox');
-            logBox.textContent = '';  // 先清空，后端已清除日志文件
+            logBox.textContent = langZh ? '正在刷新，请稍候...' : 'Refreshing, please wait...';
             logBox.classList.remove('empty');
             try {
                 const postRes = await fetch(appRoot + '/api/partner/refresh-all-cache', {
@@ -146,7 +146,7 @@
                     try {
                         const r = await fetch(appRoot + '/api/partner/refresh-status', { credentials: 'same-origin' });
                         const data = await r.json();
-                        if (data.logs) {
+                        if (data.logs !== undefined) {
                             logBox.textContent = typeof data.logs === 'string' ? data.logs : (data.logs.join ? data.logs.join('') : String(data.logs));
                         }
                         if (data.error) {
@@ -175,7 +175,7 @@
                     }
                 };
                 doPoll();
-                pollId = setInterval(doPoll, 2000);
+                pollId = setInterval(doPoll, 1000);  // 1 秒轮询，实时显示日志
             } catch (e) {
                 logBox.textContent = (e.message || 'Network error');
                 btn.disabled = false;

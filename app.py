@@ -461,7 +461,7 @@ def admin_cache_refresh():
 
     cache_meta = None
     refresh_logs = []
-    refresh_logs_text = ""  # 进入页面时不加载 log 文件，仅刷新时通过轮询获取
+    refresh_logs_text = ""  # 进入页面不加载 log，点击刷新后通过轮询实时显示
     try:
         from kn_producer_cache import load_cache_meta
         app.logger.info("[admin_cache_refresh] 开始加载 cache_meta")

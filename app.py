@@ -461,9 +461,9 @@ def admin_cache_refresh():
 
     cache_meta = None
     refresh_logs = []
-    refresh_logs_text = ""  # 进入页面不加载 log，点击刷新后通过轮询实时显示
+    refresh_logs_text = ""
     try:
-        from kn_producer_cache import load_cache_meta
+        from kn_producer_cache import load_cache_meta, load_refresh_log
         app.logger.info("[admin_cache_refresh] 开始加载 cache_meta")
         raw = load_cache_meta()
         if raw:
@@ -476,6 +476,10 @@ def admin_cache_refresh():
             app.logger.info("[admin_cache_refresh] cache_meta 加载成功 last_updated=%s", lu[:19] if lu else "N/A")
         else:
             app.logger.info("[admin_cache_refresh] cache_meta 为空（无缓存或文件不存在）")
+        # 进入页面时加载上次的 log 文档并显示
+        logs = load_refresh_log()
+        refresh_logs = logs if isinstance(logs, list) else ([logs] if logs else [])
+        refresh_logs_text = "".join(refresh_logs) if refresh_logs else ""
     except Exception as e:
         app.logger.exception("[admin_cache_refresh] 加载失败: %s", e)
 

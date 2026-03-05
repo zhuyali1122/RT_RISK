@@ -461,9 +461,9 @@ def admin_cache_refresh():
 
     cache_meta = None
     refresh_logs = []
-    refresh_logs_text = ""
+    refresh_logs_text = ""  # 进入页面时不加载 log 文件，仅刷新时通过轮询获取
     try:
-        from kn_producer_cache import load_cache_meta, load_refresh_log
+        from kn_producer_cache import load_cache_meta
         app.logger.info("[admin_cache_refresh] 开始加载 cache_meta")
         raw = load_cache_meta()
         if raw:
@@ -476,15 +476,8 @@ def admin_cache_refresh():
             app.logger.info("[admin_cache_refresh] cache_meta 加载成功 last_updated=%s", lu[:19] if lu else "N/A")
         else:
             app.logger.info("[admin_cache_refresh] cache_meta 为空（无缓存或文件不存在）")
-
-        app.logger.info("[admin_cache_refresh] 开始加载 refresh_log")
-        refresh_logs = load_refresh_log()
-        refresh_logs_text = "".join(refresh_logs) if refresh_logs else ""
-        app.logger.info("[admin_cache_refresh] refresh_log 加载完成，行数=%d", len(refresh_logs))
     except Exception as e:
         app.logger.exception("[admin_cache_refresh] 加载失败: %s", e)
-        refresh_logs = []
-        refresh_logs_text = ""
 
     cache_backend = "file"
     if os.getenv("VERCEL"):
@@ -1810,7 +1803,8 @@ def api_refresh_all_producer_cache():
     if not _can_refresh_cache():
         return jsonify({"error": "权限不足"}), 403
     try:
-        from kn_producer_cache import refresh_producer_full_cache_async, get_refresh_status
+        from kn_producer_cache import clear_refresh_log, refresh_producer_full_cache_async, get_refresh_status
+        clear_refresh_log()  # 按 Refresh 时先清空日志，再启动刷新
         refresh_producer_full_cache_async()
         st = get_refresh_status()
         if st.get("result") is not None:

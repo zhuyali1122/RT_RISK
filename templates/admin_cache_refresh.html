@@ -101,7 +101,7 @@
             document.getElementById('btnIcon').textContent = '⏳';
             document.getElementById('btnText').textContent = langZh ? '刷新中...' : 'Refreshing...';
             const logBox = document.getElementById('logBox');
-            logBox.textContent = langZh ? '已启动后台刷新，正在获取日志...' : 'Background refresh started, fetching logs...';
+            logBox.textContent = '';  // 先清空，后端已清除日志文件
             logBox.classList.remove('empty');
             try {
                 const postRes = await fetch(appRoot + '/api/partner/refresh-all-cache', {

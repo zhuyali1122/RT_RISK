@@ -1,10 +1,20 @@
 {
   "rewrites": [
+    { "source": "/api/cron/refresh-cache", "destination": "/api/cron_refresh" },
     { "source": "/(.*)", "destination": "/api/index" }
   ],
   "functions": {
     "api/index.py": {
       "maxDuration": 60
+    },
+    "api/cron_refresh.py": {
+      "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/refresh-cache",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }

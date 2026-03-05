@@ -77,7 +77,15 @@ Vercel Serverless 的 `/tmp` 是**实例级** ephemeral 存储，不同请求可
 - 缓存写入 **Redis**，所有 Vercel 实例共享
 - **PM/Investor** 登录后，任意实例均可读取最新缓存，无需再次刷新
 
-### 4. 为何 Vercel 上需同步刷新
+### 4. 每日自动刷新（Cron）
+
+Vercel Cron 每天 **UTC 00:00**（北京时间 08:00）自动执行全量缓存刷新，用户登录即可访问最新数据。
+
+**环境变量**：在 Vercel 添加 `CRON_SECRET`（至少 16 字符，随机字符串），Vercel 会将其作为 `Authorization: Bearer <CRON_SECRET>` 注入到 cron 请求中用于鉴权。
+
+**Admin 手动刷新**：仍可随时在「缓存管理」页面点击「刷新全量缓存」。
+
+### 5. 为何 Vercel 上需同步刷新
 
 Vercel Serverless 在 **HTTP 响应返回后立即终止函数**，后台线程会被杀死。若使用异步刷新，缓存尚未写入 Redis 时函数已结束，导致缓存「很快消失」。因此 Vercel 上改为**同步执行**刷新，请求会阻塞直至完成（最多 60 秒，Hobby 计划限制）。若生产商较多导致超时，可在项目 Settings → Functions 将 `maxDuration` 调高（Pro 计划最高 300 秒）。
 

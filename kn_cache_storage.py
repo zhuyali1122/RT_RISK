@@ -23,14 +23,14 @@ def _use_blob():
 
 
 def _blob_put(path: str, content: str | bytes) -> bool:
-    """上传内容到 Blob"""
+    """上传内容到 Blob（allowOverwrite 确保每次刷新可覆盖）"""
     token = os.getenv("BLOB_READ_WRITE_TOKEN")
     if not token:
         return False
     try:
         import vercel_blob
         data = content.encode("utf-8") if isinstance(content, str) else content
-        vercel_blob.put(path, data)
+        vercel_blob.put(path, data, {"allowOverwrite": "true"})
         return True
     except Exception as e:
         log.error("[blob_put] 失败 path=%s: %s", path, e)
@@ -38,21 +38,20 @@ def _blob_put(path: str, content: str | bytes) -> bool:
 
 
 def _blob_get(path: str) -> str | None:
-    """从 Blob 读取内容"""
+    """从 Blob 读取内容（用文件夹 prefix 列出后按 pathname 精确匹配）"""
     token = os.getenv("BLOB_READ_WRITE_TOKEN")
     if not token:
         return None
     try:
         import vercel_blob
-        blobs = vercel_blob.list({"prefix": path, "limit": "10"})
+        # 用 rt_risk/ 前缀列出，避免精确 path 作为 prefix 时漏匹配
+        blobs = vercel_blob.list({"prefix": BLOB_PREFIX, "limit": "20"})
         blobs_list = blobs.get("blobs", []) if isinstance(blobs, dict) else []
         b = None
         for x in blobs_list:
             if x.get("pathname") == path:
                 b = x
                 break
-        if not b and blobs_list:
-            b = blobs_list[0]
         if not b:
             return None
         url = b.get("url") or b.get("downloadUrl")

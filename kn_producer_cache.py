@@ -270,9 +270,10 @@ def _append_log(logs: list, msg: str, truncate_first: bool = False):
         pass
 
 
-def refresh_producer_full_cache():
+def refresh_producer_full_cache(triggered_by: str = "admin"):
     """
     从数据库重新加载所有生产商的风控、收益、现金流数据并写入缓存
+    triggered_by: "admin" 手动刷新 | "cron" 定时刷新，日志中会标明来源
 
     刷新流程：
     1. 缓存 get_latest_data_date，供 kn_revenue/kn_cashflow 复用
@@ -290,7 +291,8 @@ def refresh_producer_full_cache():
     logs = []
     try:
         clear_refresh_log()
-        _append_log(logs, "开始刷新全量缓存...", truncate_first=True)
+        src_label = "Cron 定时触发" if triggered_by == "cron" else "Admin 手动触发"
+        _append_log(logs, f"{src_label} - 开始刷新全量缓存...", truncate_first=True)
         try:
             from kn_cache_storage import _use_blob
             _append_log(logs, f"缓存后端: {'Blob（跨实例共享）' if _use_blob() else '文件'}")

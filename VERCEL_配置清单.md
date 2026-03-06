@@ -54,7 +54,8 @@ RT_RISK 部署到 Vercel 的完整配置说明。
 
 - **Admin/Cron** 刷新时写入 `/tmp/rt_risk_cache/` 下的 `producer_full_cache.json`、`cache_meta.json`
 - **其他页面** 只读，不修改缓存文件
-- 每日 **UTC 00:00** Cron 自动刷新，需配置 `CRON_SECRET`
+- 每日 **UTC 00:00**（香港时间 08:00）Cron 自动刷新，需配置 `CRON_SECRET`
+- Cron 与 Admin 刷新日志写入同一处（Blob `refresh_log.txt`），日志首行会标明「Cron 定时触发」或「Admin 手动触发」
 
 ---
 

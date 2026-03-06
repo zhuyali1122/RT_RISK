@@ -1,6 +1,7 @@
 """
 Vercel Cron 定时刷新全量缓存 - 独立函数，maxDuration 300 秒
-每天 UTC 00:00（北京时间 08:00）执行，加载全量数据并写入缓存文件
+每天 UTC 00:00（香港时间 08:00）执行，加载全量数据并写入缓存文件
+日志写入与 Admin 刷新同一处（Blob/refresh_log.txt）
 """
 import json
 import os
@@ -22,7 +23,7 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             from kn_producer_cache import refresh_producer_full_cache
-            result = refresh_producer_full_cache()
+            result = refresh_producer_full_cache(triggered_by="cron")
             if "error" in result:
                 self._send_json(500, result)
                 return

@@ -6,6 +6,7 @@
 import json
 import logging
 import os
+from typing import Optional, Union
 
 log = logging.getLogger("kn_cache_storage")
 
@@ -22,7 +23,7 @@ def _use_blob():
     return bool(os.getenv("BLOB_READ_WRITE_TOKEN"))
 
 
-def _blob_put(path: str, content: str | bytes) -> bool:
+def _blob_put(path: str, content: Union[str, bytes]) -> bool:
     """上传内容到 Blob（allowOverwrite 确保每次刷新可覆盖）"""
     token = os.getenv("BLOB_READ_WRITE_TOKEN")
     if not token:
@@ -37,7 +38,7 @@ def _blob_put(path: str, content: str | bytes) -> bool:
         return False
 
 
-def _blob_get(path: str) -> str | None:
+def _blob_get(path: str) -> Optional[str]:
     """从 Blob 读取内容（用文件夹 prefix 列出后按 pathname 精确匹配）"""
     token = os.getenv("BLOB_READ_WRITE_TOKEN")
     if not token:
@@ -72,7 +73,7 @@ def _blob_append(path: str, content: str) -> bool:
     return _blob_put(path, existing + content)
 
 
-def cache_get_json(path: str) -> dict | None:
+def cache_get_json(path: str) -> Optional[dict]:
     """从 Blob 读取 JSON"""
     raw = _blob_get(path)
     if raw is None:
@@ -99,7 +100,7 @@ def cache_append(path: str, value: str, truncate_first: bool = False) -> bool:
     return _blob_append(path, value)
 
 
-def cache_get(path: str) -> str | None:
+def cache_get(path: str) -> Optional[str]:
     """从 Blob 读取"""
     return _blob_get(path)
 

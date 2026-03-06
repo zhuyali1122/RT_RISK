@@ -123,7 +123,7 @@
                     logBox.textContent = Array.isArray(logs) ? logs.join('\n') : String(logs);
                     if (postData.last_updated) {
                         const d = new Date(postData.last_updated);
-                        document.getElementById('lastUpdated').textContent = d.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'medium' });
+                        document.getElementById('lastUpdated').textContent = d.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'medium', timeZone: 'Asia/Hong_Kong' });
                     }
                     if (postData.system_cutover_date) {
                         document.getElementById('systemCutover').textContent = postData.system_cutover_date;
@@ -154,7 +154,7 @@
                         }
                         if (data.last_updated) {
                             const d = new Date(data.last_updated);
-                            document.getElementById('lastUpdated').textContent = d.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'medium' });
+                            document.getElementById('lastUpdated').textContent = d.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'medium', timeZone: 'Asia/Hong_Kong' });
                         }
                         if (data.system_cutover_date) {
                             document.getElementById('systemCutover').textContent = data.system_cutover_date;

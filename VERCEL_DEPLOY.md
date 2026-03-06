@@ -70,7 +70,12 @@
 
 ### 3. 每日自动刷新（Cron）
 
-Vercel Cron 每天 **UTC 00:00**（北京时间 08:00）执行。需配置 `CRON_SECRET`。
+Vercel Cron 每天 **UTC 00:00**（香港时间 08:00）执行。需配置 `CRON_SECRET`。日志与 Admin 刷新写入同一处（Blob `refresh_log.txt`），可通过「缓存管理」查看。
+
+**Cron 未执行排查**：
+- 确认 `CRON_SECRET` 已设置（Production 环境），至少 16 字符
+- Vercel 项目 → **Settings** → **Cron Jobs** 查看是否启用、查看执行日志
+- Hobby 计划：每日仅可执行一次，时间可能在指定小时内浮动（如 08:00–08:59 香港时间）
 
 ### 4. 同步刷新
 

@@ -4,6 +4,7 @@ RT_RISK Web 应用 - 角色化资产管理平台
 import json
 import logging
 import os
+from datetime import datetime, timezone
 
 # 确保风控/收益/现金流模块的进度日志可输出（若尚未配置）
 if not logging.getLogger().handlers:
@@ -48,6 +49,28 @@ try:
         pass
 except OSError:
     pass
+
+
+def _format_last_updated_hk(iso_str):
+    """将 ISO 时间字符串格式化为香港时间显示（Vercel 存储为 UTC）"""
+    if not iso_str:
+        return ""
+    try:
+        s = (iso_str or "").replace("Z", "+00:00").strip()
+        if not s:
+            return ""
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        try:
+            from zoneinfo import ZoneInfo
+            hk = dt.astimezone(ZoneInfo("Asia/Hong_Kong"))
+        except ImportError:
+            from datetime import timedelta
+            hk = dt + timedelta(hours=8)  # 香港 UTC+8，无夏令时
+        return hk.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return (iso_str[:19].replace("T", " ") if iso_str else "")
 
 
 @app.before_request
@@ -426,7 +449,7 @@ def api_cache_meta():
             return jsonify({})
         lu = raw.get("last_updated") or ""
         return jsonify({
-            "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
+            "last_updated_fmt": _format_last_updated_hk(lu),
             "system_cutover_date": raw.get("system_cutover_date") or "",
         })
     except Exception:
@@ -470,7 +493,7 @@ def admin_cache_refresh():
             lu = raw.get("last_updated") or ""
             cache_meta = {
                 "last_updated": lu,
-                "last_updated_fmt": lu[:19].replace("T", " ") if lu else "",
+                "last_updated_fmt": _format_last_updated_hk(lu),
                 "system_cutover_date": raw.get("system_cutover_date") or "",
             }
             app.logger.info("[admin_cache_refresh] cache_meta 加载成功 last_updated=%s", lu[:19] if lu else "N/A")

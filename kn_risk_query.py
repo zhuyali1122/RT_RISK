@@ -369,6 +369,22 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
     """, (spv_id, stat_d))
     cum_disb = cur.fetchone()[0] or 0
 
+    # cumulative_extension: 累计展期总额 = 所有 repayment_type=3（展期结清）的 loan 的 disbursement_amount 之和
+    # repayment_type: 1=按期 2=提前结清 3=展期结清 4=部分还款 5=逾期还款
+    cur.execute("""
+        SELECT COALESCE(SUM(rl.disbursement_amount), 0) AS cumulative_extension
+        FROM raw_loan rl
+        WHERE rl.spv_id = %s
+          AND rl.loan_id IN (
+            SELECT rp.loan_id FROM raw_repayment rp
+            WHERE rp.repayment_type = 3
+              AND rp.repayment_date::date <= %s
+          )
+    """, (spv_id, stat_d))
+    cum_ext_row = cur.fetchone()
+    cumulative_extension = float(cum_ext_row[0] or 0) if cum_ext_row else 0
+    log.info("[风控] 累计展期总额 %.0f", cumulative_extension)
+
     # DPD 分布：按 bucket 聚合 loan_count, balance
     cur.execute(f"""
         SELECT
@@ -436,6 +452,7 @@ def query_kn_core_metrics(stat_date: str, spv_id: str = "kn"):
     return {
         "stat_date": stat_d,
         "cumulative_disbursement": str(int(float(cum_disb))),
+        "cumulative_extension": str(int(cumulative_extension)),
         "current_balance": str(int(total_bal)),
         "m0_balance": str(int(float(m0_balance or 0))),
         "m0_accrued_interest": str(int(round(float(m0_accrued_interest)))),

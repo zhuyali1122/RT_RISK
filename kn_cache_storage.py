@@ -31,6 +31,9 @@ def _blob_put(path: str, content: Union[str, bytes]) -> bool:
     try:
         import vercel_blob
         data = content.encode("utf-8") if isinstance(content, str) else content
+        # Vercel Blob API 要求 x-content-length，空内容会报错，用占位符替代
+        if len(data) == 0:
+            data = b"\n"
         vercel_blob.put(path, data, {"allowOverwrite": "true"})
         return True
     except Exception as e:

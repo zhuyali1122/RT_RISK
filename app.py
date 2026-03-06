@@ -1819,6 +1819,35 @@ def api_risk_query_loan(loan_id):
     return jsonify(result)
 
 
+@app.route("/api/cron/refresh-cache", methods=["GET"])
+def api_cron_refresh_cache():
+    """
+    Cron 定时刷新入口。Vercel 上由 api/cron_refresh 处理；本地运行 Flask 时由此路由处理。
+    鉴权：Authorization: Bearer {CRON_SECRET}。本地无 CRON_SECRET 时，仅允许 127.0.0.1 访问（便于测试）。
+    """
+    auth = request.headers.get("Authorization", "")
+    cron_secret = os.getenv("CRON_SECRET", "")
+    if cron_secret:
+        if auth != f"Bearer {cron_secret}":
+            return jsonify({"error": "Unauthorized"}), 401
+    else:
+        # 本地无 CRON_SECRET 时，仅允许 localhost 测试
+        if request.remote_addr not in ("127.0.0.1", "::1", "localhost"):
+            return jsonify({"error": "Unauthorized"}), 401
+    try:
+        from kn_producer_cache import refresh_producer_full_cache
+        result = refresh_producer_full_cache(triggered_by="cron")
+        if "error" in result:
+            return jsonify(result), 500
+        return jsonify({
+            "ok": True,
+            "last_updated": result.get("last_updated"),
+            "producer_count": result.get("producer_count"),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/partner/refresh-all-cache", methods=["POST"])
 @login_required
 def api_refresh_all_producer_cache():

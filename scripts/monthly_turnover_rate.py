@@ -170,6 +170,14 @@ def main():
             if recent_valid:
                 print(f"  近12月平均周转率: {sum(recent_valid)/len(recent_valid):.2%}")
 
+        # 7. 年化周转倍数 = Σ(近12月 V_m) × (1 - 年化核销率)，核销率=0 时 = Σ V_m
+        writeoff_rate = 0
+        last_12 = [r["v_m"] for r in rows[-12:] if r["v_m"] is not None]
+        if last_12:
+            sum_vm = sum(last_12)
+            annual_turnover = sum_vm * (1 - writeoff_rate)
+            print(f"\n  ★ 年化周转倍数 = Σ(近12月V_m) × (1-核销率) = {sum_vm:.4f} × (1-{writeoff_rate}) = {annual_turnover:.4f}")
+
     cur.close()
     conn.close()
     print("\n完成。")

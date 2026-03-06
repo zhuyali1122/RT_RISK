@@ -167,6 +167,7 @@
 
         @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .charts-row { grid-template-columns: 1fr; } }
     </style>
+    {% include '_mobile_styles.html' %}
 </head>
 <body>
     {% include '_top_bar.html' %}
@@ -197,15 +198,7 @@
                     <span class="cache-empty">{{ t('no_cache_hint') }}</span>
                     {% endif %}
                 </div>
-                <button class="btn-refresh" onclick="refreshRevenue()" title="{{ t('btn_refresh') }}">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                    {{ t('btn_refresh') }}
-                </button>
                 {% endif %}
-                <a class="btn-pdf" href="{{ app_root }}/api/partner/{{ partner.id }}/download-excel" download title="{{ t('btn_download_excel') }}" onclick="return handleDownloadExcel(event, '{{ partner.id }}')">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    {{ t('btn_download_excel') }}
-                </a>
                 {% if local_currency != 'USD' %}
                 <div class="currency-selector">
                     <div class="currency-selector-row">
@@ -230,53 +223,6 @@
         const localCurrency = '{{ local_currency }}';
         const exchangeRate = {{ exchange_rate }};
         const T = {{ translations_json | tojson }};
-
-        async function handleDownloadExcel(ev, pid) {
-            ev.preventDefault();
-            const url = (window.APP_ROOT || '') + '/api/partner/' + (pid || partnerId) + '/download-excel';
-            try {
-                const res = await fetch(url, { credentials: 'same-origin' });
-                if (!res.ok) {
-                    const data = await res.json().catch(() => ({}));
-                    alert(T.download_failed + ': ' + (data.error || res.statusText || ''));
-                    return false;
-                }
-                const blob = await res.blob();
-                const disposition = res.headers.get('Content-Disposition') || '';
-                const m = disposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i) || disposition.match(/filename="?([^";]+)/);
-                const filename = (m ? decodeURIComponent((m[1] || '').replace(/^"/, '').replace(/"$/, '')) : '').trim() || T.export_filename;
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = filename || T.export_filename;
-                a.click();
-                URL.revokeObjectURL(a.href);
-            } catch (e) {
-                alert(T.download_failed + ': ' + (e.message || ''));
-            }
-            return false;
-        }
-
-        async function refreshRevenue() {
-            const btn = document.querySelector('.btn-refresh');
-            if (btn) { btn.disabled = true; btn.classList.add('loading'); }
-            try {
-                const res = await fetch((window.APP_ROOT || '') + '/api/partner/' + partnerId + '/refresh-revenue', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
-                const result = await res.json();
-                if (result.ok) {
-                    location.reload();
-                } else {
-                    alert(T.refresh_failed + ': ' + (result.error || ''));
-                }
-            } catch (e) {
-                alert(T.refresh_failed + ': ' + e.message);
-            } finally {
-                if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
-            }
-        }
 
         function _num(x) {
             if (x === null || x === undefined || x === '') return null;

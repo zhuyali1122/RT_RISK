@@ -1,0 +1,168 @@
+{# 手机适配 - 公共响应式样式，在 </head> 前 include #}
+<style>
+/* 断点 768px - Top bar 样式已移至 _top_bar_styles.html */
+@media (max-width: 768px) {
+    /* 通用页面 */
+    .page, .main {
+        padding: 16px 16px 32px;
+        margin-top: 16px;
+    }
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .page-header .left-group, .page-header .right-group {
+        flex-wrap: wrap;
+    }
+
+    /* Meta card 单列 */
+    .meta-card {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 16px;
+    }
+
+    /* Dashboard */
+    .welcome {
+        padding: 20px;
+    }
+    .welcome h1 {
+        font-size: 1.2rem;
+    }
+    .welcome p {
+        font-size: 0.8rem;
+    }
+    .cards {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .card {
+        padding: 18px;
+    }
+    .card h3 {
+        font-size: 0.88rem;
+    }
+    .card p {
+        font-size: 0.76rem;
+    }
+
+    /* Partner cards */
+    .partner-cards {
+        grid-template-columns: 1fr;
+    }
+    .p-card-header, .p-card-body {
+        padding: 16px;
+    }
+    .p-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .p-kpi-value {
+        font-size: 0.9rem;
+    }
+    .p-card-footer {
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    /* Tabs */
+    .main-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 16px;
+    }
+    .main-tab {
+        padding: 10px 18px;
+        font-size: 0.82rem;
+        white-space: nowrap;
+    }
+
+    /* Log box */
+    .log-box {
+        max-height: 280px;
+        padding: 12px;
+        font-size: 0.72rem;
+    }
+
+    /* Portfolio / 通用 grid */
+    .kpi-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .kpi-row-2 {
+        grid-template-columns: 1fr;
+    }
+    .grid-2, .grid-3 {
+        grid-template-columns: 1fr;
+    }
+    .chart-container {
+        flex-direction: column;
+    }
+
+    /* 表格横向滚动 */
+    .tbl-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .section-block {
+        padding: 16px;
+    }
+
+    /* 底部状态栏 */
+    .data-source-status {
+        font-size: 0.65rem;
+        height: 22px;
+    }
+    body {
+        padding-bottom: 22px;
+    }
+
+    /* 按钮 */
+    .btn-back, .btn-refresh {
+        font-size: 0.8rem;
+        padding: 8px 14px;
+    }
+    .btn-refresh {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Help 页面：侧边栏与内容堆叠 */
+@media (max-width: 768px) {
+    .page.page-help {
+        flex-direction: column;
+        padding: 16px;
+    }
+    .help-sidebar {
+        width: 100%;
+        position: static;
+        margin-bottom: 16px;
+    }
+    .help-content {
+        padding: 20px 16px;
+    }
+    .help-content h1 {
+        font-size: 1.25rem;
+    }
+}
+
+/* Login 页面：品牌与表单上下堆叠（login 页已有部分适配，此处补充） */
+@media (max-width: 768px) {
+    .login-panel {
+        padding: 32px 24px;
+    }
+}
+
+/* 更小屏幕 480px - top-bar 已移至 _top_bar_styles */
+@media (max-width: 480px) {
+    .page, .main {
+        padding: 12px 12px 24px;
+    }
+    .log-box {
+        max-height: 220px;
+    }
+}
+</style>

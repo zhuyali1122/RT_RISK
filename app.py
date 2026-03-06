@@ -451,6 +451,7 @@ def api_cache_meta():
         return jsonify({
             "last_updated_fmt": _format_last_updated_hk(lu),
             "system_cutover_date": raw.get("system_cutover_date") or "",
+            "last_updated_by": raw.get("last_updated_by") or "admin",
         })
     except Exception:
         return jsonify({})
@@ -495,6 +496,7 @@ def admin_cache_refresh():
                 "last_updated": lu,
                 "last_updated_fmt": _format_last_updated_hk(lu),
                 "system_cutover_date": raw.get("system_cutover_date") or "",
+                "last_updated_by": raw.get("last_updated_by") or "admin",
             }
             app.logger.info("[admin_cache_refresh] cache_meta 加载成功 last_updated=%s", lu[:19] if lu else "N/A")
         else:
@@ -1868,7 +1870,7 @@ def api_refresh_all_producer_cache():
             r = st["result"]
             if "error" in r:
                 return jsonify(r), 500
-            return jsonify({"ok": True, "started": False, "last_updated": r.get("last_updated"), "producer_count": r.get("producer_count"), "logs": r.get("logs", [])})
+            return jsonify({"ok": True, "started": False, "last_updated": r.get("last_updated"), "last_updated_by": r.get("last_updated_by", "admin"), "producer_count": r.get("producer_count"), "logs": r.get("logs", [])})
         return jsonify({"started": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1900,6 +1902,7 @@ def api_refresh_status():
             "logs": logs_text,
             "last_updated": meta.get("last_updated") if meta else None,
             "system_cutover_date": meta.get("system_cutover_date") if meta else None,
+            "last_updated_by": meta.get("last_updated_by") if meta else "admin",
         }
         if st.get("result"):
             r = st["result"]
@@ -1908,6 +1911,7 @@ def api_refresh_status():
             if r.get("ok"):
                 out["last_updated"] = r.get("last_updated")
                 out["system_cutover_date"] = r.get("system_cutover_date")
+                out["last_updated_by"] = r.get("last_updated_by", "admin")
                 out["producer_count"] = r.get("producer_count")
         return jsonify(out)
     except Exception as e:

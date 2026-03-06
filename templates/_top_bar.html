@@ -26,12 +26,15 @@
   var appRoot = {{ app_root | tojson }};
   var tUpdated = {{ translations_json.get('cache_last_updated', '') | tojson }};
   var tCutover = {{ translations_json.get('cache_system_cutover', '') | tojson }};
+  var tByCron = {{ translations_json.get('cache_updated_by_cron', '') | tojson }};
+  var tByAdmin = {{ translations_json.get('cache_updated_by_admin', '') | tojson }};
   fetch((appRoot || '') + '/api/cache-meta', {credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
     if(d && (d.last_updated_fmt || d.system_cutover_date)){
       var el = document.getElementById('cache-meta-display');
       if(el){
         var s = tUpdated + ': ' + (d.last_updated_fmt || '-');
         if(d.system_cutover_date) s += ' · ' + tCutover + ': ' + d.system_cutover_date;
+        if(d.last_updated_by) s += ' · ' + (d.last_updated_by === 'cron' ? tByCron : tByAdmin);
         el.textContent = s;
       }
     }

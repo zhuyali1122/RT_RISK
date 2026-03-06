@@ -66,6 +66,10 @@
                 <label>{{ t('cache_system_cutover') }}</label>
                 <span class="value" id="systemCutover">{{ cache_meta.system_cutover_date if cache_meta else t('cache_no_data') }}</span>
             </div>
+            <div class="meta-item" style="grid-column: 1 / -1;">
+                <label>{{ t('cache_last_updated_by') }}</label>
+                <span class="value" id="lastUpdatedBy">{{ (t('cache_updated_by_cron') if cache_meta and cache_meta.get('last_updated_by') == 'cron' else t('cache_updated_by_admin')) if cache_meta else '-' }}</span>
+            </div>
         </div>
         {% if cache_backend == 'file' and is_vercel %}
         <p style="font-size:0.85rem;color:#B45309;background:#FEF3C7;padding:10px 14px;border-radius:8px;margin-bottom:16px;">
@@ -128,6 +132,9 @@
                     if (postData.system_cutover_date) {
                         document.getElementById('systemCutover').textContent = postData.system_cutover_date;
                     }
+                    if (postData.last_updated_by) {
+                        document.getElementById('lastUpdatedBy').textContent = postData.last_updated_by === 'cron' ? T.cache_updated_by_cron : T.cache_updated_by_admin;
+                    }
                     btn.disabled = false;
                     document.getElementById('btnIcon').textContent = '🔄';
                     document.getElementById('btnText').textContent = T.btn_refresh_cache;
@@ -158,6 +165,9 @@
                         }
                         if (data.system_cutover_date) {
                             document.getElementById('systemCutover').textContent = data.system_cutover_date;
+                        }
+                        if (data.last_updated_by) {
+                            document.getElementById('lastUpdatedBy').textContent = data.last_updated_by === 'cron' ? T.cache_updated_by_cron : T.cache_updated_by_admin;
                         }
                         if (!data.running) {
                             if (pollId) clearInterval(pollId);

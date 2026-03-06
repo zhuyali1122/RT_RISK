@@ -62,7 +62,11 @@ def _blob_get(path: str) -> Optional[str]:
         if not url:
             return None
         import requests
-        r = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=60)
+        # Public blob URL（.public.blob.vercel-storage.com）无需 Authorization，带 token 反而可能 403
+        headers = {}
+        if ".private.blob.vercel-storage.com" in url:
+            headers["Authorization"] = f"Bearer {token}"
+        r = requests.get(url, headers=headers, timeout=60)
         r.raise_for_status()
         return r.content.decode("utf-8", errors="replace")
     except Exception as e:

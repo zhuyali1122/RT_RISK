@@ -178,7 +178,7 @@ def load_cache_meta():
 def save_producer_full_cache(payload: dict):
     """
     保存全量缓存（仅 admin/cron 调用）。写入 Blob（跨实例共享）+ 文件，不删除。
-    payload: { producers, portfolio_cumulative_stats?, allocation_by_platform?, system_cutover_date? }
+    payload: { producers, portfolio_cumulative_stats?, allocation_by_platform?, system_cutover_date?, last_updated_by? }
     """
     global _producer_cache_memory, _producer_cache_mtime, _cache_meta_memory, _cache_meta_mtime
     _producer_cache_memory = None
@@ -188,6 +188,7 @@ def save_producer_full_cache(payload: dict):
     now = datetime.now()
     last_updated = now.isoformat()
     system_cutover_date = payload.get("system_cutover_date")
+    last_updated_by = payload.get("last_updated_by", "admin")  # "cron" | "admin"
     data = {
         "last_updated": last_updated,
         "system_cutover_date": system_cutover_date,
@@ -195,7 +196,11 @@ def save_producer_full_cache(payload: dict):
         "portfolio_cumulative_stats": payload.get("portfolio_cumulative_stats"),
         "allocation_by_platform": payload.get("allocation_by_platform"),
     }
-    meta = {"last_updated": last_updated, "system_cutover_date": system_cutover_date or ""}
+    meta = {
+        "last_updated": last_updated,
+        "system_cutover_date": system_cutover_date or "",
+        "last_updated_by": last_updated_by,
+    }
     try:
         from kn_cache_storage import _use_blob, cache_set_json, BLOB_PATH_CACHE, BLOB_PATH_META
         if _use_blob():
@@ -497,6 +502,7 @@ def refresh_producer_full_cache(triggered_by: str = "admin"):
             "portfolio_cumulative_stats": portfolio_cumulative_stats,
             "allocation_by_platform": allocation_by_platform,
             "system_cutover_date": system_cutover_date,
+            "last_updated_by": triggered_by,
         })
         last_updated = datetime.now().isoformat()
         _append_log(logs, f"刷新完成，共 {len(producers_cache)} 个生产商")
@@ -504,6 +510,7 @@ def refresh_producer_full_cache(triggered_by: str = "admin"):
             "ok": True,
             "last_updated": last_updated,
             "system_cutover_date": system_cutover_date,
+            "last_updated_by": triggered_by,
             "producer_count": len(producers_cache),
             "logs": logs,
         }
